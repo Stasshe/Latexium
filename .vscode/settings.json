@@ -8,24 +8,18 @@
   },
   "files.autoSave": "onFocusChange",
   "files.exclude": {
-    "**/.next": true,
     "**/node_modules": true,
     "**/.git": true,
-    "**/out": true
   },
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "**/.hg/store/**": true,
     "**/node_modules/**": true,
-    "**/.next/**": true,
-    "**/out/**": true
   },
   "search.exclude": {
     "**/node_modules": true,
-    "**/.next": true,
     "**/.git": true,
-    "**/out": true
   },
   "typescript.tsdk": "node_modules/typescript/lib",
   "eslint.enable": true,
