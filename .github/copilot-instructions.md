@@ -1,3 +1,6 @@
+必要なライブラリがあれば、インストールすること。
+コードは全て英語で、コメントも英語で書くこと。
+
 Be sure to reread the file and check for errors whenever you make a large change of 100 lines or more.
 
 When fixing errors, check for errors before making corrections.
