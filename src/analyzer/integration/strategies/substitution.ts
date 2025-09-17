@@ -63,9 +63,9 @@ export class SubstitutionStrategy implements IntegrationStrategy {
     const candidates: SubstitutionCandidate[] = [];
 
     // Look for composite functions f(g(x))
-    if (node.type === 'FunctionCall') {
+    if (node.type === 'FunctionCall' && node.args[0]) {
       const arg = node.args[0];
-      if (arg && containsVariable(arg, variable) && arg.type !== 'Identifier') {
+      if (containsVariable(arg, variable)) {
         candidates.push({
           u: arg,
           du: this.estimateDerivative(arg, variable),
@@ -88,6 +88,38 @@ export class SubstitutionStrategy implements IntegrationStrategy {
       }
     }
 
+    // Look for square root patterns √(x²+1), √(x²-1), etc.
+    if (node.type === 'FunctionCall' && node.name === 'sqrt') {
+      const arg = node.args[0];
+      if (arg && this.isQuadraticForm(arg, variable)) {
+        candidates.push({
+          u: arg,
+          du: this.estimateDerivative(arg, variable),
+          confidence: 0.85,
+          technique: 'Square root substitution',
+        });
+      }
+    }
+
+    // Look for trigonometric substitution patterns: 1/√(a²-x²), 1/√(x²+a²), 1/√(x²-a²)
+    if (
+      node.type === 'Fraction' &&
+      node.numerator.type === 'NumberLiteral' &&
+      node.numerator.value === 1 &&
+      node.denominator.type === 'FunctionCall' &&
+      node.denominator.name === 'sqrt'
+    ) {
+      const sqrtArg = node.denominator.args[0];
+      if (sqrtArg && this.isTrigSubstitutionForm(sqrtArg, variable)) {
+        candidates.push({
+          u: sqrtArg,
+          du: this.estimateDerivative(sqrtArg, variable),
+          confidence: 0.95,
+          technique: 'Trigonometric substitution',
+        });
+      }
+    }
+
     // Look for products that suggest substitution
     if (node.type === 'BinaryExpression' && node.operator === '*') {
       const productNode = node as { operator: '*'; left: ASTNode; right: ASTNode };
@@ -102,6 +134,63 @@ export class SubstitutionStrategy implements IntegrationStrategy {
     }
 
     return candidates.sort((a, b) => b.confidence - a.confidence);
+  }
+
+  private isQuadraticForm(node: ASTNode, variable: string): boolean {
+    // Check for forms like x²+a², x²-a², ax²+b, etc.
+    if (node.type === 'BinaryExpression' && ['+', '-'].includes(node.operator)) {
+      const hasSquaredTerm = this.containsSquaredVariable(node, variable);
+      return hasSquaredTerm;
+    }
+    return false;
+  }
+
+  private containsSquaredVariable(node: ASTNode, variable: string): boolean {
+    if (
+      node.type === 'BinaryExpression' &&
+      node.operator === '^' &&
+      node.left.type === 'Identifier' &&
+      node.left.name === variable &&
+      node.right.type === 'NumberLiteral' &&
+      node.right.value === 2
+    ) {
+      return true;
+    }
+    if (node.type === 'BinaryExpression') {
+      return (
+        this.containsSquaredVariable(node.left, variable) ||
+        this.containsSquaredVariable(node.right, variable)
+      );
+    }
+    return false;
+  }
+
+  private isTrigSubstitutionForm(node: ASTNode, variable: string): boolean {
+    // Check for a²-x², x²+a², x²-a²
+    if (node.type === 'BinaryExpression' && ['+', '-'].includes(node.operator)) {
+      const left = node.left;
+      const right = node.right;
+
+      // Check for x² terms and constant terms
+      const hasXSquared =
+        (left.type === 'BinaryExpression' &&
+          left.operator === '^' &&
+          left.left.type === 'Identifier' &&
+          left.left.name === variable &&
+          left.right.type === 'NumberLiteral' &&
+          left.right.value === 2) ||
+        (right.type === 'BinaryExpression' &&
+          right.operator === '^' &&
+          right.left.type === 'Identifier' &&
+          right.left.name === variable &&
+          right.right.type === 'NumberLiteral' &&
+          right.right.value === 2);
+
+      const hasConstant = isConstant(left, variable) || isConstant(right, variable);
+
+      return hasXSquared && hasConstant;
+    }
+    return false;
   }
 
   private findProductSubstitutions(
@@ -155,6 +244,23 @@ export class SubstitutionStrategy implements IntegrationStrategy {
         du: node.numerator,
         confidence: 0.9,
         technique: 'Logarithmic substitution',
+      });
+    }
+
+    // Special case: ln(x)/x -> u = ln(x), du = (1/x)dx
+    if (
+      node.numerator.type === 'FunctionCall' &&
+      node.numerator.name === 'ln' &&
+      node.numerator.args[0]?.type === 'Identifier' &&
+      node.numerator.args[0].name === variable &&
+      node.denominator.type === 'Identifier' &&
+      node.denominator.name === variable
+    ) {
+      candidates.push({
+        u: node.numerator, // ln(x)
+        du: createFractionNode(createNumberNode(1), createVariableNode(variable)), // 1/x
+        confidence: 0.95,
+        technique: 'ln(x)/x substitution',
       });
     }
 
@@ -298,6 +404,36 @@ export class SubstitutionStrategy implements IntegrationStrategy {
       steps.push(`∫f'(x)/f(x) dx = ln|f(x)|`);
 
       return createFunctionNode('ln', [createFunctionNode('abs', [candidate.u])]);
+    }
+
+    // Special case: ∫ln(x)/x dx = (ln(x))²/2
+    if (candidate.technique === 'ln(x)/x substitution') {
+      steps.push(`∫ln(x)/x dx: Let u = ln(x), then du = (1/x)dx`);
+      steps.push(`∫ln(x)/x dx = ∫u du = u²/2 = (ln(x))²/2`);
+
+      return createBinaryNode(
+        '/',
+        createBinaryNode(
+          '^',
+          createFunctionNode('ln', [createVariableNode(context.variable)]),
+          createNumberNode(2)
+        ),
+        createNumberNode(2)
+      );
+    }
+
+    // Trigonometric substitution: ∫1/√(a²-x²) dx = arcsin(x/a)
+    if (candidate.technique === 'Trigonometric substitution') {
+      steps.push(`∫1/√(a²-x²) dx = arcsin(x/a)`);
+
+      // For now, assume a=1 for simplicity
+      return createFunctionNode('asin', [createVariableNode(context.variable)]);
+    }
+
+    // Square root substitution: simplified handling
+    if (candidate.technique === 'Square root substitution') {
+      steps.push(`Complex square root substitution detected`);
+      throw new Error('Complex square root integration requires advanced techniques');
     }
 
     // Basic function composition

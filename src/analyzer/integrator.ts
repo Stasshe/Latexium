@@ -962,10 +962,45 @@ export function analyzeIntegrate(
     steps.push(`Integrating with respect to ${variable}`);
     steps.push(`Expression: ${astToLatex(ast)}`);
 
-    // Perform integration
-    const integral = integrateAST(ast, variable);
+    // Try modern integration engine first with detailed steps
+    try {
+      const context = {
+        variable,
+        depth: 0,
+        maxDepth: 5,
+        attemptedStrategies: new Set<string>(),
+      };
+      const result = modernIntegrationEngine.integrate(ast, context);
+      if (result.success && result.result) {
+        // Add strategy-specific steps
+        if (result.steps && result.steps.length > 0) {
+          steps.push(`Strategy: ${result.strategy}`);
+          steps.push(...result.steps);
+        }
+
+        const integralLatex = astToLatex(result.result);
+        steps.push(`Integral: ${integralLatex} + C`);
+
+        return {
+          steps,
+          value: `${integralLatex} + C`,
+          valueType: 'symbolic',
+          ast: result.result,
+          error: null,
+        };
+      }
+    } catch (modernError) {
+      steps.push(
+        `Modern strategy failed: ${modernError instanceof Error ? modernError.message : 'Unknown error'}`
+      );
+      steps.push(`Falling back to legacy integration...`);
+    }
+
+    // Perform legacy integration
+    const integral = legacyIntegrateAST(ast, variable);
     const integralLatex = astToLatex(integral);
 
+    steps.push(`Legacy integration successful`);
     steps.push(`Integral: ${integralLatex} + C`);
 
     return {

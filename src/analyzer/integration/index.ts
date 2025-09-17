@@ -60,8 +60,11 @@ export class IntegrationEngine {
     let bestResult: IntegrationResult | null = null;
     let minComplexity = Infinity;
 
-    // Try each strategy
-    for (const strategy of this.strategies) {
+    // Sort strategies by priority (lower number = higher priority)
+    const sortedStrategies = [...this.strategies].sort((a, b) => a.priority - b.priority);
+
+    // Try each strategy in priority order
+    for (const strategy of sortedStrategies) {
       if (context.attemptedStrategies.has(strategy.name)) {
         continue; // Skip already attempted strategies
       }
@@ -71,12 +74,21 @@ export class IntegrationEngine {
       }
 
       try {
+        steps.push(`Trying ${strategy.name}...`);
         const result = strategy.integrate(node, context);
 
         if (result.success && result.result) {
-          steps.push(`Attempted ${strategy.name}: Success`);
+          steps.push(`${strategy.name}: Success`);
 
-          // Choose the result with lowest complexity
+          // For high-priority strategies, return immediately if successful
+          if (strategy.priority <= 2) {
+            return {
+              ...result,
+              steps: [...steps, ...result.steps],
+            };
+          }
+
+          // For lower-priority strategies, choose the result with lowest complexity
           if (result.complexity < minComplexity) {
             bestResult = result;
             minComplexity = result.complexity;

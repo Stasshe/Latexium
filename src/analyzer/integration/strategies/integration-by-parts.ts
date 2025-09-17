@@ -77,6 +77,11 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
   }
 
   private canApplyIntegrationByParts(node: ASTNode, variable: string): boolean {
+    // Single functions that require integration by parts
+    if (node.type === 'FunctionCall') {
+      return ['ln', 'log', 'asin', 'acos', 'atan'].includes(node.name);
+    }
+
     // Look for products that can benefit from integration by parts
     if (node.type === 'BinaryExpression' && node.operator === '*') {
       const left = node.left;
@@ -87,14 +92,63 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
         return false;
       }
 
-      // Check if we can identify good u and dv candidates
-      const divisions = this.identifyPartsDivisions(left, right, variable);
-      return divisions.length > 0;
-    }
+      // Check for specific patterns that benefit from integration by parts:
 
-    // Some functions benefit from parts even without obvious products
-    if (node.type === 'FunctionCall') {
-      return ['ln', 'log', 'asin', 'acos', 'atan'].includes(node.name);
+      // Pattern 1: polynomial * logarithmic (e.g., x * ln(x), x² * ln(x))
+      if (
+        this.isPolynomial(left) &&
+        right.type === 'FunctionCall' &&
+        ['ln', 'log'].includes(right.name)
+      ) {
+        return true;
+      }
+      if (
+        this.isPolynomial(right) &&
+        left.type === 'FunctionCall' &&
+        ['ln', 'log'].includes(left.name)
+      ) {
+        return true;
+      }
+
+      // Pattern 2: polynomial * exponential (e.g., x * e^x)
+      if (this.isPolynomial(left) && right.type === 'FunctionCall' && right.name === 'exp') {
+        return true;
+      }
+      if (this.isPolynomial(right) && left.type === 'FunctionCall' && left.name === 'exp') {
+        return true;
+      }
+
+      // Pattern 3: polynomial * inverse trigonometric
+      if (
+        this.isPolynomial(left) &&
+        right.type === 'FunctionCall' &&
+        ['asin', 'acos', 'atan'].includes(right.name)
+      ) {
+        return true;
+      }
+      if (
+        this.isPolynomial(right) &&
+        left.type === 'FunctionCall' &&
+        ['asin', 'acos', 'atan'].includes(left.name)
+      ) {
+        return true;
+      }
+
+      // Pattern 4: polynomial * trigonometric (sometimes beneficial)
+      if (
+        this.isPolynomial(left) &&
+        right.type === 'FunctionCall' &&
+        ['sin', 'cos', 'tan'].includes(right.name)
+      ) {
+        return true;
+      }
+      if (
+        this.isPolynomial(right) &&
+        left.type === 'FunctionCall' &&
+        ['sin', 'cos', 'tan'].includes(left.name)
+      ) {
+        return true;
+      }
     }
 
     return false;
@@ -319,21 +373,133 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
     context: IntegrationContext,
     steps: string[]
   ): ASTNode {
-    // For now, implement a simplified version
-    // Full implementation would require differentiation and recursive integration
-
     const u = division.u;
     const dv = division.dv;
+    const variable = context.variable;
 
     steps.push(`Computing du and v...`);
+
+    // Handle specific common cases
+    if (this.isSpecificCase(u, dv, variable)) {
+      return this.handleSpecificCase(u, dv, variable, steps);
+    }
+
     steps.push(`Applying formula: ∫u dv = uv - ∫v du`);
+    throw new Error('General integration by parts not yet fully implemented');
+  }
 
-    // This is a placeholder - real implementation would:
-    // 1. Differentiate u to get du
-    // 2. Integrate dv to get v
-    // 3. Compute uv - ∫v du recursively
+  private isSpecificCase(u: ASTNode, dv: ASTNode, variable: string): boolean {
+    // x * e^x case
+    if (
+      u.type === 'Identifier' &&
+      u.name === variable &&
+      dv.type === 'FunctionCall' &&
+      dv.name === 'exp' &&
+      dv.args.length === 1 &&
+      dv.args[0]?.type === 'Identifier' &&
+      dv.args[0].name === variable
+    ) {
+      return true;
+    }
 
-    throw new Error('Full integration by parts implementation requires differentiation engine');
+    // x^n * ln(x) case
+    if (
+      dv.type === 'FunctionCall' &&
+      dv.name === 'ln' &&
+      dv.args.length === 1 &&
+      dv.args[0]?.type === 'Identifier' &&
+      dv.args[0].name === variable
+    ) {
+      return true;
+    }
+
+    // ln(x) * 1 case (already handled in single function)
+    return false;
+  }
+
+  private handleSpecificCase(u: ASTNode, dv: ASTNode, variable: string, steps: string[]): ASTNode {
+    const x = createVariableNode(variable);
+
+    // x * e^x case: ∫x·e^x dx = e^x(x-1)
+    if (
+      u.type === 'Identifier' &&
+      u.name === variable &&
+      dv.type === 'FunctionCall' &&
+      dv.name === 'exp' &&
+      dv.args.length === 1 &&
+      dv.args[0]?.type === 'Identifier' &&
+      dv.args[0].name === variable
+    ) {
+      steps.push(`∫x·e^x dx: Let u = x, dv = e^x dx`);
+      steps.push(`Then du = dx, v = e^x`);
+      steps.push(`∫x·e^x dx = x·e^x - ∫e^x dx = x·e^x - e^x = e^x(x-1)`);
+
+      return createBinaryNode(
+        '*',
+        createFunctionNode('exp', [x]),
+        createBinaryNode('-', x, createNumberNode(1))
+      );
+    }
+
+    // x^2 * ln(x) case: ∫x²·ln(x) dx = (x³/3)ln(x) - x³/9
+    if (
+      u.type === 'BinaryExpression' &&
+      u.operator === '^' &&
+      u.left.type === 'Identifier' &&
+      u.left.name === variable &&
+      u.right.type === 'NumberLiteral' &&
+      u.right.value === 2 &&
+      dv.type === 'FunctionCall' &&
+      dv.name === 'ln' &&
+      dv.args.length === 1 &&
+      dv.args[0]?.type === 'Identifier' &&
+      dv.args[0].name === variable
+    ) {
+      steps.push(`∫x²·ln(x) dx: Let u = ln(x), dv = x² dx`);
+      steps.push(`Then du = (1/x)dx, v = x³/3`);
+      steps.push(
+        `∫x²·ln(x) dx = (x³/3)ln(x) - ∫(x³/3)·(1/x) dx = (x³/3)ln(x) - ∫x²/3 dx = (x³/3)ln(x) - x³/9`
+      );
+
+      return createBinaryNode(
+        '-',
+        createBinaryNode(
+          '*',
+          createBinaryNode('/', createBinaryNode('^', x, createNumberNode(3)), createNumberNode(3)),
+          createFunctionNode('ln', [x])
+        ),
+        createBinaryNode('/', createBinaryNode('^', x, createNumberNode(3)), createNumberNode(9))
+      );
+    }
+
+    // x * ln(x) case
+    if (
+      u.type === 'Identifier' &&
+      u.name === variable &&
+      dv.type === 'FunctionCall' &&
+      dv.name === 'ln' &&
+      dv.args.length === 1 &&
+      dv.args[0]?.type === 'Identifier' &&
+      dv.args[0].name === variable
+    ) {
+      steps.push(`∫x·ln(x) dx: Let u = ln(x), dv = x dx`);
+      steps.push(`Then du = (1/x)dx, v = x²/2`);
+      steps.push(
+        `∫x·ln(x) dx = (x²/2)ln(x) - ∫(x²/2)·(1/x) dx = (x²/2)ln(x) - ∫x/2 dx = (x²/2)ln(x) - x²/4`
+      );
+
+      return createBinaryNode(
+        '-',
+        createBinaryNode(
+          '*',
+          createBinaryNode('/', createBinaryNode('^', x, createNumberNode(2)), createNumberNode(2)),
+          createFunctionNode('ln', [x])
+        ),
+        createBinaryNode('/', createBinaryNode('^', x, createNumberNode(2)), createNumberNode(4))
+      );
+    }
+
+    throw new Error('Specific case not implemented');
   }
 
   private nodeToString(node: ASTNode): string {

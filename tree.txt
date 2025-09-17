@@ -12,8 +12,20 @@
 ├── rollup.config.js
 ├── src
 │   ├── analyzer
+│   │   ├── differentiator.ts
 │   │   ├── evaluator.ts
-│   │   └── index.ts
+│   │   ├── index.ts
+│   │   ├── integration
+│   │   │   ├── index.ts
+│   │   │   └── strategies
+│   │   │       ├── basic.ts
+│   │   │       ├── index.ts
+│   │   │       ├── integration-by-parts.ts
+│   │   │       ├── rational.ts
+│   │   │       ├── substitution.ts
+│   │   │       └── trigonometric.ts
+│   │   ├── integrator.ts
+│   │   └── solver.ts
 │   ├── index.ts
 │   ├── parser
 │   │   ├── index.ts
@@ -26,19 +38,32 @@
 │       ├── ast.ts
 │       ├── index.ts
 │       ├── scope.ts
-│       └── validation.ts
+│       ├── validation.ts
+│       └── variables.ts
 ├── tests
-│   └── integration.test.mjs
+│   ├── differentiation.test.mjs
+│   ├── integration_engine.test.mjs
+│   ├── mathematical_validation.test.mjs
+│   ├── parsing_fixes.test.mjs
+│   ├── reciprocal.test.mjs
+│   ├── simplified_api.test.mjs
+│   ├── solver.test.mjs
+│   ├── specification_compliance.test.mjs
+│   ├── stress.test.mjs
+│   └── variable_inference.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-8 directories, 26 files
+10 directories, 46 files
 
 src/*.ts, *.tsx の統計:
-合計行数: 1764
-合計文字数: 42575
-合計ファイルサイズ(bytes): 43258
+Total Lines: 6698
+Total Characters: 182344
+Total File Size (bytes): 183569
 
-開発環境の容量:
-139M	.
+Development Size
+143M	.
+
+Build Size
+1.7M	dist

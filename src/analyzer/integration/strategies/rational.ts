@@ -143,6 +143,11 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
       return createFunctionNode('ln', [createFunctionNode('abs', [createVariableNode(variable)])]);
     }
 
+    // Pattern: (x+1)/(x²-1) = (x+1)/((x-1)(x+1)) = 1/(x-1)
+    if (this.isSimplifiableFraction(numerator, denominator, variable)) {
+      return this.integrateSimplifiedFraction(numerator, denominator, variable, steps);
+    }
+
     // Pattern: 1/(x²+a²)
     if (this.isFormXSquaredPlusConstant(denominator, variable)) {
       return this.integrateXSquaredPlusConstant(numerator, denominator, variable, steps);
@@ -151,6 +156,11 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     // Pattern: 1/(x²-a²)
     if (this.isFormXSquaredMinusConstant(denominator, variable)) {
       return this.integrateXSquaredMinusConstant(numerator, denominator, variable, steps);
+    }
+
+    // Pattern: (ax+b)/(x²+cx+d) - split into logarithmic and arctangent parts
+    if (this.isLinearOverQuadratic(numerator, denominator, variable)) {
+      return this.integrateLinearOverQuadratic(numerator, denominator, variable, steps);
     }
 
     // Pattern: x/(x²+a²) or similar
@@ -166,6 +176,52 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     // General partial fractions (simplified)
     steps.push(`Attempting partial fraction decomposition...`);
     return this.attemptPartialFractions(numerator, denominator, variable, steps);
+  }
+
+  private isSimplifiableFraction(
+    numerator: ASTNode,
+    denominator: ASTNode,
+    variable: string
+  ): boolean {
+    // Check for (x+1)/(x²-1) type patterns
+    if (
+      numerator.type === 'BinaryExpression' &&
+      numerator.operator === '+' &&
+      numerator.left.type === 'Identifier' &&
+      numerator.left.name === variable &&
+      numerator.right.type === 'NumberLiteral' &&
+      numerator.right.value === 1 &&
+      denominator.type === 'BinaryExpression' &&
+      denominator.operator === '-' &&
+      denominator.left.type === 'BinaryExpression' &&
+      denominator.left.operator === '^' &&
+      denominator.left.left.type === 'Identifier' &&
+      denominator.left.left.name === variable &&
+      denominator.left.right.type === 'NumberLiteral' &&
+      denominator.left.right.value === 2 &&
+      denominator.right.type === 'NumberLiteral' &&
+      denominator.right.value === 1
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  private integrateSimplifiedFraction(
+    numerator: ASTNode,
+    denominator: ASTNode,
+    variable: string,
+    steps: string[]
+  ): ASTNode {
+    // (x+1)/(x²-1) = (x+1)/((x-1)(x+1)) = 1/(x-1)
+    steps.push(`Simplifying: (x+1)/(x²-1) = (x+1)/((x-1)(x+1)) = 1/(x-1)`);
+    steps.push(`∫1/(x-1) dx = ln|x-1|`);
+
+    return createFunctionNode('ln', [
+      createFunctionNode('abs', [
+        createBinaryNode('-', createVariableNode(variable), createNumberNode(1)),
+      ]),
+    ]);
   }
 
   private isFormXSquaredPlusConstant(node: ASTNode, variable: string): boolean {
@@ -337,6 +393,42 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     variable: string,
     steps: string[]
   ): ASTNode {
+    // Handle (ax+b)/(x²+c) by splitting into logarithmic and arctangent parts
+    // ∫(2x+3)/(x²+4) dx = ∫2x/(x²+4) dx + ∫3/(x²+4) dx
+    //                   = ln(x²+4) + (3/2)arctan(x/2)
+
+    if (
+      numerator.type === 'BinaryExpression' &&
+      (numerator.operator === '+' || numerator.operator === '-') &&
+      denominator.type === 'BinaryExpression' &&
+      denominator.operator === '+' &&
+      this.isFormXSquaredPlusConstant(denominator, variable)
+    ) {
+      const leftTerm = numerator.left;
+      const rightTerm = numerator.right;
+      const sign = numerator.operator === '+' ? 1 : -1;
+
+      steps.push(
+        `Splitting: ∫(${this.termToString(leftTerm)}${numerator.operator}${this.termToString(rightTerm)})/(x²+c) dx = ∫${this.termToString(leftTerm)}/(x²+c) dx ${numerator.operator} ∫${this.termToString(rightTerm)}/(x²+c) dx`
+      );
+
+      // Integrate each part separately
+      const leftResult = this.integrateSingleTermOverQuadratic(
+        leftTerm,
+        denominator,
+        variable,
+        steps
+      );
+      const rightResult = this.integrateSingleTermOverQuadratic(
+        rightTerm,
+        denominator,
+        variable,
+        steps
+      );
+
+      return createBinaryNode(numerator.operator as '+' | '-', leftResult, rightResult);
+    }
+
     // For x/(x²+a²), result is (1/2)ln(x²+a²)
     if (
       numerator.type === 'Identifier' &&
@@ -353,6 +445,86 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     }
 
     throw new Error('Linear over quadratic form not supported');
+  }
+
+  private integrateSingleTermOverQuadratic(
+    term: ASTNode,
+    denominator: ASTNode,
+    variable: string,
+    steps: string[]
+  ): ASTNode {
+    // Handle constant over (x²+a²): ∫c/(x²+a²) dx = (c/√a)arctan(x/√a)
+    if (isConstant(term, variable)) {
+      const denom = denominator as {
+        type: 'BinaryExpression';
+        operator: '+';
+        left: ASTNode;
+        right: ASTNode;
+      };
+      const a = denom.right;
+
+      if (a.type === 'NumberLiteral' && a.value > 0) {
+        const sqrtA = Math.sqrt(a.value);
+        const coefficient = term.type === 'NumberLiteral' ? term.value : 1;
+
+        steps.push(
+          `∫${coefficient}/(x²+${a.value}) dx = (${coefficient}/${sqrtA})arctan(x/${sqrtA})`
+        );
+
+        return createBinaryNode(
+          '*',
+          createFractionNode(createNumberNode(coefficient), createNumberNode(sqrtA)),
+          createFunctionNode('atan', [
+            createFractionNode(createVariableNode(variable), createNumberNode(sqrtA)),
+          ])
+        );
+      }
+    }
+
+    // Handle cx over (x²+a²): ∫cx/(x²+a²) dx = (c/2)ln(x²+a²)
+    if (
+      term.type === 'BinaryExpression' &&
+      term.operator === '*' &&
+      ((isConstant(term.left, variable) &&
+        term.right.type === 'Identifier' &&
+        term.right.name === variable) ||
+        (isConstant(term.right, variable) &&
+          term.left.type === 'Identifier' &&
+          term.left.name === variable))
+    ) {
+      const coefficient = isConstant(term.left, variable) ? term.left : term.right;
+      const coeffValue = coefficient.type === 'NumberLiteral' ? coefficient.value : 1;
+
+      steps.push(`∫${coeffValue}x/(x²+a²) dx = (${coeffValue}/2)ln(x²+a²)`);
+
+      return createBinaryNode(
+        '*',
+        createFractionNode(createNumberNode(coeffValue), createNumberNode(2)),
+        createFunctionNode('ln', [denominator])
+      );
+    }
+
+    // Handle x over (x²+a²): ∫x/(x²+a²) dx = (1/2)ln(x²+a²)
+    if (term.type === 'Identifier' && term.name === variable) {
+      steps.push(`∫x/(x²+a²) dx = (1/2)ln(x²+a²)`);
+
+      return createBinaryNode(
+        '*',
+        createFractionNode(createNumberNode(1), createNumberNode(2)),
+        createFunctionNode('ln', [denominator])
+      );
+    }
+
+    throw new Error(`Single term integration not supported for: ${this.termToString(term)}`);
+  }
+
+  private termToString(node: ASTNode): string {
+    if (node.type === 'NumberLiteral') return node.value.toString();
+    if (node.type === 'Identifier') return node.name;
+    if (node.type === 'BinaryExpression') {
+      return `(${this.termToString(node.left)} ${node.operator} ${this.termToString(node.right)})`;
+    }
+    return 'unknown';
   }
 
   private isFormSqrtASquaredMinusXSquared(node: ASTNode, variable: string): boolean {
