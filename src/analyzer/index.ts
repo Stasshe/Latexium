@@ -7,6 +7,9 @@ export { analyzeEvaluate, evaluateAST } from './evaluator';
 export { analyzeIntegrate, integrateAST } from './integrator';
 export { analyzeSolve, solveEquation } from './solver';
 
+// Export new integration engine
+export { IntegrationEngine } from './integration';
+
 /**
  * Analyzer Module
  * Main analysis engine for mathematical expressions

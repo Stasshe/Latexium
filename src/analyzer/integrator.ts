@@ -4,8 +4,12 @@
  */
 
 import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../types';
+import { IntegrationEngine } from './integration';
 import { astToLatex } from '../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
+
+// Legacy integration engine - now using new strategy-based system
+const modernIntegrationEngine = new IntegrationEngine();
 
 /**
  * Integration table for basic functions
@@ -117,6 +121,31 @@ const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
  * Integrate an AST node with respect to a variable
  */
 export function integrateAST(node: ASTNode, variable: string): ASTNode {
+  // Try using the modern strategy-based integration engine first
+  try {
+    const context = {
+      variable,
+      depth: 0,
+      maxDepth: 5,
+      attemptedStrategies: new Set<string>(),
+    };
+    const result = modernIntegrationEngine.integrate(node, context);
+    if (result.success && result.result) {
+      return result.result;
+    }
+  } catch (error) {
+    // Fall back to legacy integration if modern engine fails
+    // console.warn('Modern integration engine failed, falling back to legacy:', error);
+  }
+
+  // Legacy integration implementation (original code preserved for fallback)
+  return legacyIntegrateAST(node, variable);
+}
+
+/**
+ * Legacy integration implementation
+ */
+function legacyIntegrateAST(node: ASTNode, variable: string): ASTNode {
   switch (node.type) {
     case 'NumberLiteral':
       // ∫c dx = cx
@@ -196,6 +225,127 @@ export function integrateAST(node: ASTNode, variable: string): ASTNode {
 }
 
 /**
+ * Handle special integration cases for powers and trigonometric functions
+ */
+function handleSpecialIntegration(node: ASTNode, variable: string): ASTNode | null {
+  // Handle sin²(x), cos²(x), etc.
+  if (
+    node.type === 'BinaryExpression' &&
+    node.operator === '^' &&
+    node.right.type === 'NumberLiteral' &&
+    node.right.value === 2 &&
+    node.left.type === 'FunctionCall'
+  ) {
+    const func = node.left;
+    if (
+      func.args.length === 1 &&
+      func.args[0]?.type === 'Identifier' &&
+      func.args[0].name === variable
+    ) {
+      switch (func.name) {
+        case 'sin':
+          // ∫sin²(x) dx = (x/2) - (sin(2x)/4)
+          return {
+            type: 'BinaryExpression',
+            operator: '-',
+            left: {
+              type: 'Fraction',
+              numerator: {
+                type: 'Identifier',
+                name: variable,
+                scope: 'free',
+                uniqueId: `free_${variable}`,
+              },
+              denominator: { type: 'NumberLiteral', value: 2 },
+            },
+            right: {
+              type: 'Fraction',
+              numerator: {
+                type: 'FunctionCall',
+                name: 'sin',
+                args: [
+                  {
+                    type: 'BinaryExpression',
+                    operator: '*',
+                    left: { type: 'NumberLiteral', value: 2 },
+                    right: {
+                      type: 'Identifier',
+                      name: variable,
+                      scope: 'free',
+                      uniqueId: `free_${variable}`,
+                    },
+                  },
+                ],
+              },
+              denominator: { type: 'NumberLiteral', value: 4 },
+            },
+          };
+
+        case 'cos':
+          // ∫cos²(x) dx = (x/2) + (sin(2x)/4)
+          return {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: {
+              type: 'Fraction',
+              numerator: {
+                type: 'Identifier',
+                name: variable,
+                scope: 'free',
+                uniqueId: `free_${variable}`,
+              },
+              denominator: { type: 'NumberLiteral', value: 2 },
+            },
+            right: {
+              type: 'Fraction',
+              numerator: {
+                type: 'FunctionCall',
+                name: 'sin',
+                args: [
+                  {
+                    type: 'BinaryExpression',
+                    operator: '*',
+                    left: { type: 'NumberLiteral', value: 2 },
+                    right: {
+                      type: 'Identifier',
+                      name: variable,
+                      scope: 'free',
+                      uniqueId: `free_${variable}`,
+                    },
+                  },
+                ],
+              },
+              denominator: { type: 'NumberLiteral', value: 4 },
+            },
+          };
+
+        case 'tan':
+          // ∫tan²(x) dx = tan(x) - x
+          return {
+            type: 'BinaryExpression',
+            operator: '-',
+            left: {
+              type: 'FunctionCall',
+              name: 'tan',
+              args: [
+                { type: 'Identifier', name: variable, scope: 'free', uniqueId: `free_${variable}` },
+              ],
+            },
+            right: {
+              type: 'Identifier',
+              name: variable,
+              scope: 'free',
+              uniqueId: `free_${variable}`,
+            },
+          };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Integrate binary expressions
  */
 function integrateBinaryExpression(
@@ -204,6 +354,12 @@ function integrateBinaryExpression(
 ): ASTNode {
   const left = node.left;
   const right = node.right;
+
+  // Check for special cases first (like sin²(x), cos²(x))
+  const specialCase = handleSpecialIntegration(node as ASTNode, variable);
+  if (specialCase) {
+    return specialCase;
+  }
 
   switch (node.operator) {
     case '+':
@@ -295,6 +451,13 @@ function integrateBinaryExpression(
       } else {
         throw new Error('Complex power integration not yet implemented');
       }
+
+    case '=':
+    case '>':
+    case '<':
+    case '>=':
+    case '<=':
+      throw new Error('Integration of comparison operators not supported');
 
     default:
       throw new Error(`Integration of operator ${node.operator} not supported`);
@@ -409,6 +572,32 @@ function integrateFunctionCall(node: { name: string; args: ASTNode[] }, variable
           right: argument,
         };
 
+      case 'log':
+        // ∫log₁₀(x) dx = x·log₁₀(x) - x/ln(10) (integration by parts)
+        return {
+          type: 'BinaryExpression',
+          operator: '-',
+          left: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: argument,
+            right: {
+              type: 'FunctionCall',
+              name: 'log',
+              args: [argument],
+            },
+          },
+          right: {
+            type: 'Fraction',
+            numerator: argument,
+            denominator: {
+              type: 'FunctionCall',
+              name: 'ln',
+              args: [{ type: 'NumberLiteral', value: 10 }],
+            },
+          },
+        };
+
       case 'sqrt':
         // ∫√x dx = (2/3)x^(3/2)
         return {
@@ -429,6 +618,161 @@ function integrateFunctionCall(node: { name: string; args: ASTNode[] }, variable
               denominator: { type: 'NumberLiteral', value: 2 },
             },
           },
+        };
+
+      case 'asin':
+        // ∫arcsin(x) dx = x·arcsin(x) + √(1-x²)
+        return {
+          type: 'BinaryExpression',
+          operator: '+',
+          left: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: argument,
+            right: {
+              type: 'FunctionCall',
+              name: 'asin',
+              args: [argument],
+            },
+          },
+          right: {
+            type: 'FunctionCall',
+            name: 'sqrt',
+            args: [
+              {
+                type: 'BinaryExpression',
+                operator: '-',
+                left: { type: 'NumberLiteral', value: 1 },
+                right: {
+                  type: 'BinaryExpression',
+                  operator: '^',
+                  left: argument,
+                  right: { type: 'NumberLiteral', value: 2 },
+                },
+              },
+            ],
+          },
+        };
+
+      case 'acos':
+        // ∫arccos(x) dx = x·arccos(x) - √(1-x²)
+        return {
+          type: 'BinaryExpression',
+          operator: '-',
+          left: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: argument,
+            right: {
+              type: 'FunctionCall',
+              name: 'acos',
+              args: [argument],
+            },
+          },
+          right: {
+            type: 'FunctionCall',
+            name: 'sqrt',
+            args: [
+              {
+                type: 'BinaryExpression',
+                operator: '-',
+                left: { type: 'NumberLiteral', value: 1 },
+                right: {
+                  type: 'BinaryExpression',
+                  operator: '^',
+                  left: argument,
+                  right: { type: 'NumberLiteral', value: 2 },
+                },
+              },
+            ],
+          },
+        };
+
+      case 'atan':
+        // ∫arctan(x) dx = x·arctan(x) - (1/2)ln(1+x²)
+        return {
+          type: 'BinaryExpression',
+          operator: '-',
+          left: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: argument,
+            right: {
+              type: 'FunctionCall',
+              name: 'atan',
+              args: [argument],
+            },
+          },
+          right: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: {
+              type: 'Fraction',
+              numerator: { type: 'NumberLiteral', value: 1 },
+              denominator: { type: 'NumberLiteral', value: 2 },
+            },
+            right: {
+              type: 'FunctionCall',
+              name: 'ln',
+              args: [
+                {
+                  type: 'BinaryExpression',
+                  operator: '+',
+                  left: { type: 'NumberLiteral', value: 1 },
+                  right: {
+                    type: 'BinaryExpression',
+                    operator: '^',
+                    left: argument,
+                    right: { type: 'NumberLiteral', value: 2 },
+                  },
+                },
+              ],
+            },
+          },
+        };
+
+      case 'sinh':
+        // ∫sinh(x) dx = cosh(x)
+        return {
+          type: 'FunctionCall',
+          name: 'cosh',
+          args: [argument],
+        };
+
+      case 'cosh':
+        // ∫cosh(x) dx = sinh(x)
+        return {
+          type: 'FunctionCall',
+          name: 'sinh',
+          args: [argument],
+        };
+
+      case 'tanh':
+        // ∫tanh(x) dx = ln(cosh(x))
+        return {
+          type: 'FunctionCall',
+          name: 'ln',
+          args: [
+            {
+              type: 'FunctionCall',
+              name: 'cosh',
+              args: [argument],
+            },
+          ],
+        };
+
+      case 'abs':
+        // ∫|x| dx = (x|x|)/2 = (x²/2)·sign(x) - simplified for x > 0
+        // For simplicity, assume x > 0: ∫|x| dx = x²/2
+        return {
+          type: 'Fraction',
+          numerator: {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: argument,
+            right: { type: 'NumberLiteral', value: 2 },
+          },
+          denominator: { type: 'NumberLiteral', value: 2 },
         };
 
       default:

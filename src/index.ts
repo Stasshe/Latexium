@@ -14,7 +14,7 @@ export * from './utils';
 export { parseLatex } from './parser';
 
 // Export analyzer
-export { analyze } from './analyzer';
+export { analyze, IntegrationEngine } from './analyzer';
 
 // Re-export commonly used functions for convenience
 export type { AnalyzeOptions, AnalyzeResult, ASTNode, ParseResult } from './types';
