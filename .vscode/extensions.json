@@ -2,8 +2,6 @@
   "recommendations": [
     "esbenp.prettier-vscode",
     "dbaeumer.vscode-eslint",
-    "bradlc.vscode-tailwindcss",
-    "ms-vscode.vscode-typescript-next",
     "github.copilot",
     "github.copilot-chat"
   ],
