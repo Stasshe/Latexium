@@ -6,7 +6,7 @@
 import { ASTNode, Fraction, FunctionCall, Identifier, NumberLiteral, ParseResult } from '../types';
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
 import { resolveScopeInAST } from '../utils/scope';
-import { validateFunctionArgs } from '../utils/validation';
+import { validateFunctionArgs, isReservedWord } from '../utils/validation';
 
 export class LaTeXParser {
   private tokens: Token[];
@@ -86,6 +86,13 @@ export class LaTeXParser {
    */
   private parseIdentifier(): Identifier {
     const token = this.consume('IDENTIFIER');
+
+    // Check for reserved words
+    if (isReservedWord(token.value)) {
+      throw new Error(
+        `Reserved word cannot be used as variable name: ${token.value} at position ${token.position}`
+      );
+    }
 
     return {
       type: 'Identifier',
@@ -256,7 +263,7 @@ export class LaTeXParser {
       // Handle braces for exponents like x^{-2}
       if (this.expectToken('LBRACE')) {
         this.consume('LBRACE');
-        right = this.parseExpression();
+        right = this.parseAddition();
         this.consume('RBRACE');
       } else {
         right = this.parseUnary();
@@ -299,9 +306,38 @@ export class LaTeXParser {
   }
 
   /**
+   * Parse equality and comparison operators (lowest precedence)
+   */
+  private parseEquality(): ASTNode {
+    let left = this.parseAddition();
+
+    while (
+      this.expectToken('OPERATOR') &&
+      (this.currentToken.value === '=' ||
+        this.currentToken.value === '>' ||
+        this.currentToken.value === '<' ||
+        this.currentToken.value === '>=' ||
+        this.currentToken.value === '<=')
+    ) {
+      const operator = this.currentToken.value as '=' | '>' | '<' | '>=' | '<=';
+      this.advance();
+      const right = this.parseAddition();
+
+      left = {
+        type: 'BinaryExpression',
+        operator,
+        left,
+        right,
+      };
+    }
+
+    return left;
+  }
+
+  /**
    * Parse addition and subtraction
    */
-  private parseExpression(): ASTNode {
+  private parseAddition(): ASTNode {
     let left = this.parseTerm();
 
     while (
@@ -321,6 +357,13 @@ export class LaTeXParser {
     }
 
     return left;
+  }
+
+  /**
+   * Parse the complete expression (top level)
+   */
+  private parseExpression(): ASTNode {
+    return this.parseEquality();
   }
 
   /**
