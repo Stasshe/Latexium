@@ -152,6 +152,8 @@ function evaluateFunctionCall(
       return Math.exp(firstArg);
     case 'sqrt':
       return Math.sqrt(firstArg);
+    case 'abs':
+      return Math.abs(firstArg);
     default:
       throw new Error(`Unsupported function: ${node.name}`);
   }

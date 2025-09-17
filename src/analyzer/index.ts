@@ -4,6 +4,8 @@
 
 export { analyzeDifferentiate, differentiateAST } from './differentiator';
 export { analyzeEvaluate, evaluateAST } from './evaluator';
+export { analyzeIntegrate, integrateAST } from './integrator';
+export { analyzeSolve, solveEquation } from './solver';
 
 /**
  * Analyzer Module
@@ -13,6 +15,8 @@ export { analyzeEvaluate, evaluateAST } from './evaluator';
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { analyzeDifferentiate } from './differentiator';
 import { analyzeEvaluate } from './evaluator';
+import { analyzeIntegrate } from './integrator';
+import { analyzeSolve } from './solver';
 
 /**
  * Main analyze function that handles different tasks
@@ -37,22 +41,10 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
         return analyzeDifferentiate(ast, options as AnalyzeOptions & { task: 'differentiate' });
 
       case 'integrate':
-        return {
-          steps: [],
-          value: null,
-          valueType: 'symbolic',
-          ast: null,
-          error: 'Integration not yet implemented',
-        };
+        return analyzeIntegrate(ast, options as AnalyzeOptions & { task: 'integrate' });
 
       case 'solve':
-        return {
-          steps: [],
-          value: null,
-          valueType: 'symbolic',
-          ast: null,
-          error: 'Equation solving not yet implemented',
-        };
+        return analyzeSolve(ast, options as AnalyzeOptions & { task: 'solve' });
 
       case 'min':
       case 'max':

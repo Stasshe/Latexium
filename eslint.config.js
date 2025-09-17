@@ -33,12 +33,11 @@ export default [
       '@typescript-eslint/no-explicit-any': 'warn',
       'prefer-const': 'error',
       'no-var': 'error',
-      'unused-imports/no-unused-imports': 'off', // Disabled unused imports check
       'no-unused-vars': 'off', // Also disable the base rule
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.js', '**/*.test.mjs'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.js', '**/*.test.mjs', 'tests/**/*.mjs'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
       'no-console': 'off',
@@ -46,6 +45,7 @@ export default [
     languageOptions: {
       globals: {
         console: 'readonly',
+        JSON: 'readonly',
       },
     },
   },

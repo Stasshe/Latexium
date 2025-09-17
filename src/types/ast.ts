@@ -134,6 +134,7 @@ export const RESERVED_FUNCTIONS = new Set([
   'sinh',
   'cosh',
   'tanh',
+  'abs',
 ]);
 
 export const RESERVED_SYMBOLS = new Set(['∞', 'infinity', '∅']);
@@ -153,6 +154,7 @@ export const FUNCTION_ARG_COUNTS: Record<string, number> = {
   ln: 1,
   exp: 1,
   sqrt: 1,
+  abs: 1,
 };
 
 // 数学定数の値
