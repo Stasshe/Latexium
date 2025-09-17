@@ -1,0 +1,64 @@
+{
+  "React Functional Component": {
+    "prefix": "rfc",
+    "body": [
+      "'use client';",
+      "",
+      "interface ${1:ComponentName}Props {",
+      "  $2",
+      "}",
+      "",
+      "export function ${1:ComponentName}({ $3 }: ${1:ComponentName}Props) {",
+      "  return (",
+      "    <div>",
+      "      $4",
+      "    </div>",
+      "  );",
+      "}"
+    ],
+    "description": "Create a React functional component with TypeScript"
+  },
+  "React Hook": {
+    "prefix": "rhook",
+    "body": [
+      "import { ${1:useState} } from 'react';",
+      "",
+      "export function use${2:HookName}() {",
+      "  $3",
+      "",
+      "  return {",
+      "    $4",
+      "  };",
+      "}"
+    ],
+    "description": "Create a custom React hook"
+  },
+  "Next.js Page Component": {
+    "prefix": "npage",
+    "body": [
+      "import { Metadata } from 'next';",
+      "",
+      "export const metadata: Metadata = {",
+      "  title: '${1:Page Title}',",
+      "  description: '${2:Page description}',",
+      "};",
+      "",
+      "export default function ${3:PageName}() {",
+      "  return (",
+      "    <div>",
+      "      <h1>${1:Page Title}</h1>",
+      "      $4",
+      "    </div>",
+      "  );",
+      "}"
+    ],
+    "description": "Create a Next.js page component with metadata"
+  },
+  "Console Log": {
+    "prefix": "clg",
+    "body": [
+      "console.log('$1', $1);"
+    ],
+    "description": "Quick console.log with variable name"
+  }
+}
