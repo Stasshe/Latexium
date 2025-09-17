@@ -111,6 +111,7 @@ export type BaseAnalyzeOptions = {
 
 export type AnalyzeOptions =
   | (BaseAnalyzeOptions & { task: 'evaluate' })
+  | (BaseAnalyzeOptions & { task: 'approx' })
   | (BaseAnalyzeOptions & { task: 'differentiate' })
   | (BaseAnalyzeOptions & { task: 'integrate' })
   | (BaseAnalyzeOptions & { task: 'solve'; solveFor?: string })

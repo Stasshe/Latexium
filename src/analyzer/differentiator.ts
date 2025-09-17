@@ -4,7 +4,7 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
-import { astToLatex } from '../utils/ast';
+import { astToLatex, simplifyAST } from '../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
@@ -527,7 +527,10 @@ export function analyzeDifferentiate(
 
     // Perform differentiation
     const derivative = differentiateAST(ast, variable);
-    const derivativeLatex = astToLatex(derivative);
+
+    // Apply simplification to the derivative
+    const simplifiedDerivative = simplifyAST(derivative);
+    const derivativeLatex = astToLatex(simplifiedDerivative);
 
     steps.push(`Derivative: ${derivativeLatex}`);
 
@@ -535,7 +538,7 @@ export function analyzeDifferentiate(
       steps,
       value: derivativeLatex,
       valueType: 'symbolic',
-      ast: derivative,
+      ast: simplifiedDerivative,
       error: null,
     };
   } catch (error) {

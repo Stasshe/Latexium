@@ -1,6 +1,8 @@
 必要なライブラリがあれば、インストールすること。
 コードは全て英語で、コメントも英語で書くこと。
 
+testcaseは、testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。
+
 必ずSPECIFICATION.mdを参照すること。
 
 Be sure to reread the file and check for errors whenever you make a large change of 100 lines or more.

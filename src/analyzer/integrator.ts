@@ -5,7 +5,7 @@
 
 import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../types';
 import { IntegrationEngine } from './integration';
-import { astToLatex } from '../utils/ast';
+import { astToLatex, simplifyAST } from '../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 // Legacy integration engine - now using new strategy-based system
@@ -978,14 +978,16 @@ export function analyzeIntegrate(
           steps.push(...result.steps);
         }
 
-        const integralLatex = astToLatex(result.result);
+        // Apply simplification to the integral result
+        const simplifiedResult = simplifyAST(result.result);
+        const integralLatex = astToLatex(simplifiedResult);
         steps.push(`Integral: ${integralLatex} + C`);
 
         return {
           steps,
           value: `${integralLatex} + C`,
           valueType: 'symbolic',
-          ast: result.result,
+          ast: simplifiedResult,
           error: null,
         };
       }
@@ -998,7 +1000,10 @@ export function analyzeIntegrate(
 
     // Perform legacy integration
     const integral = legacyIntegrateAST(ast, variable);
-    const integralLatex = astToLatex(integral);
+
+    // Apply simplification to the legacy integral result
+    const simplifiedIntegral = simplifyAST(integral);
+    const integralLatex = astToLatex(simplifiedIntegral);
 
     steps.push(`Legacy integration successful`);
     steps.push(`Integral: ${integralLatex} + C`);
@@ -1007,7 +1012,7 @@ export function analyzeIntegrate(
       steps,
       value: `${integralLatex} + C`,
       valueType: 'symbolic',
-      ast: integral,
+      ast: simplifiedIntegral,
       error: null,
     };
   } catch (error) {

@@ -21,7 +21,17 @@ export function astToLatex(node: ASTNode): string {
       return node.value.toString();
 
     case 'Identifier':
-      return node.name;
+      // Convert mathematical constants to LaTeX format
+      switch (node.name) {
+        case 'π':
+          return '\\pi';
+        case 'e':
+          return 'e'; // e is typically not escaped in LaTeX
+        case 'i':
+          return 'i'; // imaginary unit
+        default:
+          return node.name;
+      }
 
     case 'BinaryExpression':
       return binaryExpressionToLatex(node);
@@ -305,6 +315,124 @@ function gcd(a: number, b: number): number {
   return a;
 }
 
+/**
+ * Extract coefficient and variable part from a term
+ * Returns { coefficient: number, variablePart: ASTNode | null }
+ */
+function extractCoefficientAndVariable(node: ASTNode): {
+  coefficient: number;
+  variablePart: ASTNode | null;
+} {
+  switch (node.type) {
+    case 'NumberLiteral':
+      return { coefficient: node.value, variablePart: null };
+
+    case 'Identifier':
+      return { coefficient: 1, variablePart: node };
+
+    case 'BinaryExpression':
+      if (node.operator === '*') {
+        // Check if left is number and right is variable part
+        if (node.left.type === 'NumberLiteral') {
+          return { coefficient: node.left.value, variablePart: node.right };
+        }
+        // Check if right is number and left is variable part
+        if (node.right.type === 'NumberLiteral') {
+          return { coefficient: node.right.value, variablePart: node.left };
+        }
+      }
+      return { coefficient: 1, variablePart: node };
+
+    default:
+      return { coefficient: 1, variablePart: node };
+  }
+}
+
+/**
+ * Combine like terms in addition
+ */
+function combineLikeTerms(terms: ASTNode[]): ASTNode[] {
+  const termMap = new Map<string, { coefficient: number; variablePart: ASTNode | null }>();
+
+  for (const term of terms) {
+    const { coefficient, variablePart } = extractCoefficientAndVariable(term);
+
+    // Use LaTeX representation of variable part as key
+    const key = variablePart ? astToLatex(variablePart) : 'constant';
+
+    if (termMap.has(key)) {
+      const existing = termMap.get(key)!;
+      existing.coefficient += coefficient;
+    } else {
+      termMap.set(key, { coefficient, variablePart });
+    }
+  }
+
+  // Convert back to AST nodes
+  const result: ASTNode[] = [];
+  for (const [key, { coefficient, variablePart }] of termMap) {
+    if (coefficient === 0) continue; // Skip zero terms
+
+    if (!variablePart) {
+      // Constant term
+      result.push({ type: 'NumberLiteral', value: coefficient });
+    } else if (coefficient === 1) {
+      // Coefficient is 1, just use variable part
+      result.push(variablePart);
+    } else if (coefficient === -1) {
+      // Coefficient is -1, use unary minus
+      result.push({
+        type: 'UnaryExpression',
+        operator: '-',
+        operand: variablePart,
+      });
+    } else {
+      // General case: coefficient * variable
+      result.push({
+        type: 'BinaryExpression',
+        operator: '*',
+        left: { type: 'NumberLiteral', value: coefficient },
+        right: variablePart,
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Extract all terms from an addition expression
+ */
+function extractAdditionTerms(node: ASTNode): ASTNode[] {
+  if (node.type === 'BinaryExpression' && node.operator === '+') {
+    return [...extractAdditionTerms(node.left), ...extractAdditionTerms(node.right)];
+  }
+  return [node];
+}
+
+/**
+ * Build addition expression from terms
+ */
+function buildAdditionFromTerms(terms: ASTNode[]): ASTNode {
+  if (terms.length === 0) {
+    return { type: 'NumberLiteral', value: 0 };
+  }
+  if (terms.length === 1) {
+    return terms[0]!;
+  }
+
+  let result = terms[0]!;
+  for (let i = 1; i < terms.length; i++) {
+    result = {
+      type: 'BinaryExpression',
+      operator: '+',
+      left: result,
+      right: terms[i]!,
+    };
+  }
+  return result;
+}
+
 function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
   const left = simplifyAST(node.left);
   const right = simplifyAST(node.right);
@@ -329,53 +457,61 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
   // 特殊ケースの簡約
   switch (node.operator) {
     case '+': {
-      // 0 + x = x, x + 0 = x
-      if (left.type === 'NumberLiteral' && left.value === 0) return right;
-      if (right.type === 'NumberLiteral' && right.value === 0) return left;
+      // Extract all terms from the addition
+      const allTerms = extractAdditionTerms(node);
 
-      // 分数の加算: a/b + c/d = (ad + bc)/(bd)
-      if (left.type === 'Fraction' && right.type === 'Fraction') {
-        const newNumerator: ASTNode = {
-          type: 'BinaryExpression',
-          operator: '+',
-          left: {
+      // Check for immediate simplifications first
+      if (allTerms.length === 2) {
+        const [term1, term2] = allTerms;
+
+        // x + 0 = x
+        if (term2!.type === 'NumberLiteral' && term2!.value === 0) return term1!;
+        if (term1!.type === 'NumberLiteral' && term1!.value === 0) return term2!;
+
+        // Fraction addition: a/b + c/d = (ad + bc)/(bd)
+        if (term1!.type === 'Fraction' && term2!.type === 'Fraction') {
+          const newNumerator: ASTNode = {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: {
+              type: 'BinaryExpression',
+              operator: '*',
+              left: term1!.numerator,
+              right: term2!.denominator,
+            },
+            right: {
+              type: 'BinaryExpression',
+              operator: '*',
+              left: term2!.numerator,
+              right: term1!.denominator,
+            },
+          };
+
+          const newDenominator: ASTNode = {
             type: 'BinaryExpression',
             operator: '*',
-            left: left.numerator,
-            right: right.denominator,
-          },
-          right: {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: right.numerator,
-            right: left.denominator,
-          },
-        };
+            left: term1!.denominator,
+            right: term2!.denominator,
+          };
 
-        const newDenominator: ASTNode = {
-          type: 'BinaryExpression',
-          operator: '*',
-          left: left.denominator,
-          right: right.denominator,
-        };
-
-        return simplifyAST({
-          type: 'Fraction',
-          numerator: newNumerator,
-          denominator: newDenominator,
-        });
+          return simplifyAST({
+            type: 'Fraction',
+            numerator: newNumerator,
+            denominator: newDenominator,
+          });
+        }
       }
 
-      // 同類項の結合: 2x + 3x = 5x (基本ケース)
-      if (areEquivalentNodes(left, right)) {
-        return {
-          type: 'BinaryExpression',
-          operator: '*',
-          left: { type: 'NumberLiteral', value: 2 },
-          right: left,
-        };
+      // Combine like terms for all terms
+      const combinedTerms = combineLikeTerms(allTerms);
+
+      // If we reduced the number of terms, rebuild the expression
+      if (combinedTerms.length < allTerms.length) {
+        return simplifyAST(buildAdditionFromTerms(combinedTerms));
       }
-      break;
+
+      // No simplification possible
+      return node;
     }
 
     case '-':

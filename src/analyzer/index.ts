@@ -3,7 +3,7 @@
  */
 
 export { analyzeDifferentiate, differentiateAST } from './differentiator';
-export { analyzeEvaluate, evaluateAST } from './evaluator';
+export { analyzeEvaluate, analyzeApprox, evaluateAST } from './evaluator';
 export { analyzeIntegrate, integrateAST } from './integrator';
 export { analyzeSolve, solveEquation } from './solver';
 
@@ -17,7 +17,7 @@ export { IntegrationEngine } from './integration';
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { analyzeDifferentiate } from './differentiator';
-import { analyzeEvaluate } from './evaluator';
+import { analyzeEvaluate, analyzeApprox } from './evaluator';
 import { analyzeIntegrate } from './integrator';
 import { analyzeSolve } from './solver';
 
@@ -39,6 +39,9 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
     switch (options.task) {
       case 'evaluate':
         return analyzeEvaluate(ast, options);
+
+      case 'approx':
+        return analyzeApprox(ast, options as AnalyzeOptions & { task: 'approx' });
 
       case 'differentiate':
         return analyzeDifferentiate(ast, options as AnalyzeOptions & { task: 'differentiate' });

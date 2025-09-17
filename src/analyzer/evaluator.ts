@@ -255,13 +255,13 @@ function hasFloatingPointInValues(values: Record<string, number>): boolean {
 /**
  * Substitute mathematical constants in AST with their numerical values
  */
-function substituteMathConstants(node: ASTNode): ASTNode {
+function substituteMathConstants(node: ASTNode, convertConstants: boolean = true): ASTNode {
   switch (node.type) {
     case 'NumberLiteral':
       return node;
 
     case 'Identifier':
-      if (node.name in MATH_CONSTANTS) {
+      if (node.name in MATH_CONSTANTS && convertConstants) {
         return {
           type: 'NumberLiteral',
           value: MATH_CONSTANTS[node.name]!,
@@ -272,27 +272,27 @@ function substituteMathConstants(node: ASTNode): ASTNode {
     case 'BinaryExpression':
       return {
         ...node,
-        left: substituteMathConstants(node.left),
-        right: substituteMathConstants(node.right),
+        left: substituteMathConstants(node.left, convertConstants),
+        right: substituteMathConstants(node.right, convertConstants),
       };
 
     case 'UnaryExpression':
       return {
         ...node,
-        operand: substituteMathConstants(node.operand),
+        operand: substituteMathConstants(node.operand, convertConstants),
       };
 
     case 'FunctionCall':
       return {
         ...node,
-        args: node.args.map(arg => substituteMathConstants(arg)),
+        args: node.args.map(arg => substituteMathConstants(arg, convertConstants)),
       };
 
     case 'Fraction':
       return {
         ...node,
-        numerator: substituteMathConstants(node.numerator),
-        denominator: substituteMathConstants(node.denominator),
+        numerator: substituteMathConstants(node.numerator, convertConstants),
+        denominator: substituteMathConstants(node.denominator, convertConstants),
       };
 
     default:
@@ -391,8 +391,8 @@ export function analyzeEvaluate(
   const precision = options.precision || 6;
 
   try {
-    // Substitute mathematical constants first
-    const astWithConstants = substituteMathConstants(ast);
+    // For evaluate task, keep mathematical constants symbolic
+    const astWithConstants = substituteMathConstants(ast, false);
 
     // Extract free variables after constant substitution
     const freeVars = extractFreeVariables(astWithConstants);
@@ -425,6 +425,77 @@ export function analyzeEvaluate(
       };
     }
 
+    // For evaluate task, always preserve symbolic representation
+    const simplifiedAST = simplifyAST(astWithConstants);
+    const symbolicResult = astToLatex(simplifiedAST);
+
+    steps.push(`Symbolic evaluation (π preserved)`);
+    steps.push(`Result: ${symbolicResult}`);
+
+    return {
+      steps,
+      value: symbolicResult,
+      valueType: 'exact',
+      ast: simplifiedAST,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      steps,
+      value: null,
+      valueType: 'exact',
+      ast: null,
+      error: error instanceof Error ? error.message : 'Evaluation error',
+    };
+  }
+}
+
+/**
+ * Approximate evaluation - converts mathematical constants to decimal values
+ */
+export function analyzeApprox(
+  ast: ASTNode,
+  options: AnalyzeOptions & { task: 'approx' }
+): AnalyzeResult {
+  const steps: string[] = [];
+  const values = options.values || {};
+  const precision = options.precision || 6;
+
+  try {
+    // For approx task, convert mathematical constants to decimal values
+    const astWithConstants = substituteMathConstants(ast, true);
+
+    // Extract free variables after constant substitution
+    const freeVars = extractFreeVariables(astWithConstants);
+
+    // Check if expression contains imaginary unit 'i'
+    const containsImaginary = containsImaginaryUnit(astWithConstants);
+
+    // If there are free variables without values, or contains imaginary unit, return symbolic representation
+    const unassignedVars = Array.from(freeVars).filter(varName => values[varName] === undefined);
+
+    if (unassignedVars.length > 0 || containsImaginary) {
+      // Apply simplification to AST before converting to LaTeX
+      const simplifiedAST = simplifyAST(astWithConstants);
+      const symbolicResult = astToLatex(simplifiedAST);
+
+      if (unassignedVars.length > 0) {
+        steps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
+      }
+      if (containsImaginary) {
+        steps.push(`Expression contains imaginary unit: cannot evaluate numerically`);
+      }
+      steps.push(`Simplified result with decimal constants: ${symbolicResult}`);
+
+      return {
+        steps,
+        value: symbolicResult,
+        valueType: 'symbolic',
+        ast: simplifiedAST,
+        error: null,
+      };
+    }
+
     // Check if we should preserve exact representation (e.g., fractions) but not for functions
     const containsFunctionsToEvaluate = containsFunctions(astWithConstants);
     const shouldPreserveExact =
@@ -437,7 +508,7 @@ export function analyzeEvaluate(
       const simplifiedAST = simplifyAST(astWithConstants);
       const symbolicResult = astToLatex(simplifiedAST);
 
-      steps.push(`Exact simplification applied`);
+      steps.push(`Exact simplification applied with decimal constants`);
       steps.push(`Result: ${symbolicResult}`);
 
       return {
@@ -459,7 +530,7 @@ export function analyzeEvaluate(
 
     // Format the result
     const formattedResult = formatNumber(result, precision);
-    steps.push(`Result: ${formattedResult}`);
+    steps.push(`Approximate result: ${formattedResult}`);
 
     const analyzeResult: AnalyzeResult = {
       steps,

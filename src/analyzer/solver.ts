@@ -3,8 +3,8 @@
  * Implements solving for linear and quadratic equations
  */
 
-import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../types';
-import { astToLatex } from '../utils/ast';
+import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
+import { astToLatex, simplifyAST } from '../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
@@ -666,14 +666,16 @@ export function analyzeSolve(
       };
     }
 
-    const solutionStrings = solutions.map(sol => astToLatex(sol));
+    // Apply simplification to solutions
+    const simplifiedSolutions = solutions.map(sol => simplifyAST(sol));
+    const solutionStrings = simplifiedSolutions.map(sol => astToLatex(sol));
     steps.push(`Solutions: ${variable} = ${solutionStrings.join(', ')}`);
 
     return {
       steps,
       value: solutionStrings.join(', '),
       valueType: 'symbolic',
-      ast: solutions.length === 1 ? solutions[0] || null : null,
+      ast: simplifiedSolutions.length === 1 ? simplifiedSolutions[0] || null : null,
       error: null,
     };
   } catch (error) {
