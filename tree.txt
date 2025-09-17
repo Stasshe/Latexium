@@ -28,7 +28,7 @@
 │       ├── scope.ts
 │       └── validation.ts
 ├── tests
-│   └── basic.test.ts
+│   └── integration.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
@@ -36,9 +36,9 @@
 8 directories, 26 files
 
 src/*.ts, *.tsx の統計:
-合計行数: 1770
-合計文字数: 42782
-合計ファイルサイズ(bytes): 43465
+合計行数: 1764
+合計文字数: 42575
+合計ファイルサイズ(bytes): 43258
 
 開発環境の容量:
 139M	.
