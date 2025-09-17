@@ -1,9 +1,17 @@
 /**
+ * Analysis functions
+ */
+
+export { analyzeDifferentiate, differentiateAST } from './differentiator';
+export { analyzeEvaluate, evaluateAST } from './evaluator';
+
+/**
  * Analyzer Module
  * Main analysis engine for mathematical expressions
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
+import { analyzeDifferentiate } from './differentiator';
 import { analyzeEvaluate } from './evaluator';
 
 /**
@@ -26,13 +34,7 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
         return analyzeEvaluate(ast, options);
 
       case 'differentiate':
-        return {
-          steps: [],
-          value: null,
-          valueType: 'symbolic',
-          ast: null,
-          error: 'Differentiation not yet implemented',
-        };
+        return analyzeDifferentiate(ast, options as AnalyzeOptions & { task: 'differentiate' });
 
       case 'integrate':
         return {

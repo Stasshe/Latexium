@@ -6,7 +6,7 @@
 import { ASTNode, Fraction, FunctionCall, Identifier, NumberLiteral, ParseResult } from '../types';
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
 import { resolveScopeInAST } from '../utils/scope';
-import { validateFunctionArgs, validateVariableNames } from '../utils/validation';
+import { validateFunctionArgs } from '../utils/validation';
 
 export class LaTeXParser {
   private tokens: Token[];
@@ -170,15 +170,15 @@ export class LaTeXParser {
     const token = this.consume('COMMAND');
 
     switch (token.value) {
-      case '\\\\frac':
+      case '\\frac':
         return this.parseFraction();
-      case '\\\\sin':
-      case '\\\\cos':
-      case '\\\\tan':
-      case '\\\\log':
-      case '\\\\ln':
-      case '\\\\exp':
-      case '\\\\sqrt':
+      case '\\sin':
+      case '\\cos':
+      case '\\tan':
+      case '\\log':
+      case '\\ln':
+      case '\\exp':
+      case '\\sqrt':
         return this.parseFunctionCall(token.value.substring(1), token.position); // Remove backslash
       default:
         throw new Error(`Unsupported LaTeX command: ${token.value} at position ${token.position}`);

@@ -1,10 +1,10 @@
 {
   "editor.tabSize": 2,
   "editor.insertSpaces": true,
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   "editor.codeActionsOnSave": {
     "source.fixAll": "always",
-    "source.organizeImports": "always"
+    "source.organizeImports": "never"
   },
   "files.autoSave": "onFocusChange",
   "files.exclude": {
