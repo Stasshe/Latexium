@@ -12,6 +12,7 @@ Latexium では、ユーザーは LaTeX 数式を `parseLatex` で AST に変換
 - LaTeX の `$$...$$` の中身をそのまま入力可能  
 - **変数スコープ**: 積分変数・総和変数は束縛変数として自動識別
 - **予約文字制限**: `x`, `y`, `e`, `π` など数学定数は変数名として使用不可
+- !important --πではなく、\\piで最終的に返すように。
 
 ---
 
@@ -402,7 +403,7 @@ const parseResult = parseLatex("a + \\sin(4a)");
 const minVal = analyze(parseResult.ast, {
   task: "min",
   variable: "a",
-  domain: { min: 0, max: pi, inclusive: [true, true] }  // [0, π]
+  domain: { min: 0, max: pi, inclusive: [true, true] }
   // または domain: [0, pi]  // 配列形式（両端含む）
 });
 /*

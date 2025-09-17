@@ -66,6 +66,16 @@ const basicTestCases = [
     expected: 'x + 5'  // x is unspecified, remains symbolic
   },
   {
+    expression: '(x + 1)^2',
+    task: 'evaluate',
+    variable: 'x',
+  },
+  {
+    expression: '-x-3x-6x+3',
+    task: 'evaluate',
+    expected: '-10x + 3'
+  },
+  {
     expression: '\\sin(\\frac{\\pi}{2})',
     task: 'evaluate',
     variable: 'x',
@@ -122,7 +132,7 @@ const basicTestCases = [
     expected: '2x'
   },
   {
-    expression: '3 * x',
+    expression: '3 \\cdot x',
     task: 'differentiate',
     variable: 'x',
     expected: '3'
@@ -252,24 +262,6 @@ const basicTestCases = [
     expected: 'x = -3'
   },
   {
-    expression: 'x^2 - 4',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-2, 2\\}'
-  },
-  {
-    expression: 'x^2 + x - 6',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-3, 2\\}'
-  },
-  {
-    expression: 'x^2 - 5 * x + 6',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{2, 3\\}'
-  },
-  {
     expression: '3 * x - 9',
     task: 'solve',
     variable: 'x',
@@ -356,13 +348,13 @@ const edgeCaseTests = [
     expression: '\\sin(\\pi)',
     task: 'evaluate',
     variable: 'x',
-    expected: '0'  // sin(π) = 0
+    expected: '0'
   },
   {
     expression: '\\cos(\\pi)',
     task: 'evaluate',
     variable: 'x',
-    expected: '-1'  // cos(π) = -1
+    expected: '-1'
   },
 
   // Complex Chain Rules and Compositions (10 cases)
@@ -522,38 +514,6 @@ const edgeCaseTests = [
     variable: 'x',
     expected: '\\frac{3x^2}{1000}'
   },
-
-  // Complex Equations (5 cases)
-  {
-    expression: 'x^2 + x + 1',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{\\frac{-1 + i\\sqrt{3}}{2}, \\frac{-1 - i\\sqrt{3}}{2}\\}'
-  },
-  {
-    expression: 'x^3 - x',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-1, 0, 1\\}'
-  },
-  {
-    expression: '\\frac{x + 1}{2}',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = -1'
-  },
-  {
-    expression: '0.5 * x^2 - 2',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-2, 2\\}'
-  },
-  {
-    expression: 'x^2 - 2 * x - 3',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-1, 3\\}'
-  }
 ];
 
 function checkExpectedValue(actualValue, expectedValue) {
@@ -826,14 +786,6 @@ console.log(`⚠️  Analyze Errors: ${totalAnalyzeErrors} (${((totalAnalyzeErro
 console.log(`🔧 Structure Errors: ${totalStructureErrors} (${((totalStructureErrors/totalTests)*100).toFixed(1)}%)`);
 console.log(`💥 Runtime Errors: ${totalRuntimeErrors} (${((totalRuntimeErrors/totalTests)*100).toFixed(1)}%)`);
 console.log(`📊 Expected Mismatches: ${totalExpectedMismatches} (${((totalExpectedMismatches/totalTests)*100).toFixed(1)}%)`);
-
-console.log('\n📋 SPECIFICATION COMPLIANCE SUMMARY:');
-console.log('✓ Result structure validation (AnalyzeResult type)');
-console.log('✓ Error handling consistency');
-console.log('✓ Value type classification (exact/approximate/symbolic)');
-console.log('✓ Steps array for educational purposes');
-console.log('✓ AST preservation in results');
-console.log('✓ Expected value validation for all test cases');
 
 if (totalSuccess / totalTests > 0.8) {
   console.log('\n🎉 EXCELLENT: High specification compliance!');

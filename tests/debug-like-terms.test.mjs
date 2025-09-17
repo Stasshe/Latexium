@@ -1,12 +1,12 @@
 /**
- * Debug Factorization Test
- * Debug the common factor extraction issue
+ * Debug Like Terms Combination
+ * Test the specific issue with linear term combination
  */
 
 import { parseLatex, analyze } from '../dist/index.esm.js';
 
-function debugTest(expression, description) {
-  console.log(`\n🔍 Debug: ${description}`);
+function debugLikeTerms(expression, description) {
+  console.log(`\n🔍 Debug Like Terms: ${description}`);
   console.log(`Expression: ${expression}`);
   
   try {
@@ -31,9 +31,11 @@ function debugTest(expression, description) {
   }
 }
 
-console.log('🚀 Debug Factorization Tests');
-console.log('===============================');
+console.log('🚀 Debug Like Terms Combination');
+console.log('================================');
 
-debugTest('6x + 9', 'Common factor extraction issue');
-debugTest('6*x + 9', 'Alternative multiplication format');
-debugTest('2x + 3x', 'Like terms combination');
+debugLikeTerms('-2x - 2x', 'Simple like terms: -2x - 2x');
+debugLikeTerms('x + x', 'Positive like terms: x + x');
+debugLikeTerms('2x + 3x', 'Coefficient like terms: 2x + 3x');
+debugLikeTerms('-x - x', 'Negative like terms: -x - x');
+debugLikeTerms('2 - 2', 'Constants: 2 - 2');

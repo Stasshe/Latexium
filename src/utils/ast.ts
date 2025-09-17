@@ -11,6 +11,7 @@ import {
   Integral,
   UnaryExpression,
 } from '../types';
+import { astToPolynomial, factorPolynomial, Polynomial } from './polynomial';
 import {
   gcd,
   reduceFraction,
@@ -550,11 +551,23 @@ function combineLikeTerms(terms: ASTNode[]): ASTNode[] {
 }
 
 /**
- * Extract all terms from an addition expression
+ * Extract all terms from an addition/subtraction expression
+ * Converts subtraction to addition of negative terms
  */
 function extractAdditionTerms(node: ASTNode): ASTNode[] {
   if (node.type === 'BinaryExpression' && node.operator === '+') {
     return [...extractAdditionTerms(node.left), ...extractAdditionTerms(node.right)];
+  }
+  if (node.type === 'BinaryExpression' && node.operator === '-') {
+    // Convert a - b to a + (-b)
+    const leftTerms = extractAdditionTerms(node.left);
+    const rightTerms = extractAdditionTerms(node.right);
+    const negatedRightTerms = rightTerms.map(term => ({
+      type: 'UnaryExpression' as const,
+      operator: '-' as const,
+      operand: term,
+    }));
+    return [...leftTerms, ...negatedRightTerms];
   }
   return [node];
 }
@@ -798,6 +811,33 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
         }
       }
 
+      // Combine like terms for subtraction (convert to addition)
+      // Extract all terms treating subtraction as addition of negative terms
+      const allTerms = extractAdditionTerms({ ...node, left, right });
+
+      // Remove zero terms
+      const nonZeroTerms = allTerms.filter(
+        term => !(term.type === 'NumberLiteral' && term.value === 0)
+      );
+
+      // If all terms are zero, return 0
+      if (nonZeroTerms.length === 0) {
+        return { type: 'NumberLiteral', value: 0 };
+      }
+
+      // If only one term left, return it
+      if (nonZeroTerms.length === 1) {
+        return nonZeroTerms[0]!;
+      }
+
+      // Combine like terms
+      const combinedTerms = combineLikeTerms(nonZeroTerms);
+
+      // If we reduced the number of terms, rebuild the expression
+      if (combinedTerms.length < nonZeroTerms.length || combinedTerms.length < allTerms.length) {
+        return simplifyAST(buildAdditionFromTerms(combinedTerms));
+      }
+
       // Try difference of squares factorization
       const diffSquares = factorDifferenceOfSquares({ ...node, left, right });
       if (diffSquares) {
@@ -908,10 +948,6 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
             frac.denominator.value
           );
 
-          if (result.den === 1) {
-            return { type: 'NumberLiteral', value: result.num };
-          }
-
           return {
             type: 'Fraction',
             numerator: { type: 'NumberLiteral', value: result.num },
@@ -979,6 +1015,10 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
           right: right.right,
         });
       }
+
+      // Distributive law temporarily disabled to prevent infinite recursion
+      // TODO: Implement with proper recursion depth control
+
       break;
 
     case '/':

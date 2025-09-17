@@ -77,7 +77,7 @@ for (let i = 0; i < testCases.length; i++) {
       console.log(`✅ EXPECTED VALUE MATCH`);
       passed++;
     } else {
-      console.log(`⚠️  EXPECTED VALUE MISMATCH`);
+      console.log(`⚠️  RETURN VALUE ${analyzeResult.value}`);
     }
     
   } catch (error) {
