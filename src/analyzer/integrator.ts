@@ -409,18 +409,76 @@ function integrateFunctionCall(node: { name: string; args: ASTNode[] }, variable
           right: argument,
         };
 
+      case 'sqrt':
+        // ∫√x dx = (2/3)x^(3/2)
+        return {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: {
+            type: 'Fraction',
+            numerator: { type: 'NumberLiteral', value: 2 },
+            denominator: { type: 'NumberLiteral', value: 3 },
+          },
+          right: {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: argument,
+            right: {
+              type: 'Fraction',
+              numerator: { type: 'NumberLiteral', value: 3 },
+              denominator: { type: 'NumberLiteral', value: 2 },
+            },
+          },
+        };
+
       default:
-        throw new Error(`Integration of function ${node.name} not supported`);
+        throw new Error(`Integration of function ${node.name} not yet implemented`);
     }
   }
 
-  // Complex case with substitution - would need u-substitution
-  if (isConstant(argument, variable)) {
-    // If argument is constant, treat as constant times function
-    throw new Error('Integration with constant arguments not yet implemented');
-  } else {
-    throw new Error('Integration with substitution not yet implemented');
+  // Handle e^(ax) case where a is constant
+  if (node.name === 'exp' && argument.type === 'BinaryExpression' && argument.operator === '*') {
+    const { left, right } = argument;
+    if (isConstant(left, variable) && right.type === 'Identifier' && right.name === variable) {
+      // ∫e^(ax) dx = (1/a)e^(ax)
+      return {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: 1 },
+          denominator: left,
+        },
+        right: {
+          type: 'FunctionCall',
+          name: 'exp',
+          args: [argument],
+        },
+      };
+    } else if (
+      isConstant(right, variable) &&
+      left.type === 'Identifier' &&
+      left.name === variable
+    ) {
+      // ∫e^(ax) dx = (1/a)e^(ax)
+      return {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: 1 },
+          denominator: right,
+        },
+        right: {
+          type: 'FunctionCall',
+          name: 'exp',
+          args: [argument],
+        },
+      };
+    }
   }
+
+  throw new Error('Integration with substitution not yet implemented');
 }
 
 /**
@@ -460,6 +518,52 @@ function integrateFraction(
         },
       ],
     };
+  }
+
+  // Special case: 1/(x²+a²) = (1/a)arctan(x/a)
+  if (
+    numerator.type === 'NumberLiteral' &&
+    numerator.value === 1 &&
+    denominator.type === 'BinaryExpression' &&
+    denominator.operator === '+' &&
+    denominator.left.type === 'BinaryExpression' &&
+    denominator.left.operator === '^' &&
+    denominator.left.left.type === 'Identifier' &&
+    denominator.left.left.name === variable &&
+    denominator.left.right.type === 'NumberLiteral' &&
+    denominator.left.right.value === 2 &&
+    isConstant(denominator.right, variable)
+  ) {
+    // ∫1/(x²+a²) dx = (1/√a)arctan(x/√a) for a > 0
+    const a = denominator.right;
+    if (a.type === 'NumberLiteral' && a.value > 0) {
+      const sqrtA = Math.sqrt(a.value);
+      return {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: 1 },
+          denominator: { type: 'NumberLiteral', value: sqrtA },
+        },
+        right: {
+          type: 'FunctionCall',
+          name: 'atan',
+          args: [
+            {
+              type: 'Fraction',
+              numerator: {
+                type: 'Identifier',
+                name: variable,
+                scope: 'free',
+                uniqueId: `free_${variable}`,
+              },
+              denominator: { type: 'NumberLiteral', value: sqrtA },
+            },
+          ],
+        },
+      };
+    }
   }
 
   // More complex fractions would need partial fractions or other techniques

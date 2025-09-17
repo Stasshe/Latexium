@@ -294,13 +294,33 @@ function extractLinearCoefficients(node: ASTNode, variable: string): LinearCoeff
             break;
 
           case '*':
-            // Handle coefficient * variable
+            // Handle coefficient * variable or fraction * variable
             if (isConstant(n.left, variable)) {
               const coeff = evaluateConstant(n.left);
               extract(n.right, sign * coeff);
             } else if (isConstant(n.right, variable)) {
               const coeff = evaluateConstant(n.right);
               extract(n.left, sign * coeff);
+            } else if (
+              n.left.type === 'Fraction' &&
+              n.right.type === 'Identifier' &&
+              n.right.name === variable
+            ) {
+              // Handle (a/b) * x
+              const numerValue = evaluateConstant(n.left.numerator);
+              const denomValue = evaluateConstant(n.left.denominator);
+              const coeff = numerValue / denomValue;
+              a += sign * coeff;
+            } else if (
+              n.right.type === 'Fraction' &&
+              n.left.type === 'Identifier' &&
+              n.left.name === variable
+            ) {
+              // Handle x * (a/b)
+              const numerValue = evaluateConstant(n.right.numerator);
+              const denomValue = evaluateConstant(n.right.denominator);
+              const coeff = numerValue / denomValue;
+              a += sign * coeff;
             } else {
               throw new Error('Complex multiplication not supported in linear extraction');
             }
@@ -318,6 +338,15 @@ function extractLinearCoefficients(node: ASTNode, variable: string): LinearCoeff
           extract(n.operand, sign);
         }
         break;
+
+      case 'Fraction': {
+        // Handle fractions like (1/2)*x + 3/4
+        const numerValue = evaluateConstant(n.numerator);
+        const denomValue = evaluateConstant(n.denominator);
+        const fracValue = numerValue / denomValue;
+        b += sign * fracValue;
+        break;
+      }
 
       default:
         throw new Error(
@@ -401,6 +430,15 @@ function extractQuadraticCoefficients(node: ASTNode, variable: string): Quadrati
           extract(n.operand, sign);
         }
         break;
+
+      case 'Fraction': {
+        // Handle fractions like (1/2)*x² + (3/4)*x + 1/8
+        const numerValue = evaluateConstant(n.numerator);
+        const denomValue = evaluateConstant(n.denominator);
+        const fracValue = numerValue / denomValue;
+        c += sign * fracValue;
+        break;
+      }
 
       default:
         throw new Error(
@@ -568,8 +606,14 @@ function evaluateConstant(node: ASTNode): number {
       }
     }
 
-    case 'Fraction':
-      return evaluateConstant(node.numerator) / evaluateConstant(node.denominator);
+    case 'Fraction': {
+      const numerator = evaluateConstant(node.numerator);
+      const denominator = evaluateConstant(node.denominator);
+      if (denominator === 0) {
+        throw new Error('Division by zero in fraction evaluation');
+      }
+      return numerator / denominator;
+    }
 
     default:
       throw new Error(`Cannot evaluate node type: ${(node as { type: string }).type}`);
