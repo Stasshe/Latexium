@@ -5,6 +5,7 @@
 
 import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../types';
 import { astToLatex } from '../utils/ast';
+import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
  * Solve an equation AST
@@ -583,9 +584,21 @@ export function analyzeSolve(
   options: AnalyzeOptions & { task: 'solve' }
 ): AnalyzeResult {
   const steps: string[] = [];
-  const variable = options.solveFor || options.variable || 'x';
 
   try {
+    // Automatic variable inference for solving
+    const variable = options.solveFor || getAnalysisVariable(ast, options.variable);
+    const freeVars = extractFreeVariables(ast);
+
+    // Add informative steps about variable selection
+    if (!options.solveFor && !options.variable && freeVars.size > 1) {
+      steps.push(
+        `Multiple variables found: {${Array.from(freeVars).join(', ')}}. Solving for '${variable}'.`
+      );
+    } else if (!options.solveFor && !options.variable && freeVars.size === 1) {
+      steps.push(`Auto-detected variable: ${variable}`);
+    }
+
     steps.push(`Solving equation for ${variable}`);
     steps.push(`Equation: ${astToLatex(ast)} = 0`);
 

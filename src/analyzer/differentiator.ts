@@ -5,6 +5,7 @@
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { astToLatex } from '../utils/ast';
+import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
  * Differentiate an AST node with respect to a variable
@@ -506,9 +507,21 @@ export function analyzeDifferentiate(
   options: AnalyzeOptions & { task: 'differentiate' }
 ): AnalyzeResult {
   const steps: string[] = [];
-  const variable = options.variable || 'x';
 
   try {
+    // Automatic variable inference
+    const variable = getAnalysisVariable(ast, options.variable);
+    const freeVars = extractFreeVariables(ast);
+
+    // Add informative steps about variable selection
+    if (!options.variable && freeVars.size > 1) {
+      steps.push(
+        `Multiple variables found: {${Array.from(freeVars).join(', ')}}. Using '${variable}' for differentiation.`
+      );
+    } else if (!options.variable && freeVars.size === 1) {
+      steps.push(`Auto-detected variable: ${variable}`);
+    }
+
     steps.push(`Differentiating with respect to ${variable}`);
     steps.push(`Expression: ${astToLatex(ast)}`);
 
