@@ -71,53 +71,60 @@ function differentiateBinaryExpression(
     case '+':
     case '-':
       // (u ± v)' = u' ± v'
-      return {
+      return simplifyAST({
         type: 'BinaryExpression',
         operator: node.operator as '+' | '-',
         left: differentiateAST(left, variable),
         right: differentiateAST(right, variable),
-      };
+      });
 
-    case '*':
+    case '*': {
       // Product rule: (uv)' = u'v + uv'
-      return {
+      const leftDerivative = differentiateAST(left, variable);
+      const rightDerivative = differentiateAST(right, variable);
+
+      return simplifyAST({
         type: 'BinaryExpression',
         operator: '+',
-        left: {
+        left: simplifyAST({
           type: 'BinaryExpression',
           operator: '*',
-          left: differentiateAST(left, variable),
+          left: leftDerivative,
           right: right,
-        },
-        right: {
+        }),
+        right: simplifyAST({
           type: 'BinaryExpression',
           operator: '*',
           left: left,
-          right: differentiateAST(right, variable),
-        },
-      };
+          right: rightDerivative,
+        }),
+      });
+    }
 
-    case '/':
+    case '/': {
       // Quotient rule: (u/v)' = (u'v - uv')/v²
-      return {
+      const uPrime = differentiateAST(left, variable);
+      const vPrime = differentiateAST(right, variable);
+
+      return simplifyAST({
         type: 'Fraction',
-        numerator: {
+        numerator: simplifyAST({
           type: 'BinaryExpression',
           operator: '-',
-          left: {
+          left: simplifyAST({
             type: 'BinaryExpression',
             operator: '*',
-            left: differentiateAST(left, variable),
+            left: uPrime,
             right: right,
-          },
-          right: {
+          }),
+          right: simplifyAST({
             type: 'BinaryExpression',
             operator: '*',
             left: left,
-            right: differentiateAST(right, variable),
-          },
-        },
-        denominator: {
+            right: vPrime,
+          }),
+        }),
+        denominator: simplifyAST({
           type: 'BinaryExpression',
           operator: '^',
           left: right,
@@ -125,12 +132,13 @@ function differentiateBinaryExpression(
             type: 'NumberLiteral',
             value: 2,
           },
-        },
-      };
+        }),
+      });
+    }
 
     case '^':
       // Power rule and exponential rule
-      return differentiatePower(left, right, variable);
+      return simplifyAST(differentiatePower(left, right, variable));
 
     default:
       throw new Error(`Differentiation of operator ${node.operator} not supported`);
@@ -308,12 +316,12 @@ function differentiateFunctionCall(
     return innerDerivative;
   }
 
-  return {
+  return simplifyAST({
     type: 'BinaryExpression',
     operator: '*',
     left: innerDerivative,
     right: argumentDerivative,
-  };
+  });
 }
 
 /**
@@ -329,6 +337,46 @@ function differentiateFraction(
   const uPrime = differentiateAST(u, variable);
   const vPrime = differentiateAST(v, variable);
 
+  // Check for special cases to simplify early
+  const uPrimeIsZero = isZero(uPrime);
+  const vPrimeIsZero = isZero(vPrime);
+
+  // If v is constant (v' = 0), then (u/c)' = u'/c
+  if (vPrimeIsZero) {
+    return {
+      type: 'Fraction',
+      numerator: uPrime,
+      denominator: v,
+    };
+  }
+
+  // If u is constant (u' = 0), then (c/v)' = -c*v'/v²
+  if (uPrimeIsZero) {
+    return {
+      type: 'Fraction',
+      numerator: {
+        type: 'UnaryExpression',
+        operator: '-',
+        operand: {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: u,
+          right: vPrime,
+        },
+      },
+      denominator: {
+        type: 'BinaryExpression',
+        operator: '^',
+        left: v,
+        right: {
+          type: 'NumberLiteral',
+          value: 2,
+        },
+      },
+    };
+  }
+
+  // General case: (u/v)' = (u'v - uv')/v²
   return {
     type: 'Fraction',
     numerator: {

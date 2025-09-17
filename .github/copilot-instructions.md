@@ -1,7 +1,10 @@
 必要なライブラリがあれば、インストールすること。
 コードは全て英語で、コメントも英語で書くこと。
 
-testcaseは、testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。
+!important
+testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。
+
+テストケースの実行にはnodeコマンドを直接使うこと。
 
 必ずSPECIFICATION.mdを参照すること。
 

@@ -69,11 +69,45 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
     case '-':
       return `${left} - ${right}`;
     case '*':
-      // LaTeXでは通常乗算記号を省略
+      // Handle coefficient * constant/variable patterns
+      if (node.left.type === 'NumberLiteral') {
+        // Number * π/e should display as "2π" or "2e"
+        if (
+          node.right.type === 'Identifier' &&
+          (node.right.name === 'π' || node.right.name === 'pi' || node.right.name === 'e')
+        ) {
+          return `${left}${node.right.name === 'pi' ? '\\pi' : node.right.name}`;
+        }
+        // Number * variable should display as "2x"
+        if (node.right.type === 'Identifier') {
+          return `${left}${right}`;
+        }
+        // Number * expression should have space
+        return `${left} ${right}`;
+      }
+
+      // Variable/constant * number should reorder for display
+      if (node.right.type === 'NumberLiteral' && node.left.type === 'Identifier') {
+        if (node.left.name === 'π' || node.left.name === 'pi' || node.left.name === 'e') {
+          return `${right}${node.left.name === 'pi' ? '\\pi' : node.left.name}`;
+        }
+        return `${right}${left}`;
+      }
+
+      // Default: LaTeXでは通常乗算記号を省略し、スペースで区切る
       return `${left} ${right}`;
     case '/':
       return `\\frac{${left}}{${right}}`;
     case '^':
+      // Simplify exponent display for simple numbers
+      if (
+        node.right.type === 'NumberLiteral' &&
+        Number.isInteger(node.right.value) &&
+        node.right.value >= 0 &&
+        node.right.value <= 9
+      ) {
+        return `${left}^{${right}}`;
+      }
       return `${left}^{${right}}`;
     case '=':
       return `${left} = ${right}`;
@@ -207,6 +241,9 @@ export function cloneAST(node: ASTNode): ASTNode {
  * Basic AST simplification
  */
 export function simplifyAST(node: ASTNode): ASTNode {
+  // Pre-process: Handle specific patterns that need early simplification
+  node = preprocessSpecialPatterns(node);
+
   switch (node.type) {
     case 'NumberLiteral':
     case 'Identifier':
@@ -248,6 +285,66 @@ export function simplifyAST(node: ASTNode): ASTNode {
         expression: simplifyAST(node.expression),
         lowerBound: simplifyAST(node.lowerBound),
         upperBound: simplifyAST(node.upperBound),
+      };
+
+    default:
+      return node;
+  }
+}
+
+/**
+ * Preprocess special patterns before main simplification
+ */
+function preprocessSpecialPatterns(node: ASTNode): ASTNode {
+  switch (node.type) {
+    case 'BinaryExpression':
+      // Handle coefficient * 1 patterns
+      if (node.operator === '*' && node.right.type === 'NumberLiteral' && node.right.value === 1) {
+        return preprocessSpecialPatterns(node.left);
+      }
+      if (node.operator === '*' && node.left.type === 'NumberLiteral' && node.left.value === 1) {
+        return preprocessSpecialPatterns(node.right);
+      }
+
+      // Handle x^(n-1) patterns
+      if (
+        node.operator === '^' &&
+        node.right.type === 'BinaryExpression' &&
+        node.right.operator === '-' &&
+        node.right.left.type === 'NumberLiteral' &&
+        node.right.right.type === 'NumberLiteral'
+      ) {
+        const newExponent = node.right.left.value - node.right.right.value;
+        return {
+          ...node,
+          left: preprocessSpecialPatterns(node.left),
+          right: { type: 'NumberLiteral', value: newExponent },
+        };
+      }
+
+      return {
+        ...node,
+        left: preprocessSpecialPatterns(node.left),
+        right: preprocessSpecialPatterns(node.right),
+      };
+
+    case 'UnaryExpression':
+      return {
+        ...node,
+        operand: preprocessSpecialPatterns(node.operand),
+      };
+
+    case 'Fraction':
+      return {
+        ...node,
+        numerator: preprocessSpecialPatterns(node.numerator),
+        denominator: preprocessSpecialPatterns(node.denominator),
+      };
+
+    case 'FunctionCall':
+      return {
+        ...node,
+        args: node.args.map(arg => preprocessSpecialPatterns(arg)),
       };
 
     default:
@@ -340,6 +437,54 @@ function extractCoefficientAndVariable(node: ASTNode): {
         if (node.right.type === 'NumberLiteral') {
           return { coefficient: node.right.value, variablePart: node.left };
         }
+        // Handle complex multiplications like (a * b) where both might contain coefficients
+        const leftCoeff = extractCoefficientAndVariable(node.left);
+        const rightCoeff = extractCoefficientAndVariable(node.right);
+
+        // If both have variable parts, combine into multiplication
+        if (leftCoeff.variablePart && rightCoeff.variablePart) {
+          const combinedVariable: ASTNode = {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: leftCoeff.variablePart,
+            right: rightCoeff.variablePart,
+          };
+          return {
+            coefficient: leftCoeff.coefficient * rightCoeff.coefficient,
+            variablePart: combinedVariable,
+          };
+        }
+
+        // If only one has variable part
+        if (leftCoeff.variablePart) {
+          return {
+            coefficient: leftCoeff.coefficient * rightCoeff.coefficient,
+            variablePart: leftCoeff.variablePart,
+          };
+        }
+        if (rightCoeff.variablePart) {
+          return {
+            coefficient: leftCoeff.coefficient * rightCoeff.coefficient,
+            variablePart: rightCoeff.variablePart,
+          };
+        }
+
+        // Both are constants
+        return { coefficient: leftCoeff.coefficient * rightCoeff.coefficient, variablePart: null };
+      }
+      return { coefficient: 1, variablePart: node };
+
+    case 'UnaryExpression':
+      if (node.operator === '-') {
+        const inner = extractCoefficientAndVariable(node.operand);
+        return { coefficient: -inner.coefficient, variablePart: inner.variablePart };
+      }
+      return { coefficient: 1, variablePart: node };
+
+    case 'Fraction':
+      // Handle fractions like 1/2 * x
+      if (node.numerator.type === 'NumberLiteral' && node.denominator.type === 'NumberLiteral') {
+        return { coefficient: node.numerator.value / node.denominator.value, variablePart: null };
       }
       return { coefficient: 1, variablePart: node };
 
@@ -371,15 +516,15 @@ function combineLikeTerms(terms: ASTNode[]): ASTNode[] {
   // Convert back to AST nodes
   const result: ASTNode[] = [];
   for (const [key, { coefficient, variablePart }] of termMap) {
-    if (coefficient === 0) continue; // Skip zero terms
+    if (Math.abs(coefficient) < 1e-10) continue; // Skip zero terms
 
     if (!variablePart) {
       // Constant term
       result.push({ type: 'NumberLiteral', value: coefficient });
-    } else if (coefficient === 1) {
+    } else if (Math.abs(coefficient - 1) < 1e-10) {
       // Coefficient is 1, just use variable part
       result.push(variablePart);
-    } else if (coefficient === -1) {
+    } else if (Math.abs(coefficient + 1) < 1e-10) {
       // Coefficient is -1, use unary minus
       result.push({
         type: 'UnaryExpression',
@@ -464,7 +609,7 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       if (allTerms.length === 2) {
         const [term1, term2] = allTerms;
 
-        // x + 0 = x
+        // x + 0 = x, 0 + x = x
         if (term2!.type === 'NumberLiteral' && term2!.value === 0) return term1!;
         if (term1!.type === 'NumberLiteral' && term1!.value === 0) return term2!;
 
@@ -502,21 +647,49 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
         }
       }
 
+      // Remove zero terms from all terms
+      const nonZeroTerms = allTerms.filter(
+        term => !(term.type === 'NumberLiteral' && term.value === 0)
+      );
+
+      // If all terms are zero, return 0
+      if (nonZeroTerms.length === 0) {
+        return { type: 'NumberLiteral', value: 0 };
+      }
+
+      // If only one term left, return it
+      if (nonZeroTerms.length === 1) {
+        return nonZeroTerms[0]!;
+      }
+
       // Combine like terms for all terms
-      const combinedTerms = combineLikeTerms(allTerms);
+      const combinedTerms = combineLikeTerms(nonZeroTerms);
 
       // If we reduced the number of terms, rebuild the expression
-      if (combinedTerms.length < allTerms.length) {
+      if (combinedTerms.length < nonZeroTerms.length) {
         return simplifyAST(buildAdditionFromTerms(combinedTerms));
       }
 
+      // If terms changed, rebuild
+      if (nonZeroTerms.length < allTerms.length) {
+        return simplifyAST(buildAdditionFromTerms(nonZeroTerms));
+      }
+
       // No simplification possible
-      return node;
+      return { ...node, left, right };
     }
 
     case '-':
       // x - 0 = x
       if (right.type === 'NumberLiteral' && right.value === 0) return left;
+      // 0 - x = -x
+      if (left.type === 'NumberLiteral' && left.value === 0) {
+        return {
+          type: 'UnaryExpression',
+          operator: '-',
+          operand: right,
+        };
+      }
       // x - x = 0
       if (areEquivalentNodes(left, right)) {
         return { type: 'NumberLiteral', value: 0 };
@@ -530,9 +703,87 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       // 1 * x = x, x * 1 = x
       if (left.type === 'NumberLiteral' && left.value === 1) return right;
       if (right.type === 'NumberLiteral' && right.value === 1) return left;
+
+      // Handle fraction * number multiplication: (a/b) * c = (a*c)/b
+      if (left.type === 'Fraction' && right.type === 'NumberLiteral') {
+        return simplifyAST({
+          type: 'Fraction',
+          numerator: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: left.numerator,
+            right: right,
+          },
+          denominator: left.denominator,
+        });
+      }
+
+      // Handle number * fraction multiplication: c * (a/b) = (c*a)/b
+      if (left.type === 'NumberLiteral' && right.type === 'Fraction') {
+        return simplifyAST({
+          type: 'Fraction',
+          numerator: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: left,
+            right: right.numerator,
+          },
+          denominator: right.denominator,
+        });
+      }
+
+      // Coefficient ordering and combination
+      // π * 2 → 2π, x * 2 → 2x (coefficient goes first)
+      if (right.type === 'NumberLiteral' && left.type === 'Identifier') {
+        return { ...node, left: right, right: left };
+      }
+
+      // 2 * π → 2π, but keep as is for LaTeX display
+      if (
+        left.type === 'NumberLiteral' &&
+        right.type === 'Identifier' &&
+        (right.name === 'pi' || right.name === 'π' || right.name === 'e')
+      ) {
+        // Keep the structure for LaTeX display as coefficient * constant
+        return { ...node, left, right };
+      }
+
+      // Handle nested multiplications: (2 * x) * 3 → 6x
+      if (
+        left.type === 'BinaryExpression' &&
+        left.operator === '*' &&
+        left.left.type === 'NumberLiteral' &&
+        right.type === 'NumberLiteral'
+      ) {
+        const newCoeff = left.left.value * right.value;
+        return simplifyAST({
+          type: 'BinaryExpression',
+          operator: '*',
+          left: { type: 'NumberLiteral', value: newCoeff },
+          right: left.right,
+        });
+      }
+
+      // Handle nested multiplications: 2 * (3 * x) → 6x
+      if (
+        right.type === 'BinaryExpression' &&
+        right.operator === '*' &&
+        right.left.type === 'NumberLiteral' &&
+        left.type === 'NumberLiteral'
+      ) {
+        const newCoeff = left.value * right.left.value;
+        return simplifyAST({
+          type: 'BinaryExpression',
+          operator: '*',
+          left: { type: 'NumberLiteral', value: newCoeff },
+          right: right.right,
+        });
+      }
       break;
 
     case '/':
+      // 0 / x = 0 (x ≠ 0)
+      if (left.type === 'NumberLiteral' && left.value === 0) return left;
       // x / 1 = x
       if (right.type === 'NumberLiteral' && right.value === 1) return left;
       // x / x = 1 (x ≠ 0)
@@ -548,6 +799,35 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       }
       // x^1 = x
       if (right.type === 'NumberLiteral' && right.value === 1) return left;
+      // 0^x = 0 (x > 0)
+      if (
+        left.type === 'NumberLiteral' &&
+        left.value === 0 &&
+        right.type === 'NumberLiteral' &&
+        right.value > 0
+      ) {
+        return left;
+      }
+      // Simplify power expressions like x^(3-1) → x^2
+      if (
+        right.type === 'BinaryExpression' &&
+        right.operator === '-' &&
+        right.left.type === 'NumberLiteral' &&
+        right.right.type === 'NumberLiteral'
+      ) {
+        const simplifiedPower = right.left.value - right.right.value;
+        if (simplifiedPower === 0) {
+          return { type: 'NumberLiteral', value: 1 };
+        }
+        if (simplifiedPower === 1) {
+          return left;
+        }
+        return {
+          ...node,
+          left,
+          right: { type: 'NumberLiteral', value: simplifiedPower },
+        };
+      }
       break;
   }
 
@@ -598,6 +878,54 @@ function simplifyFraction(node: Fraction): ASTNode {
     return numerator;
   }
 
+  // 分子が0の場合: 0/x = 0
+  if (numerator.type === 'NumberLiteral' && numerator.value === 0) {
+    return numerator;
+  }
+
+  // 分子が0を含む式の場合 (e.g., 0*a - b*0)
+  if (numerator.type === 'BinaryExpression') {
+    // Check for expressions that evaluate to zero
+    if (
+      (numerator.operator === '-' || numerator.operator === '+') &&
+      ((numerator.left.type === 'NumberLiteral' && numerator.left.value === 0) ||
+        (numerator.right.type === 'NumberLiteral' && numerator.right.value === 0))
+    ) {
+      if (
+        numerator.operator === '-' &&
+        numerator.left.type === 'NumberLiteral' &&
+        numerator.left.value === 0 &&
+        numerator.right.type === 'NumberLiteral' &&
+        numerator.right.value === 0
+      ) {
+        return { type: 'NumberLiteral', value: 0 };
+      }
+
+      if (
+        numerator.operator === '+' &&
+        ((numerator.left.type === 'NumberLiteral' && numerator.left.value === 0) ||
+          (numerator.right.type === 'NumberLiteral' && numerator.right.value === 0))
+      ) {
+        const nonZeroTerm =
+          numerator.left.type === 'NumberLiteral' && numerator.left.value === 0
+            ? numerator.right
+            : numerator.left;
+        if (nonZeroTerm.type === 'NumberLiteral' && nonZeroTerm.value === 0) {
+          return { type: 'NumberLiteral', value: 0 };
+        }
+      }
+    }
+
+    // Check for multiplication by zero: 0 * anything = 0
+    if (
+      numerator.operator === '*' &&
+      ((numerator.left.type === 'NumberLiteral' && numerator.left.value === 0) ||
+        (numerator.right.type === 'NumberLiteral' && numerator.right.value === 0))
+    ) {
+      return { type: 'NumberLiteral', value: 0 };
+    }
+  }
+
   // 分子・分母が同じ数値の場合: 5/3 = 1.666...
   if (numerator.type === 'NumberLiteral' && denominator.type === 'NumberLiteral') {
     if (denominator.value === 0) {
@@ -607,21 +935,25 @@ function simplifyFraction(node: Fraction): ASTNode {
     // 約分を試行
     const num = numerator.value;
     const den = denominator.value;
-    const commonDivisor = gcd(num, den);
 
-    if (commonDivisor > 1) {
-      const simplifiedNum = num / commonDivisor;
-      const simplifiedDen = den / commonDivisor;
+    // Check for integers to avoid floating point precision issues
+    if (Number.isInteger(num) && Number.isInteger(den)) {
+      const commonDivisor = gcd(Math.abs(num), Math.abs(den));
 
-      if (simplifiedDen === 1) {
-        return { type: 'NumberLiteral', value: simplifiedNum };
+      if (commonDivisor > 1) {
+        const simplifiedNum = num / commonDivisor;
+        const simplifiedDen = den / commonDivisor;
+
+        if (simplifiedDen === 1) {
+          return { type: 'NumberLiteral', value: simplifiedNum };
+        }
+
+        return {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: simplifiedNum },
+          denominator: { type: 'NumberLiteral', value: simplifiedDen },
+        };
       }
-
-      return {
-        type: 'Fraction',
-        numerator: { type: 'NumberLiteral', value: simplifiedNum },
-        denominator: { type: 'NumberLiteral', value: simplifiedDen },
-      };
     }
 
     // 約分できない場合も分数形式で保持
@@ -631,11 +963,6 @@ function simplifyFraction(node: Fraction): ASTNode {
   // 分子・分母が同じ表現の場合: x/x = 1
   if (areEquivalentNodes(numerator, denominator)) {
     return { type: 'NumberLiteral', value: 1 };
-  }
-
-  // 分子が0の場合: 0/x = 0
-  if (numerator.type === 'NumberLiteral' && numerator.value === 0) {
-    return numerator;
   }
 
   return { ...node, numerator, denominator };
