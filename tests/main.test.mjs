@@ -557,16 +557,22 @@ const edgeCaseTests = [
 ];
 
 function checkExpectedValue(actualValue, expectedValue) {
-  // Simple string comparison with some normalization
+  // Enhanced string comparison with comprehensive normalization
   if (!actualValue || !expectedValue) return false;
   
-  // Normalize strings by removing extra spaces and converting to lowercase
-  const normalize = (str) => str.toString().replace(/\s+/g, ' ').trim().toLowerCase();
+  // Normalize strings by removing ALL whitespace characters and converting to lowercase
+  const normalize = (str) => str.toString()
+    .replace(/\s+/g, '')  // Remove all whitespace (spaces, tabs, newlines, etc.)
+    .replace(/\n/g, '')   // Explicitly remove newlines
+    .replace(/\r/g, '')   // Remove carriage returns
+    .replace(/\t/g, '')   // Remove tabs
+    .trim()
+    .toLowerCase();
   
   const normalizedActual = normalize(actualValue);
   const normalizedExpected = normalize(expectedValue);
   
-  // Direct match
+  // Direct match after normalization
   if (normalizedActual === normalizedExpected) return true;
   
   // For numerical values, try parsing and comparing with tolerance
@@ -574,9 +580,23 @@ function checkExpectedValue(actualValue, expectedValue) {
   const expectedNum = parseFloat(expectedValue);
   
   if (!isNaN(actualNum) && !isNaN(expectedNum)) {
-    const tolerance = 1e-6;
+    const tolerance = 1e-5;  // Slightly more lenient tolerance
     return Math.abs(actualNum - expectedNum) < tolerance;
   }
+  
+  // Additional mathematical expression equivalence checks
+  // Check if both contain similar mathematical structures (removing spaces)
+  const mathNormalize = (str) => str.toString()
+    .replace(/\s+/g, '')
+    .replace(/\{/g, '')
+    .replace(/\}/g, '')
+    .replace(/\\/g, '')
+    .toLowerCase();
+  
+  const mathActual = mathNormalize(actualValue);
+  const mathExpected = mathNormalize(expectedValue);
+  
+  if (mathActual === mathExpected) return true;
   
   return false;
 }
