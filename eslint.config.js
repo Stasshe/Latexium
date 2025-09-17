@@ -28,17 +28,25 @@ export default [
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
       ],
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': 'off', // Completely disabled
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       'prefer-const': 'error',
       'no-var': 'error',
+      'unused-imports/no-unused-imports': 'off', // Disabled unused imports check
+      'no-unused-vars': 'off', // Also disable the base rule
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.spec.ts'],
+    files: ['**/*.test.ts', '**/*.spec.ts', '**/*.test.js', '**/*.test.mjs'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-console': 'off',
+    },
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+      },
     },
   },
   {

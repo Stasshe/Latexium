@@ -35,7 +35,7 @@ export function validateFunctionArgs(functionName: string, argCount: number): st
   }
 
   if (argCount !== expectedCount) {
-    return `関数 \\${functionName} は${expectedCount}個の引数を期待しますが、${argCount}個指定されました`;
+    return `Function \\${functionName} expects ${expectedCount} argument(s), but ${argCount} were provided`;
   }
 
   return null;
@@ -48,7 +48,7 @@ export function validateVariableNames(names: string[]): string | null {
   const reserved = getReservedWords(names);
 
   if (reserved.length > 0) {
-    return `予約語は変数名として使用できません: ${reserved.join(', ')}`;
+    return `Reserved words cannot be used as variable names: ${reserved.join(', ')}`;
   }
 
   return null;

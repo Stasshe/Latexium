@@ -1,8 +1,20 @@
 /**
  * Latexium - A powerful TypeScript library for parsing and analyzing LaTeX mathematical expressions
  *
- * This is a placeholder file to avoid TypeScript configuration errors.
- * The actual implementation will be added in subsequent development phases.
+ * Main entry point providing the core API functions
  */
 
-export const placeholder: boolean = true;
+// Export types
+export * from './types';
+
+// Export utilities
+export * from './utils';
+
+// Export parser
+export { parseLatex } from './parser';
+
+// Export analyzer
+export { analyze } from './analyzer';
+
+// Re-export commonly used functions for convenience
+export type { AnalyzeOptions, AnalyzeResult, ASTNode, ParseResult } from './types';

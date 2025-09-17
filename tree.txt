@@ -12,21 +12,33 @@
 ├── rollup.config.js
 ├── src
 │   ├── analyzer
+│   │   ├── evaluator.ts
+│   │   └── index.ts
 │   ├── index.ts
 │   ├── parser
+│   │   ├── index.ts
+│   │   ├── parser.ts
+│   │   └── tokenizer.ts
 │   ├── types
+│   │   ├── ast.ts
+│   │   └── index.ts
 │   └── utils
+│       ├── ast.ts
+│       ├── index.ts
+│       ├── scope.ts
+│       └── validation.ts
 ├── tests
+│   └── basic.test.ts
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-8 directories, 14 files
+8 directories, 26 files
 
 src/*.ts, *.tsx の統計:
-合計行数: 8
-合計文字数: 304
-合計ファイルサイズ(bytes): 304
+合計行数: 1770
+合計文字数: 42782
+合計ファイルサイズ(bytes): 43465
 
 開発環境の容量:
-138M	.
+139M	.
