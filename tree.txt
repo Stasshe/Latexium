@@ -4,38 +4,29 @@
 │   └── README.md
 ├── README.md
 ├── SPECIFICATION.md
-├── eslint.config.mjs
-├── next-env.d.ts
-├── next.config.ts
+├── TODO.md
+├── eslint.config.js
+├── jest.config.js
 ├── package-lock.json
 ├── package.json
-├── postcss.config.js
-├── public
-│   ├── favicon.png
-│   ├── file.svg
-│   ├── globe.svg
-│   ├── next.svg
-│   └── window.svg
+├── rollup.config.js
 ├── src
-│   ├── app
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components
-│   │   └── ThemeToggle.tsx
-│   └── contexts
-│       └── ThemeContext.tsx
-├── tailwind.config.ts
+│   ├── analyzer
+│   ├── index.ts
+│   ├── parser
+│   ├── types
+│   └── utils
+├── tests
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-7 directories, 24 files
+8 directories, 14 files
 
 src/*.ts, *.tsx の統計:
-合計行数: 263
-合計文字数: 8478
-合計ファイルサイズ(bytes): 8880
+合計行数: 8
+合計文字数: 304
+合計ファイルサイズ(bytes): 304
 
 開発環境の容量:
-655M	.
+138M	.
