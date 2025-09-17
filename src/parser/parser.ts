@@ -198,6 +198,18 @@ export class LaTeXParser {
       case '\\ln':
       case '\\exp':
         return this.parseFunctionCall(token.value.substring(1), token.position); // Remove backslash
+      case '\\pi':
+        // Return π as an identifier (mathematical constant)
+        return {
+          type: 'Identifier',
+          name: 'π',
+        };
+      case '\\e':
+        // Return e as an identifier (mathematical constant)
+        return {
+          type: 'Identifier',
+          name: 'e',
+        };
       default:
         throw new Error(`Unsupported LaTeX command: ${token.value} at position ${token.position}`);
     }

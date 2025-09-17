@@ -6,6 +6,14 @@
 import { ASTNode, Identifier } from '../types';
 
 /**
+ * Check if a name represents a mathematical constant
+ */
+function isMathematicalConstant(name: string): boolean {
+  const constants = ['e', 'π', 'pi', 'i', 'I'];
+  return constants.includes(name);
+}
+
+/**
  * Extract all free variables from AST
  */
 export function extractFreeVariables(node: ASTNode): Set<string> {
@@ -19,8 +27,8 @@ export function extractFreeVariables(node: ASTNode): Set<string> {
       case 'Identifier':
         // Only include free variables (not bound variables like integration variables)
         if (node.scope === 'free' || !node.scope) {
-          // Skip mathematical constants
-          if (!['e', 'π', 'pi', 'i'].includes(node.name)) {
+          // Skip mathematical constants - handle both π and pi notation
+          if (!isMathematicalConstant(node.name)) {
             variables.add(node.name);
           }
         }

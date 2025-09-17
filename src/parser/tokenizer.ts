@@ -182,7 +182,7 @@ export class LaTeXTokenizer {
         };
       }
 
-      // Greek letters and special symbols
+      // Greek letters and special symbols - handle π as identifier
       if (/[π∞∅]/.test(this.currentChar)) {
         const symbol = this.currentChar;
         this.advance();

@@ -9,7 +9,7 @@
 !.yarn/versions
 
 # Testing
-/coverage
+tests/output/*
 
 # Build output
 /dist

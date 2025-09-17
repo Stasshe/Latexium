@@ -4,6 +4,8 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS } from '../types';
+import { astToLatex } from '../utils/ast';
+import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
  * Evaluate an AST node with given variable values
@@ -17,6 +19,11 @@ export function evaluateAST(node: ASTNode, values: Record<string, number> = {}):
       // First check if it's a mathematical constant
       if (node.name in MATH_CONSTANTS) {
         return MATH_CONSTANTS[node.name]!;
+      }
+
+      // Handle imaginary unit 'i' - it stays symbolic in evaluation
+      if (node.name === 'i' || node.name === 'I') {
+        throw new Error('Imaginary unit i cannot be evaluated numerically');
       }
 
       // Then check user-provided values
@@ -160,6 +167,49 @@ function evaluateFunctionCall(
 }
 
 /**
+ * Check if AST contains imaginary unit 'i'
+ */
+function containsImaginaryUnit(node: ASTNode): boolean {
+  switch (node.type) {
+    case 'NumberLiteral':
+      return false;
+
+    case 'Identifier':
+      return node.name === 'i' || node.name === 'I';
+
+    case 'BinaryExpression':
+      return containsImaginaryUnit(node.left) || containsImaginaryUnit(node.right);
+
+    case 'UnaryExpression':
+      return containsImaginaryUnit(node.operand);
+
+    case 'FunctionCall':
+      return node.args.some(arg => containsImaginaryUnit(arg));
+
+    case 'Fraction':
+      return containsImaginaryUnit(node.numerator) || containsImaginaryUnit(node.denominator);
+
+    case 'Integral':
+      return (
+        containsImaginaryUnit(node.integrand) ||
+        (node.lowerBound ? containsImaginaryUnit(node.lowerBound) : false) ||
+        (node.upperBound ? containsImaginaryUnit(node.upperBound) : false)
+      );
+
+    case 'Sum':
+    case 'Product':
+      return (
+        containsImaginaryUnit(node.expression) ||
+        containsImaginaryUnit(node.lowerBound) ||
+        containsImaginaryUnit(node.upperBound)
+      );
+
+    default:
+      return false;
+  }
+}
+
+/**
  * Find all free variables in an AST
  */
 export function findFreeVariables(node: ASTNode): Set<string> {
@@ -168,7 +218,7 @@ export function findFreeVariables(node: ASTNode): Set<string> {
   function traverse(n: ASTNode): void {
     switch (n.type) {
       case 'Identifier':
-        if (n.scope === 'free' && !MATH_CONSTANTS[n.name]) {
+        if (n.scope === 'free' && !MATH_CONSTANTS[n.name] && n.name !== 'i' && n.name !== 'I') {
           freeVars.add(n.name);
         }
         break;
@@ -250,15 +300,31 @@ export function analyzeEvaluate(
   const precision = options.precision || 6;
 
   try {
-    // Check for undefined variables
-    const validationError = validateVariableAssignment(ast, values);
-    if (validationError) {
+    const freeVars = extractFreeVariables(ast);
+
+    // Check if expression contains imaginary unit 'i'
+    const containsImaginary = containsImaginaryUnit(ast);
+
+    // If there are free variables without values, or contains imaginary unit, return symbolic representation
+    const unassignedVars = Array.from(freeVars).filter(varName => values[varName] === undefined);
+
+    if (unassignedVars.length > 0 || containsImaginary) {
+      // Return symbolic representation with constants substituted
+      const symbolicResult = astToLatex(ast);
+      if (unassignedVars.length > 0) {
+        steps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
+      }
+      if (containsImaginary) {
+        steps.push(`Expression contains imaginary unit: cannot evaluate numerically`);
+      }
+      steps.push(`Symbolic result: ${symbolicResult}`);
+
       return {
-        steps: [],
-        value: null,
-        valueType: 'exact',
-        ast: null,
-        error: validationError,
+        steps,
+        value: symbolicResult,
+        valueType: 'symbolic',
+        ast,
+        error: null,
       };
     }
 

@@ -43,27 +43,31 @@
 ├── tests
 │   ├── differentiation.test.mjs
 │   ├── integration_engine.test.mjs
+│   ├── main.test.mjs
 │   ├── mathematical_validation.test.mjs
+│   ├── output
+│   │   ├── test-log.txt
+│   │   ├── test-results.json
+│   │   └── test-summary.txt
 │   ├── parsing_fixes.test.mjs
 │   ├── reciprocal.test.mjs
 │   ├── simplified_api.test.mjs
 │   ├── solver.test.mjs
-│   ├── specification_compliance.test.mjs
 │   ├── stress.test.mjs
 │   └── variable_inference.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-10 directories, 46 files
+11 directories, 49 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 6698
-Total Characters: 182344
-Total File Size (bytes): 183569
+Total Lines: 6857
+Total Characters: 185580
+Total File Size (bytes): 186809
 
 Development Size
-143M	.
+144M	.
 
 Build Size
 1.7M	dist
