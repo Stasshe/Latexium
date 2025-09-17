@@ -172,13 +172,14 @@ export class LaTeXParser {
     switch (token.value) {
       case '\\frac':
         return this.parseFraction();
+      case '\\sqrt':
+        return this.parseSqrt();
       case '\\sin':
       case '\\cos':
       case '\\tan':
       case '\\log':
       case '\\ln':
       case '\\exp':
-      case '\\sqrt':
         return this.parseFunctionCall(token.value.substring(1), token.position); // Remove backslash
       default:
         throw new Error(`Unsupported LaTeX command: ${token.value} at position ${token.position}`);
@@ -201,6 +202,21 @@ export class LaTeXParser {
       type: 'Fraction',
       numerator,
       denominator,
+    };
+  }
+
+  /**
+   * Parse a square root \\sqrt{expression}
+   */
+  private parseSqrt(): FunctionCall {
+    this.consume('LBRACE');
+    const argument = this.parseExpression();
+    this.consume('RBRACE');
+
+    return {
+      type: 'FunctionCall',
+      name: 'sqrt',
+      args: [argument],
     };
   }
 
@@ -234,7 +250,17 @@ export class LaTeXParser {
 
     while (this.expectToken('CARET')) {
       this.advance(); // consume '^'
-      const right = this.parseUnary();
+
+      let right: ASTNode;
+
+      // Handle braces for exponents like x^{-2}
+      if (this.expectToken('LBRACE')) {
+        this.consume('LBRACE');
+        right = this.parseExpression();
+        this.consume('RBRACE');
+      } else {
+        right = this.parseUnary();
+      }
 
       left = {
         type: 'BinaryExpression',
