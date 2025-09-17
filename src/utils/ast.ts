@@ -245,6 +245,66 @@ export function simplifyAST(node: ASTNode): ASTNode {
   }
 }
 
+/**
+ * Check if two AST nodes are equivalent (represent the same expression)
+ */
+function areEquivalentNodes(left: ASTNode, right: ASTNode): boolean {
+  if (left.type !== right.type) return false;
+
+  switch (left.type) {
+    case 'NumberLiteral':
+      return (right as typeof left).value === left.value;
+    case 'Identifier':
+      return (right as typeof left).name === left.name;
+    case 'BinaryExpression': {
+      const rightBinary = right as typeof left;
+      return (
+        left.operator === rightBinary.operator &&
+        areEquivalentNodes(left.left, rightBinary.left) &&
+        areEquivalentNodes(left.right, rightBinary.right)
+      );
+    }
+    case 'UnaryExpression': {
+      const rightUnary = right as typeof left;
+      return (
+        left.operator === rightUnary.operator &&
+        areEquivalentNodes(left.operand, rightUnary.operand)
+      );
+    }
+    case 'FunctionCall': {
+      const rightFunction = right as typeof left;
+      return (
+        left.name === rightFunction.name &&
+        left.args.length === rightFunction.args.length &&
+        left.args.every((arg, i) => areEquivalentNodes(arg, rightFunction.args[i]!))
+      );
+    }
+    case 'Fraction': {
+      const rightFraction = right as typeof left;
+      return (
+        areEquivalentNodes(left.numerator, rightFraction.numerator) &&
+        areEquivalentNodes(left.denominator, rightFraction.denominator)
+      );
+    }
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calculate Greatest Common Divisor
+ */
+function gcd(a: number, b: number): number {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b !== 0) {
+    const temp = b;
+    b = a % b;
+    a = temp;
+  }
+  return a;
+}
+
 function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
   const left = simplifyAST(node.left);
   const right = simplifyAST(node.right);
@@ -268,26 +328,90 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
 
   // 特殊ケースの簡約
   switch (node.operator) {
-    case '+':
+    case '+': {
+      // 0 + x = x, x + 0 = x
       if (left.type === 'NumberLiteral' && left.value === 0) return right;
       if (right.type === 'NumberLiteral' && right.value === 0) return left;
+
+      // 分数の加算: a/b + c/d = (ad + bc)/(bd)
+      if (left.type === 'Fraction' && right.type === 'Fraction') {
+        const newNumerator: ASTNode = {
+          type: 'BinaryExpression',
+          operator: '+',
+          left: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: left.numerator,
+            right: right.denominator,
+          },
+          right: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: right.numerator,
+            right: left.denominator,
+          },
+        };
+
+        const newDenominator: ASTNode = {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: left.denominator,
+          right: right.denominator,
+        };
+
+        return simplifyAST({
+          type: 'Fraction',
+          numerator: newNumerator,
+          denominator: newDenominator,
+        });
+      }
+
+      // 同類項の結合: 2x + 3x = 5x (基本ケース)
+      if (areEquivalentNodes(left, right)) {
+        return {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: { type: 'NumberLiteral', value: 2 },
+          right: left,
+        };
+      }
       break;
+    }
+
     case '-':
+      // x - 0 = x
       if (right.type === 'NumberLiteral' && right.value === 0) return left;
+      // x - x = 0
+      if (areEquivalentNodes(left, right)) {
+        return { type: 'NumberLiteral', value: 0 };
+      }
       break;
+
     case '*':
-      if (left.type === 'NumberLiteral' && left.value === 0) return left; // 0 * x = 0
-      if (right.type === 'NumberLiteral' && right.value === 0) return right; // x * 0 = 0
-      if (left.type === 'NumberLiteral' && left.value === 1) return right; // 1 * x = x
-      if (right.type === 'NumberLiteral' && right.value === 1) return left; // x * 1 = x
+      // 0 * x = 0, x * 0 = 0
+      if (left.type === 'NumberLiteral' && left.value === 0) return left;
+      if (right.type === 'NumberLiteral' && right.value === 0) return right;
+      // 1 * x = x, x * 1 = x
+      if (left.type === 'NumberLiteral' && left.value === 1) return right;
+      if (right.type === 'NumberLiteral' && right.value === 1) return left;
       break;
+
     case '/':
-      if (right.type === 'NumberLiteral' && right.value === 1) return left; // x / 1 = x
+      // x / 1 = x
+      if (right.type === 'NumberLiteral' && right.value === 1) return left;
+      // x / x = 1 (x ≠ 0)
+      if (areEquivalentNodes(left, right)) {
+        return { type: 'NumberLiteral', value: 1 };
+      }
       break;
+
     case '^':
-      if (right.type === 'NumberLiteral' && right.value === 0)
-        return { type: 'NumberLiteral', value: 1 }; // x^0 = 1
-      if (right.type === 'NumberLiteral' && right.value === 1) return left; // x^1 = x
+      // x^0 = 1
+      if (right.type === 'NumberLiteral' && right.value === 0) {
+        return { type: 'NumberLiteral', value: 1 };
+      }
+      // x^1 = x
+      if (right.type === 'NumberLiteral' && right.value === 1) return left;
       break;
   }
 
@@ -311,17 +435,71 @@ function simplifyFraction(node: Fraction): ASTNode {
   const numerator = simplifyAST(node.numerator);
   const denominator = simplifyAST(node.denominator);
 
-  // 分母が1の場合
+  // 複分数の簡約: (a/b)/(c/d) = (a/b) * (d/c) = (ad)/(bc)
+  if (numerator.type === 'Fraction' && denominator.type === 'Fraction') {
+    const newNumerator: ASTNode = {
+      type: 'BinaryExpression',
+      operator: '*',
+      left: numerator.numerator,
+      right: denominator.denominator,
+    };
+    const newDenominator: ASTNode = {
+      type: 'BinaryExpression',
+      operator: '*',
+      left: numerator.denominator,
+      right: denominator.numerator,
+    };
+
+    return simplifyAST({
+      type: 'Fraction',
+      numerator: newNumerator,
+      denominator: newDenominator,
+    });
+  }
+
+  // 分母が1の場合: x/1 = x
   if (denominator.type === 'NumberLiteral' && denominator.value === 1) {
     return numerator;
   }
 
-  // 分子・分母が同じ数値の場合
+  // 分子・分母が同じ数値の場合: 5/3 = 1.666...
   if (numerator.type === 'NumberLiteral' && denominator.type === 'NumberLiteral') {
     if (denominator.value === 0) {
       throw new Error('Division by zero');
     }
-    return { type: 'NumberLiteral', value: numerator.value / denominator.value };
+
+    // 約分を試行
+    const num = numerator.value;
+    const den = denominator.value;
+    const commonDivisor = gcd(num, den);
+
+    if (commonDivisor > 1) {
+      const simplifiedNum = num / commonDivisor;
+      const simplifiedDen = den / commonDivisor;
+
+      if (simplifiedDen === 1) {
+        return { type: 'NumberLiteral', value: simplifiedNum };
+      }
+
+      return {
+        type: 'Fraction',
+        numerator: { type: 'NumberLiteral', value: simplifiedNum },
+        denominator: { type: 'NumberLiteral', value: simplifiedDen },
+      };
+    }
+
+    // 約分できない場合も分数形式で保持
+    return { ...node, numerator, denominator };
+  }
+
+  // 分子・分母が同じ表現の場合: x/x = 1
+  if (areEquivalentNodes(numerator, denominator)) {
+    return { type: 'NumberLiteral', value: 1 };
+  }
+
+  // 分子が0の場合: 0/x = 0
+  if (numerator.type === 'NumberLiteral' && numerator.value === 0) {
+    return numerator;
   }
 
   return { ...node, numerator, denominator };

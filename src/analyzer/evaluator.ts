@@ -4,7 +4,7 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS } from '../types';
-import { astToLatex } from '../utils/ast';
+import { astToLatex, simplifyAST } from '../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
@@ -210,6 +210,97 @@ function containsImaginaryUnit(node: ASTNode): boolean {
 }
 
 /**
+ * Check if AST contains fractions
+ */
+function containsFractions(node: ASTNode): boolean {
+  switch (node.type) {
+    case 'Fraction':
+      return true;
+    case 'BinaryExpression':
+      return containsFractions(node.left) || containsFractions(node.right);
+    case 'UnaryExpression':
+      return containsFractions(node.operand);
+    case 'FunctionCall':
+      return node.args.some(arg => containsFractions(arg));
+    default:
+      return false;
+  }
+}
+
+/**
+ * Check if AST contains function calls
+ */
+function containsFunctions(node: ASTNode): boolean {
+  switch (node.type) {
+    case 'FunctionCall':
+      return true;
+    case 'BinaryExpression':
+      return containsFunctions(node.left) || containsFunctions(node.right);
+    case 'UnaryExpression':
+      return containsFunctions(node.operand);
+    case 'Fraction':
+      return containsFunctions(node.numerator) || containsFunctions(node.denominator);
+    default:
+      return false;
+  }
+}
+
+/**
+ * Check if values contain floating point numbers
+ */
+function hasFloatingPointInValues(values: Record<string, number>): boolean {
+  return Object.values(values).some(value => !Number.isInteger(value));
+}
+
+/**
+ * Substitute mathematical constants in AST with their numerical values
+ */
+function substituteMathConstants(node: ASTNode): ASTNode {
+  switch (node.type) {
+    case 'NumberLiteral':
+      return node;
+
+    case 'Identifier':
+      if (node.name in MATH_CONSTANTS) {
+        return {
+          type: 'NumberLiteral',
+          value: MATH_CONSTANTS[node.name]!,
+        };
+      }
+      return node;
+
+    case 'BinaryExpression':
+      return {
+        ...node,
+        left: substituteMathConstants(node.left),
+        right: substituteMathConstants(node.right),
+      };
+
+    case 'UnaryExpression':
+      return {
+        ...node,
+        operand: substituteMathConstants(node.operand),
+      };
+
+    case 'FunctionCall':
+      return {
+        ...node,
+        args: node.args.map(arg => substituteMathConstants(arg)),
+      };
+
+    case 'Fraction':
+      return {
+        ...node,
+        numerator: substituteMathConstants(node.numerator),
+        denominator: substituteMathConstants(node.denominator),
+      };
+
+    default:
+      return node;
+  }
+}
+
+/**
  * Find all free variables in an AST
  */
 export function findFreeVariables(node: ASTNode): Set<string> {
@@ -300,30 +391,60 @@ export function analyzeEvaluate(
   const precision = options.precision || 6;
 
   try {
-    const freeVars = extractFreeVariables(ast);
+    // Substitute mathematical constants first
+    const astWithConstants = substituteMathConstants(ast);
+
+    // Extract free variables after constant substitution
+    const freeVars = extractFreeVariables(astWithConstants);
 
     // Check if expression contains imaginary unit 'i'
-    const containsImaginary = containsImaginaryUnit(ast);
+    const containsImaginary = containsImaginaryUnit(astWithConstants);
 
     // If there are free variables without values, or contains imaginary unit, return symbolic representation
     const unassignedVars = Array.from(freeVars).filter(varName => values[varName] === undefined);
 
     if (unassignedVars.length > 0 || containsImaginary) {
-      // Return symbolic representation with constants substituted
-      const symbolicResult = astToLatex(ast);
+      // Apply simplification to AST before converting to LaTeX
+      const simplifiedAST = simplifyAST(astWithConstants);
+      const symbolicResult = astToLatex(simplifiedAST);
+
       if (unassignedVars.length > 0) {
         steps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
       }
       if (containsImaginary) {
         steps.push(`Expression contains imaginary unit: cannot evaluate numerically`);
       }
-      steps.push(`Symbolic result: ${symbolicResult}`);
+      steps.push(`Simplified result: ${symbolicResult}`);
 
       return {
         steps,
         value: symbolicResult,
         valueType: 'symbolic',
-        ast,
+        ast: simplifiedAST,
+        error: null,
+      };
+    }
+
+    // Check if we should preserve exact representation (e.g., fractions) but not for functions
+    const containsFunctionsToEvaluate = containsFunctions(astWithConstants);
+    const shouldPreserveExact =
+      containsFractions(astWithConstants) &&
+      !hasFloatingPointInValues(values) &&
+      !containsFunctionsToEvaluate;
+
+    if (shouldPreserveExact) {
+      // Simplify symbolically but keep exact representation
+      const simplifiedAST = simplifyAST(astWithConstants);
+      const symbolicResult = astToLatex(simplifiedAST);
+
+      steps.push(`Exact simplification applied`);
+      steps.push(`Result: ${symbolicResult}`);
+
+      return {
+        steps,
+        value: symbolicResult,
+        valueType: 'exact',
+        ast: simplifiedAST,
         error: null,
       };
     }
@@ -334,7 +455,7 @@ export function analyzeEvaluate(
     });
 
     // Evaluate the expression
-    const result = evaluateAST(ast, values);
+    const result = evaluateAST(astWithConstants, values);
 
     // Format the result
     const formattedResult = formatNumber(result, precision);
