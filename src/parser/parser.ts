@@ -3,10 +3,19 @@
  * Parses tokenized LaTeX mathematical expressions into AST
  */
 
-import { ASTNode, Fraction, FunctionCall, Identifier, NumberLiteral, ParseResult } from '../types';
+import {
+  ASTNode,
+  Fraction,
+  FunctionCall,
+  Identifier,
+  NumberLiteral,
+  ParseResult,
+  RESERVED_FUNCTIONS,
+  RESERVED_SYMBOLS,
+} from '../types';
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
 import { resolveScopeInAST } from '../utils/scope';
-import { validateFunctionArgs, isReservedWord } from '../utils/validation';
+import { validateFunctionArgs } from '../utils/validation';
 
 export class LaTeXParser {
   private tokens: Token[];
@@ -87,8 +96,9 @@ export class LaTeXParser {
   private parseIdentifier(): Identifier {
     const token = this.consume('IDENTIFIER');
 
-    // Check for reserved words
-    if (isReservedWord(token.value)) {
+    // Mathematical constants are allowed as identifiers, will be evaluated later
+    // Only check for reserved function names and symbols
+    if (RESERVED_FUNCTIONS.has(token.value) || RESERVED_SYMBOLS.has(token.value)) {
       throw new Error(
         `Reserved word cannot be used as variable name: ${token.value} at position ${token.position}`
       );

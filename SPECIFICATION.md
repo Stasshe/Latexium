@@ -358,7 +358,7 @@ const result = analyze(parseResult.ast, {
 {
   value: "\\pi - 2",
   valueType: "exact",
-  ast: { /* 結果のAST */ },
+  ast: { 結果のAST },
   steps: [
     "\\int_0^{\\pi} \\int_0^t \\sin(s) \\, ds \\, dt",
     "内側積分: \\int_0^t \\sin(s) \\, ds = [-\\cos(s)]_0^t = 1 - \\cos(t)",
