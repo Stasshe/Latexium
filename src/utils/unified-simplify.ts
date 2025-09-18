@@ -7,7 +7,10 @@
 import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
 import { expandExpression } from './distribution';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
-import { convertSqrtToExponential, enhancedExponentialSimplification } from './simplify/exponential';
+import {
+  convertSqrtToExponential,
+  enhancedExponentialSimplification,
+} from './simplify/exponential';
 import {
   gcd as gcd_simplify,
   reduceFraction,
@@ -510,6 +513,21 @@ function simplifyMultiplication(
       }
     }
   }
+
+  // Try exponential term combination for expressions like x^a * x^b
+  if (options.advancedExponentialSimplification) {
+    const multiplicationNode = {
+      type: 'BinaryExpression' as const,
+      operator: '*' as const,
+      left,
+      right,
+    };
+    const exponentialCombined = enhancedExponentialSimplification(multiplicationNode);
+    if (!areEquivalentExpressions(multiplicationNode, exponentialCombined)) {
+      return exponentialCombined;
+    }
+  }
+
   return { type: 'BinaryExpression', operator: '*', left, right };
 }
 /**
