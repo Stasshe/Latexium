@@ -44,6 +44,11 @@ const basicTestCases = [
     expected: '\\pi - 4'
   },
   {
+    expression: 'x\\frac{1}{2} + x\\frac{3}{4} + x\\frac{1}{4}',
+    task: 'distribute',
+    expected: '\\frac{3}{2}x'  // 1/2 + 3/4 + 1/4 = 2
+  },
+  {
     expression: 'i + 6',
     task: 'evaluate',
     expected: '6 + i'  // i remains symbolic

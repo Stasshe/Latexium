@@ -4,9 +4,10 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
-import { astToLatex, simplifyAST } from '../utils/ast';
+import { astToLatex } from '../utils/ast';
 import { expandExpression } from '../utils/distribution';
 import { factorExpression } from '../utils/factorization';
+import { simplify } from '../utils/unified-simplify';
 
 /**
  * Analyze factorization task
@@ -89,7 +90,7 @@ export function analyzeDistribution(
     const expandedLatex = astToLatex(expanded);
 
     // Always apply simplification to handle addition, like terms, etc.
-    const simplified = simplifyAST(expanded);
+    const simplified = simplify(expanded, { combineLikeTerms: true });
     const simplifiedLatex = astToLatex(simplified);
 
     // Track changes step by step

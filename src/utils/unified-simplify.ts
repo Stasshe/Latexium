@@ -383,6 +383,59 @@ function simplifyMultiplication(
     return { type: 'NumberLiteral', value: left.value * right.value };
   }
 
+  // Fraction * Fraction: (a/b) * (c/d) = (ac)/(bd)
+  if (left.type === 'Fraction' && right.type === 'Fraction') {
+    const newNumerator = simplifyMultiplication(
+      left.numerator,
+      right.numerator,
+      options,
+      depth + 1
+    );
+    const newDenominator = simplifyMultiplication(
+      left.denominator,
+      right.denominator,
+      options,
+      depth + 1
+    );
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: newNumerator,
+        denominator: newDenominator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
+  // Number * Fraction: n * (a/b) = (n*a)/b
+  if (left.type === 'NumberLiteral' && right.type === 'Fraction') {
+    const newNumerator = simplifyMultiplication(left, right.numerator, options, depth + 1);
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: newNumerator,
+        denominator: right.denominator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
+  // Fraction * Number: (a/b) * n = (a*n)/b
+  if (left.type === 'Fraction' && right.type === 'NumberLiteral') {
+    const newNumerator = simplifyMultiplication(left.numerator, right, options, depth + 1);
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: newNumerator,
+        denominator: left.denominator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
   // Handle negative multiplications: A * (-B) = -(A * B)
   if (right.type === 'UnaryExpression' && right.operator === '-') {
     const positiveResult = simplifyMultiplication(left, right.operand, options, depth + 1);
@@ -629,9 +682,23 @@ function simplifyDivision(
   // x / 1 = x
   if (right.type === 'NumberLiteral' && right.value === 1) return left;
 
-  // Number / Number
+  // Number / Number - keep as fraction to preserve exact values
   if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral' && right.value !== 0) {
-    return { type: 'NumberLiteral', value: left.value / right.value };
+    // Only convert to decimal if it results in a whole number
+    const result = left.value / right.value;
+    if (Number.isInteger(result)) {
+      return { type: 'NumberLiteral', value: result };
+    }
+    // Otherwise, keep as fraction and reduce it
+    const reduced = reduceFraction(left.value, right.value);
+    if (reduced.den === 1) {
+      return { type: 'NumberLiteral', value: reduced.num };
+    }
+    return {
+      type: 'Fraction',
+      numerator: { type: 'NumberLiteral', value: reduced.num },
+      denominator: { type: 'NumberLiteral', value: reduced.den },
+    };
   }
 
   // x / x = 1

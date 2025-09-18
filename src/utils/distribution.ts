@@ -128,7 +128,7 @@ export function distributeMultiplication(left: ASTNode, right: ASTNode): ASTNode
   }
 
   const result = buildExpressionFromTerms(expandedTerms);
-  // Apply final simplification to the distributed result
+  // Apply basic simplification only - leave like term combination to unified-simplify
   return basicSimplify(result);
 }
 
@@ -275,6 +275,7 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
  */
 export function expandExpression(node: ASTNode): ASTNode {
   const expanded = applyDistributiveLaw(node);
+  // Apply basic simplification only - leave like term combination to unified-simplify
   return basicSimplify(expanded);
 }
 

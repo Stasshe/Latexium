@@ -181,6 +181,18 @@ function simplifyMultiplicationBasic(left: ASTNode, right: ASTNode): ASTNode {
     return { type: 'NumberLiteral', value: left.value * right.value };
   }
 
+  // Number * Fraction: n * (a/b) = (n*a)/b
+  if (left.type === 'NumberLiteral' && right.type === 'Fraction') {
+    const numerator = simplifyMultiplicationBasic(left, right.numerator);
+    return simplifyFractionBasic({ type: 'Fraction', numerator, denominator: right.denominator });
+  }
+
+  // Fraction * Number: (a/b) * n = (a*n)/b
+  if (left.type === 'Fraction' && right.type === 'NumberLiteral') {
+    const numerator = simplifyMultiplicationBasic(left.numerator, right);
+    return simplifyFractionBasic({ type: 'Fraction', numerator, denominator: left.denominator });
+  }
+
   return { type: 'BinaryExpression', operator: '*', left, right };
 }
 
@@ -196,12 +208,24 @@ function simplifyDivisionBasic(left: ASTNode, right: ASTNode): ASTNode {
     return { type: 'NumberLiteral', value: 0 };
   }
 
-  // Number / Number
+  // Number / Number - keep as fraction to preserve exact values
   if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral' && right.value !== 0) {
-    return { type: 'NumberLiteral', value: left.value / right.value };
+    // Only convert to decimal if it results in a whole number
+    const result = left.value / right.value;
+    if (Number.isInteger(result)) {
+      return { type: 'NumberLiteral', value: result };
+    }
+    // Otherwise, keep as fraction
+    const reduced = reduceFraction(left.value, right.value);
+    return {
+      type: 'Fraction',
+      numerator: { type: 'NumberLiteral', value: reduced.num },
+      denominator: { type: 'NumberLiteral', value: reduced.den },
+    };
   }
 
-  return { type: 'BinaryExpression', operator: '/', left, right };
+  // Convert division to fraction for better mathematical representation
+  return { type: 'Fraction', numerator: left, denominator: right };
 }
 
 /**

@@ -3,7 +3,7 @@
  * High-performance algebraic computation with full backward compatibility
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '@/types';
+import { ASTNode, BinaryExpression, NumberLiteral, Identifier, Fraction } from '@/types';
 
 /**
  * Represents a mathematical term in its most canonical form
@@ -71,6 +71,9 @@ export class AdvancedTermAnalyzer {
       case 'Identifier':
         return this.analyzeVariable(node as Identifier);
 
+      case 'Fraction':
+        return this.analyzeFraction(node as Fraction);
+
       case 'BinaryExpression':
         return this.analyzeBinaryExpression(node as BinaryExpression, depth);
 
@@ -104,6 +107,29 @@ export class AdvancedTermAnalyzer {
       constants: [],
       complexity: 2,
     };
+  }
+
+  /**
+   * Analyze fraction nodes
+   */
+  private static analyzeFraction(node: Fraction): AlgebraicTerm {
+    // Try to convert fraction to numerical coefficient
+    if (node.numerator.type === 'NumberLiteral' && node.denominator.type === 'NumberLiteral') {
+      const numerator = node.numerator as NumberLiteral;
+      const denominator = node.denominator as NumberLiteral;
+
+      if (denominator.value !== 0) {
+        return {
+          coefficient: numerator.value / denominator.value,
+          variables: new Map(),
+          constants: [],
+          complexity: 1,
+        };
+      }
+    }
+
+    // If not a simple numerical fraction, treat as complex
+    return this.analyzeComplex(node);
   }
 
   /**
@@ -337,11 +363,37 @@ export class AdvancedTermCombiner {
     }
 
     if (!result) {
+      // Convert decimal coefficient to fraction if needed
+      if (!Number.isInteger(absCoeff)) {
+        const fraction = this.decimalToFraction(absCoeff);
+        return {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: fraction.numerator } as NumberLiteral,
+          denominator: { type: 'NumberLiteral', value: fraction.denominator } as NumberLiteral,
+        } as Fraction;
+      }
       return { type: 'NumberLiteral', value: absCoeff } as NumberLiteral;
     }
 
     // Always apply coefficient if it's not 1
     if (absCoeff !== 1) {
+      // Convert decimal coefficient to fraction if needed
+      if (!Number.isInteger(absCoeff)) {
+        const fraction = this.decimalToFraction(absCoeff);
+        const coeffNode = {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: fraction.numerator } as NumberLiteral,
+          denominator: { type: 'NumberLiteral', value: fraction.denominator } as NumberLiteral,
+        } as Fraction;
+
+        return {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: coeffNode,
+          right: result,
+        } as BinaryExpression;
+      }
+
       return {
         type: 'BinaryExpression',
         operator: '*',
@@ -351,6 +403,33 @@ export class AdvancedTermCombiner {
     }
 
     return result;
+  }
+
+  /**
+   * Convert decimal to fraction
+   */
+  private static decimalToFraction(decimal: number): { numerator: number; denominator: number } {
+    const tolerance = 1e-10;
+    let h1 = 1,
+      h2 = 0,
+      k1 = 0,
+      k2 = 1;
+    let b = decimal;
+
+    while (Math.abs(decimal - h1 / k1) > tolerance) {
+      const a = Math.floor(b);
+      const temp = h1;
+      h1 = a * h1 + h2;
+      h2 = temp;
+
+      const temp2 = k1;
+      k1 = a * k1 + k2;
+      k2 = temp2;
+
+      b = 1 / (b - a);
+    }
+
+    return { numerator: h1, denominator: k1 };
   }
 
   /**
