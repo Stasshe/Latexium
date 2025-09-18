@@ -43,7 +43,6 @@
 │       ├── distribution.ts
 │       ├── factorization.ts
 │       ├── index.ts
-│       ├── polynomial.ts
 │       ├── simplify
 │       │   ├── commutative.ts
 │       │   └── simplification.ts
@@ -59,7 +58,6 @@
 │   ├── factorization.test.mjs
 │   ├── final-distribution-test.test.mjs
 │   ├── final-validation.test.mjs
-│   ├── like-terms.test.mjs
 │   ├── main.test.mjs
 │   ├── output
 │   │   ├── test-log.txt
@@ -83,7 +81,9 @@
 │   │   ├── debug-quotient-rule.test.mjs
 │   │   ├── debug-simple-expansion.test.mjs
 │   │   ├── debug-simple-term.test.mjs
-│   │   └── debug-simple.test.mjs
+│   │   ├── debug-simple.test.mjs
+│   │   ├── tri-gcd-ast-debug.mjs
+│   │   └── tri-gcd-simplify.test.mjs
 │   ├── test-distribution.test.mjs
 │   └── unified-simplify.test.mjs
 ├── tree.sh
@@ -93,12 +93,12 @@
 14 directories, 77 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 10896
-Total Characters: 293613
-Total File Size (bytes): 294838
+Total Lines: 10528
+Total Characters: 286945
+Total File Size (bytes): 288285
 
 Development Size
-154M	.
+157M	.
 
 Build Size
-2.0M	dist
+2.8M	dist

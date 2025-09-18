@@ -582,7 +582,7 @@ export function parseLatex(input: string): ParseResult {
     const resolvedAST = resolveScopeInAST(rawAST);
 
     // Phase 4: Recursively convert all BinaryExpression '/' to Fraction
-    function toFractionDeep(node: any): any {
+    function toFractionDeep(node: ASTNode): ASTNode {
       if (!node || typeof node !== 'object') return node;
       if (node.type === 'BinaryExpression' && node.operator === '/') {
         return {
@@ -592,15 +592,16 @@ export function parseLatex(input: string): ParseResult {
         };
       }
       // Recursively convert child nodes
-      const newNode: any = { ...node };
+      const newNode = { ...node } as Record<string, unknown>;
       for (const key of Object.keys(newNode)) {
-        if (Array.isArray(newNode[key])) {
-          newNode[key] = newNode[key].map(toFractionDeep);
-        } else if (typeof newNode[key] === 'object' && newNode[key] !== null) {
-          newNode[key] = toFractionDeep(newNode[key]);
+        const value = newNode[key];
+        if (Array.isArray(value)) {
+          newNode[key] = value.map((item: ASTNode) => toFractionDeep(item));
+        } else if (typeof value === 'object' && value !== null) {
+          newNode[key] = toFractionDeep(value as ASTNode);
         }
       }
-      return newNode;
+      return newNode as ASTNode;
     }
 
     return {
