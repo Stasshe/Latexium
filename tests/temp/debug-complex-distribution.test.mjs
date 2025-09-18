@@ -18,7 +18,7 @@ console.log(JSON.stringify(parseResult.ast, null, 2));
 // Analyze with simplify task
 console.log('\n=== Simplify Analysis ===');
 const simplifyResult = analyze(parseResult.ast, {
-  task: 'simplify',
+  task: 'distribute',
   variable: 'x'
 });
 
@@ -38,7 +38,7 @@ if (!innerParseResult.error) {
   console.log(JSON.stringify(innerParseResult.ast, null, 2));
   
   const innerSimplifyResult = analyze(innerParseResult.ast, {
-    task: 'simplify',
+    task: 'distribute',
     variable: 'x'
   });
   console.log(`Inner simplified: ${innerSimplifyResult.value}`);
@@ -51,7 +51,7 @@ console.log(`\nNegative inner: ${negativeInnerExpression}`);
 const negativeInnerParseResult = parseLatex(negativeInnerExpression);
 if (!negativeInnerParseResult.error) {
   const negativeInnerSimplifyResult = analyze(negativeInnerParseResult.ast, {
-    task: 'simplify',
+    task: 'distribute',
     variable: 'x'
   });
   console.log(`Negative inner simplified: ${negativeInnerSimplifyResult.value}`);
@@ -72,7 +72,7 @@ for (const component of components) {
   const componentParseResult = parseLatex(component);
   if (!componentParseResult.error) {
     const componentSimplifyResult = analyze(componentParseResult.ast, {
-      task: 'simplify',
+      task: 'distribute',
       variable: 'x'
     });
     console.log(`${component} → ${componentSimplifyResult.value}`);

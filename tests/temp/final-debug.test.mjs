@@ -21,7 +21,7 @@ for (const component of components) {
   const parseResult = parseLatex(component);
   if (!parseResult.error) {
     const simplifyResult = analyze(parseResult.ast, {
-      task: 'simplify',
+      task: 'distribute',
       variable: 'x'
     });
     console.log(`  ${component} → ${simplifyResult.value}`);
@@ -35,7 +35,7 @@ console.log(`Inner: ${innerExpr}`);
 const innerParseResult = parseLatex(innerExpr);
 if (!innerParseResult.error) {
   const innerSimplifyResult = analyze(innerParseResult.ast, {
-    task: 'simplify',
+    task: 'distribute',
     variable: 'x'
   });
   console.log(`Inner simplified: ${innerSimplifyResult.value}`);

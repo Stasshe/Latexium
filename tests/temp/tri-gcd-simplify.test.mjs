@@ -7,7 +7,7 @@ function testSimplify(expr, expected) {
     console.error('Parse error:', expr);
     return;
   }
-  const result = analyze(parsed.ast, { task: 'simplify' });
+  const result = analyze(parsed.ast, { task: 'distribute' });
   const out = result && result.ast ? result.ast : null;
   console.log('Input:', expr);
   console.log('Simplified:', JSON.stringify(out));

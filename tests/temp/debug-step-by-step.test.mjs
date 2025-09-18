@@ -63,7 +63,7 @@ for (const test of testCases) {
     }
     
     const analyzeResult = analyze(parseResult.ast, {
-      task: 'simplify',
+      task: 'distribute',
       variable: 'x'
     });
     
@@ -112,7 +112,7 @@ for (const test of fractionTests) {
     }
     
     const analyzeResult = analyze(parseResult.ast, {
-      task: 'simplify',
+      task: 'distribute',
       variable: 'x'
     });
     

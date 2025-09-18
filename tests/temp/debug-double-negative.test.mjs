@@ -23,7 +23,7 @@ for (const testCase of testCases) {
   console.log(`  AST: ${JSON.stringify(parseResult.ast, null, 2)}`);
   
   const analyzeResult = analyze(parseResult.ast, {
-    task: 'simplify',
+    task: 'distribute',
     variable: 'x'
   });
   
@@ -41,7 +41,7 @@ if (!parseResult.error) {
   console.log(JSON.stringify(parseResult.ast, null, 2));
   
   const analyzeResult = analyze(parseResult.ast, {
-    task: 'simplify', 
+    task: 'distribute', 
     variable: 'x'
   });
   

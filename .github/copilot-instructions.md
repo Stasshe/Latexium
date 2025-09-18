@@ -4,6 +4,8 @@
 !important
 testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
 
+ややこしいので、task: 'simplify'は使わないこと。task: 'distribute'か、'factor'を使うこと。
+
 テストケースの実行にはnodeコマンドを直接使うこと。
 
 必ずSPECIFICATION.mdを参照すること。

@@ -12,7 +12,7 @@ if (!innerParseResult.error) {
   console.log(JSON.stringify(innerParseResult.ast, null, 2));
   
   const innerSimplifyResult = analyze(innerParseResult.ast, {
-    task: 'simplify',
+    task: 'distribute',
     variable: 'x'
   });
   
@@ -33,7 +33,7 @@ if (!negatedParseResult.error) {
   console.log(JSON.stringify(negatedParseResult.ast, null, 2));
   
   const negatedSimplifyResult = analyze(negatedParseResult.ast, {
-    task: 'simplify',
+    task: 'distribution',
     variable: 'x'
   });
   

@@ -21,7 +21,7 @@ for (const expr of testCases) {
     console.log('Parse result AST:', JSON.stringify(parseResult.ast, null, 2));
     
     if (!parseResult.error) {
-      const simplifyResult = analyze(parseResult.ast, { task: 'simplify' });
+      const simplifyResult = analyze(parseResult.ast, { task: 'distribute' });
       console.log('Simplify result:', simplifyResult.value);
       
       const evaluateResult = analyze(parseResult.ast, { task: 'evaluate' });

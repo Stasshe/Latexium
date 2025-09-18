@@ -16,7 +16,7 @@ try {
     console.log('AST:', JSON.stringify(parseResult.ast, null, 2));
     
     const analyzeResult = analyze(parseResult.ast, {
-      task: 'simplify',
+      task: 'distribute',
       variable: 'x'
     });
     
@@ -52,7 +52,7 @@ for (const expr of complexFractions) {
       console.log(`❌ PARSE ERROR: ${parseResult.error}`);
     } else {
       const analyzeResult = analyze(parseResult.ast, {
-        task: 'simplify',
+        task: 'distribute',
         variable: 'x'
       });
       

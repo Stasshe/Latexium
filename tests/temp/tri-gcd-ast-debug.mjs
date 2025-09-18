@@ -2,7 +2,7 @@ import { parseLatex, analyze } from '../../dist/index.esm.js';
 
 function showAST(expr) {
   const parsed = parseLatex(expr);
-  const ans = analyze(parsed.ast, { task: 'simplify', variable: 'x' });
+  const ans = analyze(parsed.ast, { task: 'distribute', variable: 'x' });
   console.log('ans', ans.value);
   console.log('---');
 }

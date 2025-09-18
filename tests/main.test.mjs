@@ -55,12 +55,12 @@ const basicTestCases = [
   },
   {
     expression: '\\frac{1}{2} + \\frac{1}{3}',
-    task: 'simplify',
+    task: 'distribute',
     expected: '\\frac{5}{6}'
   },
   {
     expression: '\\frac{4}{6}',
-    task: 'simplify',
+    task: 'distribute',
     expected: '\\frac{2}{3}'
   },
   {
