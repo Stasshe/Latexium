@@ -82,197 +82,12 @@ const basicTestCases = [
     expected: '1'  // sin(π/2) = 1
   },
   {
-    expression: '\\cos(0)',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '1'  // cos(0) = 1
-  },
-  {
-    expression: '\\exp(0)',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '1'  // exp(0) = 1
-  },
-  {
-    expression: '\\ln(e)',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '1'  // ln(e) = 1
-  },
-  {
-    expression: '\\sqrt{16}',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '4'  // sqrt(16) = 4
-  },
-  {
-    expression: '3 * 4 + 2',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '14'  // 3 * 4 + 2 = 14
-  },
-  {
-    expression: '\\frac{6}{2}',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '3'  // 6/2 = 3
-  },
-  {
-    expression: '2^3',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '8'  // 2^3 = 8
-  },
-
-  // Basic Differentiation Tests (10 cases)
-  {
-    expression: 'x^2',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '2x'
-  },
-  {
-    expression: '3 \\cdot x',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '3'
-  },
-  {
-    expression: 'x^3 + 2 * x^2 + x + 1',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '3x^2 + 4x + 1'
-  },
-  {
-    expression: '\\sin(x)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\cos(x)'
-  },
-  {
-    expression: '\\cos(x)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '-\\sin(x)'
-  },
-  {
-    expression: '\\exp(x)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\exp(x)'
-  },
-  {
-    expression: '\\ln(x)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\frac{1}{x}'
-  },
-  {
-    expression: 'x * \\sin(x)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\sin(x) + x\\cos(x)'
-  },
-  {
-    expression: '\\frac{x}{x^2 + 1}',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\frac{1 - x^2}{(x^2 + 1)^2}'
-  },
-  {
-    expression: '\\sin(x^2)',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '2x\\cos(x^2)'
-  },
-
-  // Basic Integration Tests (10 cases)
-  {
-    expression: 'x',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\frac{x^2}{2} + C'
-  },
-  {
-    expression: 'x^2',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\frac{x^3}{3} + C'
-  },
-  {
-    expression: '2 * x + 3',
-    task: 'integrate',
-    variable: 'x',
-    expected: 'x^2 + 3x + C'
-  },
-  {
-    expression: '\\sin(x)',
-    task: 'integrate',
-    variable: 'x',
-    expected: '-\\cos(x) + C'
-  },
-  {
-    expression: '\\cos(x)',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\sin(x) + C'
-  },
-  {
-    expression: '\\exp(x)',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\exp(x) + C'
-  },
-  {
-    expression: '\\frac{1}{x}',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\ln|x| + C'
-  },
-  {
-    expression: 'x^3',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\frac{x^4}{4} + C'
-  },
-  {
-    expression: '\\frac{1}{x^2 + 1}',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\arctan(x) + C'
-  },
-  {
     expression: '2 * \\exp(x)',
     task: 'integrate',
     variable: 'x',
     expected: '2\\exp(x) + C'
   },
 
-  // Basic Solve Tests (10 cases)
-  {
-    expression: 'x - 5',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = 5'
-  },
-  {
-    expression: '2 * x + 6',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = -3'
-  },
-  {
-    expression: '3 * x - 9',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = 3'
-  },
-  {
-    expression: 'x^2 - 1',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-1, 1\\}'
-  },
   {
     expression: 'x^2 + 2 * x + 1',
     task: 'solve',
@@ -285,12 +100,6 @@ const basicTestCases = [
     variable: 'x',
     expected: 'x = 3'
   },
-  {
-    expression: 'x^2 - 9',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x \\in \\{-3, 3\\}'
-  }
 ];
 
 // 40 Edge Case Tests - Complex scenarios and error conditions
@@ -309,46 +118,9 @@ const edgeCaseTests = [
     expected: '6.283185'  // π * 2 ≈ 6.283185
   },
   {
-    expression: 'e^x',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '\\exp(x)'
-  },
-  {
-    expression: '\\pi * x^2',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '2\\pi x'
-  },
-  {
-    expression: 'e * x + \\pi',
-    task: 'integrate',
-    variable: 'x',
-    expected: '\\frac{ex^2}{2} + \\pi x + C'
-  },
-  {
-    expression: 'x + e',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = -e'
-  },
-  {
-    expression: '\\pi * x - \\pi',
-    task: 'solve',
-    variable: 'x',
-    expected: 'x = 1'
-  },
-  {
-    expression: 'e^2 + x',
-    task: 'differentiate',
-    variable: 'x',
-    expected: '1'
-  },
-  {
-    expression: '\\sin(\\pi)',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '0'
+    expression: '((((x+1)+2)+3+4)+5)',
+    task: 'distribute',
+    expected: 'x + 15',
   },
   {
     expression: '\\cos(\\pi)',

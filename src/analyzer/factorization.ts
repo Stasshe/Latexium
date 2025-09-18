@@ -84,49 +84,35 @@ export function analyzeDistribution(
   try {
     steps.push(`Original expression: ${astToLatex(ast)}`);
 
-    // Expand the expression
+    // First apply distribution for multiplication
     const expanded = expandExpression(ast);
     const expandedLatex = astToLatex(expanded);
 
-    // Check if expansion was performed
+    // Always apply simplification to handle addition, like terms, etc.
+    const simplified = simplifyAST(expanded);
+    const simplifiedLatex = astToLatex(simplified);
+
+    // Track changes step by step
     if (expandedLatex !== astToLatex(ast)) {
       steps.push(`After distribution/expansion: ${expandedLatex}`);
-
-      // Apply simplification to combine like terms
-      const simplified = simplifyAST(expanded);
-      const simplifiedLatex = astToLatex(simplified);
-
-      // Check if simplification made changes
-      if (simplifiedLatex !== expandedLatex) {
-        steps.push(`After combining like terms: ${simplifiedLatex}`);
-
-        return {
-          steps,
-          value: simplifiedLatex,
-          valueType: 'symbolic',
-          ast: simplified,
-          error: null,
-        };
-      }
-
-      return {
-        steps,
-        value: expandedLatex,
-        valueType: 'symbolic',
-        ast: expanded,
-        error: null,
-      };
-    } else {
-      steps.push('Expression is already in expanded form');
-
-      return {
-        steps,
-        value: expandedLatex,
-        valueType: 'symbolic',
-        ast: expanded,
-        error: null,
-      };
     }
+
+    if (simplifiedLatex !== expandedLatex) {
+      steps.push(`After combining like terms: ${simplifiedLatex}`);
+    }
+
+    // If no changes occurred at all, note that
+    if (simplifiedLatex === astToLatex(ast)) {
+      steps.push('Expression is already in simplified form');
+    }
+
+    return {
+      steps,
+      value: simplifiedLatex,
+      valueType: 'symbolic',
+      ast: simplified,
+      error: null,
+    };
   } catch (error) {
     steps.push(
       `Error during distribution: ${error instanceof Error ? error.message : 'Unknown error'}`

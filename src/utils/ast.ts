@@ -677,8 +677,24 @@ function extractCoefficientAndVariable(node: ASTNode): {
  * For example: x^2 * x -> x^3, x * x * x -> x^3
  */
 function normalizeVariablePart(node: ASTNode): ASTNode {
-  // For now, keep it simple and just return the node as is
-  // The main variable simplification will be handled by simplifyVariableMultiplicationAST
+  if (!node) return node;
+
+  // If it's a simple identifier, return as is
+  if (node.type === 'Identifier') {
+    return node;
+  }
+
+  // If it's a power expression, return as is (already normalized)
+  if (node.type === 'BinaryExpression' && node.operator === '^') {
+    return node;
+  }
+
+  // If it's a multiplication chain, try to simplify variable powers
+  if (node.type === 'BinaryExpression' && node.operator === '*') {
+    const simplified = simplifyVariableMultiplicationAST(node);
+    return simplified || node;
+  }
+
   return node;
 }
 
@@ -1221,9 +1237,10 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       }
 
       // Apply distributive law if applicable
-      if (canDistribute(node)) {
-        const distributed = applyDistributiveLaw(node);
-        if (distributed !== node) {
+      const currentMultNode: BinaryExpression = { ...node, left, right };
+      if (canDistribute(currentMultNode)) {
+        const distributed = applyDistributiveLaw(currentMultNode);
+        if (distributed !== currentMultNode) {
           return simplifyAST(distributed);
         }
       }

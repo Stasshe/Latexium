@@ -76,8 +76,18 @@ export class LaTeXTokenizer {
 
   /**
    * Read an identifier (variable name)
+   * For mathematical expressions, we treat each single letter as a separate variable
+   * to enable proper implicit multiplication (e.g., "xx" becomes "x * x")
    */
   private readIdentifier(): string {
+    if (this.currentChar && /[a-zA-Z]/.test(this.currentChar)) {
+      // Read only one character for single-letter variables to enable implicit multiplication
+      const result = this.currentChar;
+      this.advance();
+      return result;
+    }
+
+    // For multi-character identifiers starting with underscore or special cases
     let result = '';
     while (this.currentChar && /[a-zA-Z_]/.test(this.currentChar)) {
       result += this.currentChar;

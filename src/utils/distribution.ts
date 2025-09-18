@@ -189,6 +189,7 @@ export function canDistribute(node: ASTNode): boolean {
 
 /**
  * Apply distributive law to an expression
+ * Handles complex multiplication chains and nested distributions
  */
 export function applyDistributiveLaw(node: ASTNode): ASTNode {
   if (node.type !== 'BinaryExpression') {
@@ -231,11 +232,57 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
     return node;
   }
 
-  if (expr.operator === '*' && canDistribute(node)) {
-    return distributeMultiplication(expr.left, expr.right);
+  // Handle multiplication with distribution
+  if (expr.operator === '*') {
+    // First, recursively process left and right
+    const left = applyDistributiveLaw(expr.left);
+    const right = applyDistributiveLaw(expr.right);
+
+    // Check for distribution opportunities after recursive processing
+    const currentNode: BinaryExpression = {
+      type: 'BinaryExpression',
+      operator: '*',
+      left,
+      right,
+    };
+
+    if (canDistribute(currentNode)) {
+      const distributed = distributeMultiplication(left, right);
+      // Recursively apply distribution to the result
+      return applyDistributiveLaw(distributed);
+    }
+
+    // Check if this is part of a longer multiplication chain
+    // Handle cases like ((x+1)(x+1)) * x * x where the left side was already distributed
+    if (
+      left.type === 'BinaryExpression' &&
+      (left.operator === '+' || left.operator === '-') &&
+      right.type === 'Identifier'
+    ) {
+      // Distribute the polynomial on the left with the variable on the right
+      const distributed = distributeMultiplication(left, right);
+      return applyDistributiveLaw(distributed);
+    }
+
+    // Handle cases where right side has already been processed and left is distributable
+    if (
+      right.type === 'BinaryExpression' &&
+      (right.operator === '+' || right.operator === '-') &&
+      left.type === 'Identifier'
+    ) {
+      // Distribute the variable on the left with the polynomial on the right
+      const distributed = distributeMultiplication(left, right);
+      return applyDistributiveLaw(distributed);
+    }
+
+    if (left !== expr.left || right !== expr.right) {
+      return currentNode;
+    }
+
+    return node;
   }
 
-  // Recursively apply to child nodes
+  // Recursively apply to child nodes for other operators
   const left = applyDistributiveLaw(expr.left);
   const right = applyDistributiveLaw(expr.right);
 
