@@ -3,14 +3,7 @@
  * Provides utility functions for AST manipulation
  */
 
-import {
-  ASTNode,
-  BinaryExpression,
-  Fraction,
-  FunctionCall,
-  Integral,
-  UnaryExpression,
-} from '../types';
+import { ASTNode, BinaryExpression, FunctionCall, Integral, UnaryExpression } from '../types';
 import { simplify } from './unified-simplify';
 
 /**

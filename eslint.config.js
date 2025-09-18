@@ -2,6 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
+import unusedImports from 'eslint-plugin-unused-imports';
 
 export default [
   eslint.configs.recommended,
@@ -17,6 +18,7 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       import: importPlugin,
+      'unused-imports': unusedImports,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
@@ -31,6 +33,7 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off', // Completely disabled
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
+      'unused-imports/no-unused-imports': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
       'no-unused-vars': 'off', // Also disable the base rule

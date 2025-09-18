@@ -3,7 +3,7 @@
  * Automatically detect free variables in AST for variable inference
  */
 
-import { ASTNode, Identifier } from '../types';
+import { ASTNode } from '../types';
 
 /**
  * Check if a name represents a mathematical constant

@@ -3,7 +3,7 @@
  * Handles distributive law operations for algebraic expressions
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
+import { ASTNode, BinaryExpression } from '../types';
 import { basicSimplify } from './simplify/basic-simplify';
 
 import { MAX_EXPANSION_POWER } from '@/config';
