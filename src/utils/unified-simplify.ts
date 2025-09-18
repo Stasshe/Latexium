@@ -7,6 +7,7 @@
 import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
 import { expandExpression } from './distribution';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
+import { convertSqrtToExponential, enhancedExponentialSimplification } from './simplify/exponential';
 import {
   gcd as gcd_simplify,
   reduceFraction,
@@ -27,6 +28,10 @@ export interface SimplifyOptions {
   simplifyFractions?: boolean;
   /** Apply algebraic identities (default: true) */
   applyIdentities?: boolean;
+  /** Convert sqrt to exponential form (default: true) */
+  convertSqrtToExponential?: boolean;
+  /** Apply advanced exponential simplification (default: true) */
+  advancedExponentialSimplification?: boolean;
   /** Maximum depth for recursive simplification (default: 10) */
   maxDepth?: number;
 }
@@ -40,12 +45,14 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
   factor: true, // Enable factoring for fraction simplification
   simplifyFractions: true,
   applyIdentities: true,
+  convertSqrtToExponential: true, // Convert sqrt to exponential form by default
+  advancedExponentialSimplification: true, // Apply advanced exponential simplification
   maxDepth: 10,
 };
 
 /**
  * Enhanced simplification function
- * For complex expressions, applies distribution first, then basic simplification
+ * Converts sqrt to exponential form, applies distribution and advanced simplification
  */
 export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
@@ -53,14 +60,26 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
   if (!node) return node;
 
   try {
-    // For complex expressions involving multiplication of sums/differences,
-    // apply expansion first to handle cases like -x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1
-    if (needsExpansion(node)) {
-      const expanded = expandExpression(node);
+    let result = node;
+
+    // Step 1: Convert all sqrt functions to exponential form (x^(1/2)) if enabled
+    if (opts.convertSqrtToExponential) {
+      result = convertSqrtToExponential(result);
+    }
+
+    // Step 2: Apply full exponential simplification if enabled
+    if (opts.advancedExponentialSimplification) {
+      result = enhancedExponentialSimplification(result);
+    }
+
+    // Step 3: For complex expressions involving multiplication of sums/differences,
+    // apply expansion to handle cases like -x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1
+    if (needsExpansion(result)) {
+      const expanded = expandExpression(result);
       return basicSimplify(expanded, opts, 0);
     }
 
-    return basicSimplify(node, opts, 0);
+    return basicSimplify(result, opts, 0);
   } catch (error) {
     // Fallback: return original node if simplification fails
     return node;
