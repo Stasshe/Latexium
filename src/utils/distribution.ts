@@ -5,7 +5,6 @@
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
 import { combineCommutativeLikeTerms } from './commutative';
-import { factorCommonFactors } from './simplification';
 
 /**
  * Extract all terms from an addition/subtraction expression
@@ -190,7 +189,7 @@ export function canDistribute(node: ASTNode): boolean {
 /**
  * Apply distributive law to an expression
  */
-export function applyDistributiveLaw(node: ASTNode, options?: { autoFactor?: boolean }): ASTNode {
+export function applyDistributiveLaw(node: ASTNode): ASTNode {
   if (node.type !== 'BinaryExpression') {
     return node;
   }
@@ -198,19 +197,12 @@ export function applyDistributiveLaw(node: ASTNode, options?: { autoFactor?: boo
   const expr = node as BinaryExpression;
 
   if (expr.operator === '*' && canDistribute(node)) {
-    const distributed = distributeMultiplication(expr.left, expr.right);
-
-    // Optionally factor the result
-    if (options?.autoFactor) {
-      return factorCommonFactors(distributed);
-    }
-
-    return distributed;
+    return distributeMultiplication(expr.left, expr.right);
   }
 
   // Recursively apply to child nodes
-  const left = applyDistributiveLaw(expr.left, options);
-  const right = applyDistributiveLaw(expr.right, options);
+  const left = applyDistributiveLaw(expr.left);
+  const right = applyDistributiveLaw(expr.right);
 
   if (left !== expr.left || right !== expr.right) {
     return {
@@ -228,16 +220,13 @@ export function applyDistributiveLaw(node: ASTNode, options?: { autoFactor?: boo
  * Expand all distributive operations in an expression
  */
 export function expandExpression(node: ASTNode): ASTNode {
-  return applyDistributiveLaw(node, { autoFactor: false });
+  return applyDistributiveLaw(node);
 }
 
 /**
- * Expand and then factor the result
+ * Note: For factorization, use the factorExpression function from factorization.ts
+ * This module is dedicated to expansion only.
  */
-export function expandAndFactor(node: ASTNode): ASTNode {
-  const expanded = expandExpression(node);
-  return factorCommonFactors(expanded);
-}
 
 /**
  * Handle power expansion for simple cases like (a + b)^2

@@ -1,0 +1,191 @@
+/**
+ * Factorization Analyzer
+ * Handles factorization tasks
+ */
+
+import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
+import { astToLatex } from '../utils/ast';
+import { expandExpression } from '../utils/distribution';
+import { factorExpression } from '../utils/factorization';
+
+/**
+ * Analyze factorization task
+ */
+export function analyzeFactorization(
+  ast: ASTNode,
+  options: AnalyzeOptions & { task: 'factor' }
+): AnalyzeResult {
+  const steps: string[] = [];
+
+  try {
+    // Get variable to factor by (default to 'x')
+    const variable = options.variable || 'x';
+
+    steps.push(`Original expression: ${astToLatex(ast)}`);
+
+    // First, expand the expression to ensure all terms are visible
+    const expanded = expandExpression(ast);
+    const expandedLatex = astToLatex(expanded);
+
+    if (expandedLatex !== astToLatex(ast)) {
+      steps.push(`After expansion: ${expandedLatex}`);
+    }
+
+    // Attempt factorization
+    const factored = factorExpression(expanded, variable);
+    const factoredLatex = astToLatex(factored);
+
+    // Check if factorization was successful (expression changed)
+    if (factoredLatex !== expandedLatex && factoredLatex !== astToLatex(ast)) {
+      steps.push(`Factored form: ${factoredLatex}`);
+
+      return {
+        steps,
+        value: factoredLatex,
+        valueType: 'symbolic',
+        ast: factored,
+        error: null,
+      };
+    } else {
+      steps.push('No further factorization possible');
+
+      return {
+        steps,
+        value: expandedLatex,
+        valueType: 'symbolic',
+        ast: expanded,
+        error: null,
+      };
+    }
+  } catch (error) {
+    steps.push(
+      `Error during factorization: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+
+    return {
+      steps,
+      value: null,
+      valueType: 'symbolic',
+      ast: null,
+      error: error instanceof Error ? error.message : 'Factorization failed',
+    };
+  }
+}
+
+/**
+ * Analyze polynomial structure
+ */
+export function analyzePolynomial(
+  ast: ASTNode,
+  options: AnalyzeOptions & { task: 'analyze-polynomial' }
+): AnalyzeResult {
+  const steps: string[] = [];
+
+  try {
+    const variable = options.variable || 'x';
+    const originalLatex = astToLatex(ast);
+
+    steps.push(`Analyzing polynomial: ${originalLatex}`);
+    steps.push(`Variable: ${variable}`);
+
+    // Expand first to get standard form
+    const expanded = expandExpression(ast);
+    const expandedLatex = astToLatex(expanded);
+
+    if (expandedLatex !== originalLatex) {
+      steps.push(`Expanded form: ${expandedLatex}`);
+    }
+
+    // Analyze degree and coefficients (simplified approach)
+    const degreeInfo = analyzePolynomialDegree(expanded, variable);
+
+    if (degreeInfo) {
+      steps.push(`Degree: ${degreeInfo.degree}`);
+      steps.push(`Leading coefficient: ${degreeInfo.leadingCoeff}`);
+
+      if (degreeInfo.degree === 0) {
+        steps.push('This is a constant (degree 0)');
+      } else if (degreeInfo.degree === 1) {
+        steps.push('This is a linear polynomial');
+      } else if (degreeInfo.degree === 2) {
+        steps.push('This is a quadratic polynomial');
+      } else if (degreeInfo.degree === 3) {
+        steps.push('This is a cubic polynomial');
+      } else {
+        steps.push(`This is a polynomial of degree ${degreeInfo.degree}`);
+      }
+    } else {
+      steps.push('Could not determine polynomial structure');
+    }
+
+    return {
+      steps,
+      value: expandedLatex,
+      valueType: 'symbolic',
+      ast: expanded,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      steps,
+      value: null,
+      valueType: 'symbolic',
+      ast: null,
+      error: error instanceof Error ? error.message : 'Polynomial analysis failed',
+    };
+  }
+}
+
+/**
+ * Simplified polynomial degree analysis
+ */
+function analyzePolynomialDegree(
+  ast: ASTNode,
+  variable: string
+): { degree: number; leadingCoeff: number } | null {
+  // This is a simplified implementation
+  // A more sophisticated version would use the polynomial utilities
+
+  let maxDegree = 0;
+  const leadingCoeff = 1;
+
+  function findDegree(node: ASTNode): number {
+    switch (node.type) {
+      case 'NumberLiteral':
+        return 0;
+
+      case 'Identifier':
+        return node.name === variable ? 1 : 0;
+
+      case 'BinaryExpression':
+        switch (node.operator) {
+          case '+':
+          case '-':
+            return Math.max(findDegree(node.left), findDegree(node.right));
+
+          case '*':
+            return findDegree(node.left) + findDegree(node.right);
+
+          case '^':
+            if (
+              node.left.type === 'Identifier' &&
+              node.left.name === variable &&
+              node.right.type === 'NumberLiteral'
+            ) {
+              return node.right.value;
+            }
+            return findDegree(node.left);
+
+          default:
+            return 0;
+        }
+
+      default:
+        return 0;
+    }
+  }
+
+  maxDegree = findDegree(ast);
+
+  return { degree: maxDegree, leadingCoeff };
+}

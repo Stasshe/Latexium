@@ -12,6 +12,7 @@ import {
   UnaryExpression,
 } from '../types';
 import { canDistribute, applyDistributiveLaw, expandPower } from './distribution';
+import { factorCommonFactors, factorQuadratic, factorDifferenceOfSquares } from './factorization';
 import { astToPolynomial, factorPolynomial, Polynomial } from './polynomial';
 import {
   gcd,
@@ -20,9 +21,6 @@ import {
   multiplyFractions,
   divideFractions,
   areEquivalentExpressions,
-  factorCommonFactors,
-  factorQuadratic,
-  factorDifferenceOfSquares,
 } from './simplification';
 
 /**

@@ -115,6 +115,8 @@ export type AnalyzeOptions =
   | (BaseAnalyzeOptions & { task: 'differentiate' })
   | (BaseAnalyzeOptions & { task: 'integrate' })
   | (BaseAnalyzeOptions & { task: 'solve'; solveFor?: string })
+  | (BaseAnalyzeOptions & { task: 'factor' })
+  | (BaseAnalyzeOptions & { task: 'analyze-polynomial' })
   | (BaseAnalyzeOptions & { task: 'min' | 'max' })
   | (BaseAnalyzeOptions & { task: 'functional'; solveFor: string });
 
