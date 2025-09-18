@@ -4,8 +4,9 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS } from '../types';
-import { astToLatex, simplifyAST } from '../utils/ast';
-import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
+import { astToLatex } from '../utils/ast';
+import { simplify } from '../utils/unified-simplify';
+import { extractFreeVariables } from '../utils/variables';
 
 /**
  * Evaluate an AST node with given variable values
@@ -404,8 +405,14 @@ export function analyzeEvaluate(
     const unassignedVars = Array.from(freeVars).filter(varName => values[varName] === undefined);
 
     if (unassignedVars.length > 0 || containsImaginary) {
-      // Apply simplification to AST before converting to LaTeX
-      const simplifiedAST = simplifyAST(astWithConstants);
+      // Apply comprehensive simplification for evaluate task
+      const simplifiedAST = simplify(astWithConstants, {
+        combineLikeTerms: true,
+        expand: false, // Keep expressions compact for evaluation
+        factor: true, // Factor when possible for cleaner representation
+        simplifyFractions: true,
+        applyIdentities: true,
+      });
       const symbolicResult = astToLatex(simplifiedAST);
 
       if (unassignedVars.length > 0) {
@@ -426,7 +433,11 @@ export function analyzeEvaluate(
     }
 
     // For evaluate task, always preserve symbolic representation
-    const simplifiedAST = simplifyAST(astWithConstants);
+    const simplifiedAST = simplify(astWithConstants, {
+      combineLikeTerms: true,
+      simplifyFractions: true,
+      applyIdentities: true,
+    });
     const symbolicResult = astToLatex(simplifiedAST);
 
     steps.push(`Symbolic evaluation (π preserved)`);
@@ -476,7 +487,11 @@ export function analyzeApprox(
 
     if (unassignedVars.length > 0 || containsImaginary) {
       // Apply simplification to AST before converting to LaTeX
-      const simplifiedAST = simplifyAST(astWithConstants);
+      const simplifiedAST = simplify(astWithConstants, {
+        combineLikeTerms: true,
+        simplifyFractions: true,
+        applyIdentities: true,
+      });
       const symbolicResult = astToLatex(simplifiedAST);
 
       if (unassignedVars.length > 0) {
@@ -505,7 +520,11 @@ export function analyzeApprox(
 
     if (shouldPreserveExact) {
       // Simplify symbolically but keep exact representation
-      const simplifiedAST = simplifyAST(astWithConstants);
+      const simplifiedAST = simplify(astWithConstants, {
+        combineLikeTerms: true,
+        simplifyFractions: true,
+        applyIdentities: true,
+      });
       const symbolicResult = astToLatex(simplifiedAST);
 
       steps.push(`Exact simplification applied with decimal constants`);

@@ -4,15 +4,7 @@
  * For distribution/expansion, use distribution.ts functions explicitly
  */
 
-import {
-  ASTNode,
-  BinaryExpression,
-  NumberLiteral,
-  Identifier,
-  UnaryExpression,
-  Fraction,
-  Integral,
-} from '../types';
+import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
 import { expandExpression } from './distribution';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
 import {
@@ -912,22 +904,6 @@ function applyStructuralSimplifications(
   depth: number
 ): ASTNode {
   // This can be extended for more structural optimizations
-  return node;
-}
-
-/**
- * Apply algebraic simplifications (identities, factoring)
- */
-function applyAlgebraicSimplifications(
-  node: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
-  if (!options.applyIdentities) return node;
-
-  // Apply algebraic identities like (a+b)^2 = a^2 + 2ab + b^2
-  // This can be extended based on specific needs
-
   return node;
 }
 
