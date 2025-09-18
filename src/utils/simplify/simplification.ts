@@ -3,7 +3,7 @@
  * Basic mathematical utilities for simplification and factorization
  */
 
-import { ASTNode, BinaryExpression, Fraction, NumberLiteral, Identifier } from '../types';
+import { ASTNode, BinaryExpression, Fraction, NumberLiteral, Identifier } from '@/types';
 
 /**
  * Calculate Greatest Common Divisor using Euclidean algorithm

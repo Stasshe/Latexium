@@ -4,7 +4,7 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
-import { advancedSimplifyTerms } from './commutative';
+import { advancedSimplifyTerms } from './simplify/commutative';
 import { simplify } from './unified-simplify';
 import { MAX_EXPANSION_POWER } from '../config';
 

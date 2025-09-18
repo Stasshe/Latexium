@@ -11,17 +11,6 @@ import {
   Integral,
   UnaryExpression,
 } from '../types';
-import { canDistribute, applyDistributiveLaw, expandPower } from './distribution';
-import { factorCommonFactors, factorQuadratic, factorDifferenceOfSquares } from './factorization';
-import { astToPolynomial, factorPolynomial, Polynomial } from './polynomial';
-import {
-  gcd,
-  reduceFraction,
-  addFractions,
-  multiplyFractions,
-  divideFractions,
-  areEquivalentExpressions,
-} from './simplification';
 import { simplify } from './unified-simplify';
 
 /**

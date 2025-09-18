@@ -3,7 +3,7 @@
  * High-performance algebraic computation with full backward compatibility
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../types';
+import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '@/types';
 
 /**
  * Represents a mathematical term in its most canonical form

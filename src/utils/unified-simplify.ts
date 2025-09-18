@@ -12,8 +12,12 @@ import {
   Fraction,
   Integral,
 } from '../types';
-import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './commutative';
-import { gcd, reduceFraction, areEquivalentExpressions } from './simplification';
+import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
+import {
+  gcd as gcd_simplify,
+  reduceFraction,
+  areEquivalentExpressions,
+} from './simplify/simplification';
 
 /**
  * Comprehensive simplification options
@@ -566,4 +570,8 @@ function buildAdditionFromTerms(terms: Array<{ term: ASTNode; sign: number }>): 
  */
 export function simplifyAST(node: ASTNode): ASTNode {
   return simplify(node);
+}
+
+export function gcd(a: number, b: number): number {
+  return gcd_simplify(a, b);
 }

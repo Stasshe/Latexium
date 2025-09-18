@@ -4,7 +4,7 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../types';
-import { gcd } from './simplification';
+import { gcd } from './unified-simplify';
 
 /**
  * Deep clone an AST node

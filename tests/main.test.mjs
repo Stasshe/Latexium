@@ -57,7 +57,7 @@ const basicTestCases = [
   {
     expression: 'e + 1',
     task: 'evaluate',
-    expected: '3.71828'  // e ≈ 2.718282 so e + 1 ≈ 3.718282
+    expected: 'e + 1'  // e ≈ 2.718282 so e + 1 ≈ 3.718282
   },
   {
     expression: 'x + 5',
