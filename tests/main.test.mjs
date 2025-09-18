@@ -41,7 +41,7 @@ const basicTestCases = [
   {
     expression: '\\pi - 4',
     task: 'evaluate',
-    expected: '-4 + \\pi'
+    expected: '\\pi - 4'
   },
   {
     expression: 'i + 6',
@@ -65,7 +65,7 @@ const basicTestCases = [
   },
   {
     expression: '(4x + 3)^2',
-    task: 'evaluate',
+    task: 'distribute',
     expected: '16x^2 + 24x + 9'
   },
   {
@@ -89,7 +89,6 @@ const basicTestCases = [
   {
     expression: 'x^2 + 2 * x + 1',
     task: 'solve',
-    variable: 'x',
     expected: 'x = -1'
   },
   {

@@ -10,7 +10,10 @@ export const NUMERICAL_PRECISION = 10;
 
 // Default simplification settings
 export const DEFAULT_SIMPLIFY_OPTIONS = {
-  expandPowers: true,
+  expandPowers: false,
   combineLikeTerms: true,
   factorCommonFactors: false,
 };
+
+// Common function names (treated as functions rather than variables)
+export const COMMON_FUNCTION_NAMES = new Set(['f', 'g', 'h', 'F', 'G', 'H']);

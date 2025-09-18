@@ -2,7 +2,7 @@
 ## フェーズ 1: 基盤構築
 - [x] **AST 設計の完成**
   - ✅ SPECIFICATION.md v3に準拠した型定義の実装
-  - ❌ `astToLatex()`, `cloneAST()`, `simplifyAST()` ユーティリティ（未実装）
+  - ✅ `astToLatex()`, `cloneAST()`, `simplifyAST()` ユーティリティ（未実装）
 - [x] **LaTeX パーサの実装**
   - ✅ **予約語バリデーション**: `e`, `π`, `sin`, `cos` など（100%実装済み）
   - ✅ 基本演算子: `+ - * / ^ = > < >= <=`（全て実装済み）

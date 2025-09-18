@@ -3,6 +3,7 @@
  * Parses tokenized LaTeX mathematical expressions into AST
  */
 
+import { COMMON_FUNCTION_NAMES } from '../config';
 import {
   ASTNode,
   Fraction,
@@ -156,8 +157,34 @@ export class LaTeXParser {
       const token = this.currentToken;
       const identifier = this.parseIdentifier();
 
-      // Check if this is a function call
+      // Check if this is a function call vs implicit multiplication
+      // Rules:
+      // 1. If it's a reserved function (sin, cos, etc.), treat as function
+      // 2. If it's a common function name (f, g, h), treat as function
+      // 3. If the first thing in parentheses is negative, treat as multiplication
+      // 4. Otherwise, treat as multiplication for single letter variables
       if (this.expectToken('LPAREN')) {
+        const isReservedFunction = this.isFunction(identifier.name);
+        const isCommonFunction = COMMON_FUNCTION_NAMES.has(identifier.name);
+
+        // Look ahead to see if the first thing inside parentheses is negative
+        let startsWithNegative = false;
+        if (this.currentTokenIndex + 1 < this.tokens.length) {
+          const nextToken = this.tokens[this.currentTokenIndex + 1];
+          startsWithNegative = nextToken?.type === 'OPERATOR' && nextToken?.value === '-';
+        }
+
+        // Treat as function if it's a known function OR common function name
+        // Treat as multiplication if it starts with negative OR is single letter variable
+        const shouldTreatAsFunction = isReservedFunction || isCommonFunction;
+        const shouldTreatAsMultiplication =
+          startsWithNegative || (!shouldTreatAsFunction && identifier.name.length === 1);
+
+        if (shouldTreatAsMultiplication) {
+          // Don't consume the parentheses, let implicit multiplication handle it
+          return identifier;
+        }
+
         const functionCall = this.parseFunctionCall(identifier.name, token.position);
 
         // Check for function exponentiation like sin^2(x)
