@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc && rollup -c",
     "dev": "tsc --watch",
-    "test": "node tests/master.test.mjs",
+    "test": "node tests/main.test.mjs && node tests/master.test.mjs",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",

@@ -259,6 +259,64 @@ const complexTestCases = [
     expected: '\\frac{\\pi}{2}',
     description: 'Definite integral of trigonometric square'
   }
+  ,
+  // Additional Complex Evaluate Cases
+  {
+    id: 31,
+    expression: '\\sqrt{49} + 2^3',
+    task: 'evaluate',
+    expected: '15',
+    description: 'Evaluate with square root and exponent'
+  },
+  {
+    id: 32,
+    expression: '\\frac{6!}{3!2!}',
+    task: 'evaluate',
+    expected: '60',
+    description: 'Evaluate factorial division (combinatorics)'
+  },
+  {
+    id: 33,
+    expression: '\\sin(\\frac{\\pi}{2}) + \\cos(0)',
+    task: 'evaluate',
+    expected: '2',
+    description: 'Evaluate trigonometric sum at special angles'
+  },
+  {
+    id: 34,
+    expression: 'e^{\\ln(5)} + \\log_{10}(100)',
+    task: 'evaluate',
+    expected: '7',
+    description: 'Evaluate with exponentials and logarithms'
+  },
+  {
+    id: 35,
+    expression: '\\sum_{k=1}^4 k^2',
+    task: 'evaluate',
+    expected: '30',
+    description: 'Evaluate finite sum of squares'
+  },
+  {
+    id: 36,
+    expression: '\\prod_{i=1}^4 i',
+    task: 'evaluate',
+    expected: '24',
+    description: 'Evaluate finite product (factorial)'
+  },
+  {
+    id: 39,
+    expression: '\\frac{1}{2} + \\frac{2}{3}',
+    task: 'evaluate',
+    expected: '\\frac{7}{6}',
+    description: 'Evaluate sum of fractions'
+  },
+  {
+    id: 40,
+    expression: '\\sqrt{16} + \\sqrt{9} + \\sqrt{25}',
+    task: 'evaluate',
+    expected: '12',
+    description: 'Evaluate sum of square roots'
+  }
 ];
 
 function normalizeExpression(expr) {
