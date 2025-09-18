@@ -1,0 +1,76 @@
+より本格的なtestランをしよう。
+master.test.mjsがtests/のルートにあって、そこから、distribute,evaluator,factor, integrate, differenciateのcases.mjsを実行していく感じ？
+それぞれのテストケースは今のところそれぞれのファイルに2つずつで良い。
+テストケースは、mjsのオブジェクトで羅列する。
+普通にnpm i chalkとやると、まるでこのライブラリ全体がchalkに依存してる感じになることに気をつけて。
+次のようなディレクトリ構成を想定している。
+ディレクトリ構造は変わるかもしれないから、体系的かつ汎用的なもので。
+それぞれのケースは、
+input: string
+task: string
+expected: string
+variables?: string
+の形で与える。
+summary.mdを忘れないでね。
+tests/
+  master.test.mjs
+  output/
+    summary.md
+    parse/
+      basic.log.txt
+      reserved.log.txt
+      function-args.log.txt
+      scope.log.txt
+      detail/
+        basic.results.json
+        reserved.results.json
+        function-args.results.json
+        scope.results.json
+    analyze/
+      distribute/
+        basic.log.txt
+        nested.log.txt
+        detail/
+          basic.results.json
+          nested.resuls.json
+      evaluator/
+        basic.log.txt
+        complex.log.txt
+        detail/
+          basic.results.json
+          complex.results.json
+      factor/
+        basic.log.txt
+        advanced.log.txt
+        detail/
+          basic.results.json
+          advanced.results.json
+      integrate/
+        basic.log.txt
+        by-parts.log.txt
+        detail/
+          basic.results.json
+          by-parts.results.json
+      differentiate/
+        basic.log.txt
+        chain-rule.log.txt
+        detail/
+          basic.results.json
+          chain-rule.results.json
+  cases/
+    parse/
+      basic.mjs
+      reserved.mjs
+      function-args.mjs
+      scope.mjs
+    analyze/
+      evaluate.mjs
+      differentiate.mjs
+      integration/
+        basic.mjs
+        by-parts.mjs
+        by-substitution.mjs
+        partial-fractions.mjs
+      factor.mjs
+      solve.mjs
+      minmax.mjs

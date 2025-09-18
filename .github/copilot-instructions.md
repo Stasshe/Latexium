@@ -2,9 +2,9 @@
 コードは全て英語で、コメントも英語で書くこと。
 
 !important
-testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
+testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
 
-ややこしいので、task: 'simplify'は使わないこと。task: 'distribute'か、'factor'を使うこと。
+ややこしいので、task: 'simplify'は使わないこと。task: 'distribute'か、'factor'を使うこと。変数の順番は、テストケースのexpectedが間違えている時がある。
 
 テストケースの実行にはnodeコマンドを直接使うこと。
 
