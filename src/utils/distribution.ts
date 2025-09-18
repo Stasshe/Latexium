@@ -58,14 +58,15 @@ export function buildExpressionFromTerms(terms: { term: ASTNode; sign: number }[
 
     const { term, sign } = firstTerm;
     if (sign === 1) {
-      return term;
+      return simplify(term);
     }
-    return {
+    const result: BinaryExpression = {
       type: 'BinaryExpression',
       operator: '*',
       left: { type: 'NumberLiteral', value: -1 },
       right: term,
     };
+    return simplify(result);
   }
 
   const firstTerm = combinedTerms[0];
@@ -105,7 +106,8 @@ export function buildExpressionFromTerms(terms: { term: ASTNode; sign: number }[
     }
   }
 
-  return result;
+  // Apply simplification to the final result
+  return simplify(result);
 }
 
 /**
@@ -136,13 +138,15 @@ export function multiplyTerms(left: ASTNode, right: ASTNode): ASTNode {
     };
   }
 
-  // Create multiplication expression
-  return {
+  // Create multiplication expression and simplify
+  const result: BinaryExpression = {
     type: 'BinaryExpression',
     operator: '*',
     left,
     right,
   };
+
+  return simplify(result);
 }
 
 /**
@@ -164,7 +168,9 @@ export function distributeMultiplication(left: ASTNode, right: ASTNode): ASTNode
     }
   }
 
-  return buildExpressionFromTerms(expandedTerms);
+  const result = buildExpressionFromTerms(expandedTerms);
+  // Apply final simplification to the distributed result
+  return simplify(result);
 }
 
 /**
@@ -212,8 +218,9 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
     ) {
       // Check if base contains addition/subtraction
       if (base.type === 'BinaryExpression' && (base.operator === '+' || base.operator === '-')) {
-        // Expand the power
-        return expandPower(base, exponent.value);
+        // Expand the power and simplify
+        const expanded = expandPower(base, exponent.value);
+        return simplify(expanded);
       }
     }
 
@@ -222,12 +229,13 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
     const processedExponent = applyDistributiveLaw(exponent);
 
     if (processedBase !== base || processedExponent !== exponent) {
-      return {
+      const result: BinaryExpression = {
         type: 'BinaryExpression',
         operator: '^',
         left: processedBase,
         right: processedExponent,
       };
+      return simplify(result);
     }
 
     return node;
@@ -249,8 +257,9 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
 
     if (canDistribute(currentNode)) {
       const distributed = distributeMultiplication(left, right);
-      // Recursively apply distribution to the result
-      return applyDistributiveLaw(distributed);
+      // Recursively apply distribution to the result and simplify
+      const result = applyDistributiveLaw(distributed);
+      return simplify(result);
     }
 
     // Check if this is part of a longer multiplication chain
@@ -262,7 +271,8 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
     ) {
       // Distribute the polynomial on the left with the variable on the right
       const distributed = distributeMultiplication(left, right);
-      return applyDistributiveLaw(distributed);
+      const result = applyDistributiveLaw(distributed);
+      return simplify(result);
     }
 
     // Handle cases where right side has already been processed and left is distributable
@@ -273,11 +283,12 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
     ) {
       // Distribute the variable on the left with the polynomial on the right
       const distributed = distributeMultiplication(left, right);
-      return applyDistributiveLaw(distributed);
+      const result = applyDistributiveLaw(distributed);
+      return simplify(result);
     }
 
     if (left !== expr.left || right !== expr.right) {
-      return currentNode;
+      return simplify(currentNode);
     }
 
     return node;
@@ -288,12 +299,13 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
   const right = applyDistributiveLaw(expr.right);
 
   if (left !== expr.left || right !== expr.right) {
-    return {
+    const result: BinaryExpression = {
       type: 'BinaryExpression',
       operator: expr.operator,
       left,
       right,
     };
+    return simplify(result);
   }
 
   return node;
@@ -303,7 +315,8 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
  * Expand all distributive operations in an expression
  */
 export function expandExpression(node: ASTNode): ASTNode {
-  return applyDistributiveLaw(node);
+  const expanded = applyDistributiveLaw(node);
+  return simplify(expanded);
 }
 
 /**
@@ -334,10 +347,12 @@ export function expandPower(base: ASTNode, exponent: number): ASTNode {
     };
   }
 
-  // For powers 2-5, use repeated multiplication
+  // For powers 2-5, use repeated multiplication with simplification at each step
   let result = base;
   for (let i = 1; i < exponent; i++) {
     result = distributeMultiplication(result, base);
+    // Simplify at each step to keep expressions manageable
+    result = simplify(result);
   }
 
   return result;
