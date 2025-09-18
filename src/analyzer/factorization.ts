@@ -1,12 +1,12 @@
 /**
  * Factorization Analyzer
- * Handles factorization and distribution tasks
+ * Handles factorization and distribution tasks using the new advanced system
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { astToLatex } from '../utils/ast';
 import { expandExpression } from '../utils/distribution';
-import { factorExpression } from '../utils/factorization';
+import { factorWithSteps } from '../utils/factorization/index';
 import { simplify } from '../utils/unified-simplify';
 
 /**
@@ -32,19 +32,38 @@ export function analyzeFactorization(
       steps.push(`After expansion: ${expandedLatex}`);
     }
 
-    // Attempt factorization
-    const factored = factorExpression(expanded, variable);
-    const factoredLatex = astToLatex(factored);
+    // Use the new advanced factorization system
+    const factorizationResult = factorWithSteps(expanded, variable, {
+      preferCompleteFactorization: true,
+      extractCommonFactors: true,
+      simplifyCoefficients: true,
+    });
+
+    const factoredLatex = astToLatex(factorizationResult.ast);
+
+    // Add detailed steps from the factorization engine
+    if (factorizationResult.steps.length > 0) {
+      steps.push('Factorization process:');
+      factorizationResult.steps.forEach(step => {
+        if (step.trim() && !step.includes('Starting factorization')) {
+          steps.push(`  ${step}`);
+        }
+      });
+    }
 
     // Check if factorization was successful (expression changed)
-    if (factoredLatex !== expandedLatex && factoredLatex !== astToLatex(ast)) {
-      steps.push(`Factored form: ${factoredLatex}`);
+    if (
+      factorizationResult.changed &&
+      factoredLatex !== expandedLatex &&
+      factoredLatex !== astToLatex(ast)
+    ) {
+      steps.push(`Final factored form: ${factoredLatex}`);
 
       return {
         steps,
         value: factoredLatex,
         valueType: 'symbolic',
-        ast: factored,
+        ast: factorizationResult.ast,
         error: null,
       };
     } else {

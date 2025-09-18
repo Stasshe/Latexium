@@ -181,6 +181,23 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         return simplifiedMultiplication;
       }
 
+      // *** FIX FOR FACTORED EXPRESSIONS ***
+      // For (expression)(expression) format, both sides need parentheses if they contain +/-
+      const leftNeedsParens =
+        node.left.type === 'BinaryExpression' &&
+        (node.left.operator === '+' || node.left.operator === '-');
+      const rightNeedsParens =
+        node.right.type === 'BinaryExpression' &&
+        (node.right.operator === '+' || node.right.operator === '-');
+
+      if (leftNeedsParens && rightNeedsParens) {
+        return `(${left})(${right})`;
+      } else if (leftNeedsParens) {
+        return `(${left})${right}`;
+      } else if (rightNeedsParens) {
+        return `${left}(${right})`;
+      }
+
       // For any other multiplication, use no space to keep terms together
       return `${left}${right}`;
     }

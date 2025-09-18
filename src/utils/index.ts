@@ -7,6 +7,7 @@ export * from './ast';
 export * from './_scope';
 export * from './validation';
 export * from './factorization';
+export * from './factorization/index'; // New advanced factorization system
 export * from './distribution';
 export * from './simplify/commutative';
 export * from './simplify/simplification';
