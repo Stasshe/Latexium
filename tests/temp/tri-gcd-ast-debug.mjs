@@ -1,9 +1,9 @@
-import { parseLatex } from '../../dist/index.esm.js';
+import { parseLatex, analyze } from '../../dist/index.esm.js';
 
 function showAST(expr) {
   const parsed = parseLatex(expr);
-  console.log('Input:', expr);
-  console.log('AST:', JSON.stringify(parsed && parsed.ast, null, 2));
+  const ans = analyze(parsed.ast, { task: 'simplify', variable: 'x' });
+  console.log('ans', ans.value);
   console.log('---');
 }
 
