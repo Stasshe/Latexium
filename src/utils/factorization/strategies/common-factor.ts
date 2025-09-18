@@ -1,4 +1,5 @@
 import { ASTNode, BinaryExpression } from '../../../types/ast';
+import { basicSimplify } from '../../simplify/basic-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 import { PolynomialAnalyzer, ASTBuilder } from '../framework';
 
@@ -130,9 +131,11 @@ export class CommonFactorStrategy implements FactorizationStrategy {
           termNode = ASTBuilder.number(Math.abs(newCoeff));
         }
 
-        // Apply negative sign if needed
+        // Apply negative sign if needed - use subtraction instead of UnaryExpression
         if (newCoeff < 0) {
-          termNode = { type: 'UnaryExpression', operator: '-', operand: termNode };
+          // Instead of creating UnaryExpression, create a proper subtraction when combining terms
+          // This will be handled later in the term combination phase
+          termNode = ASTBuilder.number(newCoeff); // Keep the negative number as-is for now
         }
       }
 
@@ -155,6 +158,9 @@ export class CommonFactorStrategy implements FactorizationStrategy {
     } else {
       remainingExpression = ASTBuilder.number(1);
     }
+
+    // Apply basic simplification to clean up the remaining expression
+    remainingExpression = basicSimplify(remainingExpression);
 
     // Build the final factored expression
     let commonFactor: ASTNode;

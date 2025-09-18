@@ -94,6 +94,16 @@ function simplifyAdditionBasic(left: ASTNode, right: ASTNode): ASTNode {
   if (right.type === 'NumberLiteral' && right.value === 0) return left;
   if (left.type === 'NumberLiteral' && left.value === 0) return right;
 
+  // x + (-n) = x - n (convert addition of negative to subtraction)
+  if (right.type === 'NumberLiteral' && right.value < 0) {
+    return {
+      type: 'BinaryExpression',
+      operator: '-',
+      left,
+      right: { type: 'NumberLiteral', value: -right.value },
+    };
+  }
+
   // Number + Number
   if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
     return { type: 'NumberLiteral', value: left.value + right.value };
