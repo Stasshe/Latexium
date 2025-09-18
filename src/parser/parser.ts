@@ -241,22 +241,6 @@ export class LaTeXParser {
         return this.parseFraction();
       case '\\sqrt':
         return this.parseSqrt();
-      case '\\cdot': {
-        // Treat \cdot as multiplication operator '*':
-        // Insert an OPERATOR '*' token at the current position and re-parse as if '*' was present
-        this.tokens.splice(this.currentTokenIndex, 0, {
-          type: 'OPERATOR',
-          value: '*',
-          position: token.position,
-        });
-        this.currentToken = this.tokens[this.currentTokenIndex] ?? {
-          type: 'EOF',
-          value: '',
-          position: 0,
-        };
-        // Now parse as if '*' was present
-        return this.parsePrimary();
-      }
       case '\\sin':
       case '\\cos':
       case '\\tan':

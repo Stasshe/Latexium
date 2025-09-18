@@ -134,11 +134,21 @@ export class LaTeXTokenizer {
 
       // LaTeX commands
       if (this.currentChar === '\\') {
-        return {
-          type: 'COMMAND',
-          value: this.readCommand(),
-          position,
-        };
+        const command = this.readCommand();
+        switch (command) {
+          case '\\cdot':
+            return { type: 'OPERATOR', value: '*', position };
+          case '\\times':
+            return { type: 'OPERATOR', value: '*', position };
+          case '\\div':
+            return { type: 'OPERATOR', value: '/', position };
+          case '\\star':
+            return { type: 'OPERATOR', value: '*', position };
+          case '\\ast':
+            return { type: 'OPERATOR', value: '*', position };
+          default:
+            return { type: 'COMMAND', value: command, position };
+        }
       }
 
       // Single character tokens

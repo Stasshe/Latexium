@@ -40,7 +40,7 @@ const complexTestCases = [
   // Distribution Tests (10 cases) - Main focus
   {
     id: 1,
-    expression: '(x + y)(a + b + c)',
+    expression: '(x + y)\\cdot(a + b + c)',
     task: 'distribute',
     variable: 'x',
     expected: 'xa + xb + xc + ya + yb + yc',
