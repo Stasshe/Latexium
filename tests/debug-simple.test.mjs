@@ -4,7 +4,8 @@ console.log('=== Debug Simple Factorization ===\n');
 
 try {
   console.log('1. Testing simple parsing...');
-  const ast = parseLatex('(x + 1)(x+1) xx x + xx + x');
+  //const ast = parseLatex('(x + 1)(x+1) xx x + xx + x');
+  const ast = parseLatex('x / 3 * 2');
   console.log('AST:', JSON.stringify(ast, null, 2));
 
   console.log('\n2. Testing distribution...');

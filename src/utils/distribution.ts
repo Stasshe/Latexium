@@ -322,18 +322,6 @@ export function expandPower(base: ASTNode, exponent: number): ASTNode {
     return base;
   }
 
-  if (exponent === 2) {
-    // Special case for squared terms: (a + b)^2 = (a + b)(a + b)
-    return distributeMultiplication(base, base);
-  }
-
-  if (exponent === 3) {
-    // Special case for cubed terms: (a + b)^3 = (a + b)^2 * (a + b)
-    const squared = distributeMultiplication(base, base);
-    return distributeMultiplication(squared, base);
-  }
-
-  // For higher powers, we need to be careful about computational complexity
   // For very large exponents, we might want to keep it unexpanded
   if (exponent > MAX_EXPANSION_POWER) {
     // Keep large powers unexpanded to avoid excessive computation
@@ -345,7 +333,7 @@ export function expandPower(base: ASTNode, exponent: number): ASTNode {
     };
   }
 
-  // For moderate powers (4-20), use repeated multiplication
+  // For powers 2-5, use repeated multiplication
   let result = base;
   for (let i = 1; i < exponent; i++) {
     result = distributeMultiplication(result, base);
