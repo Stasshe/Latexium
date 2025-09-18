@@ -97,7 +97,7 @@ const simplifyTests = [
   {
     expression: '-x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1',
     task: 'simplify',
-    expected: 'x^3 + 4x^2 + 2x - 2',
+    expected: 'x^3 - 5x^2 - x - 1',
   }
 ];
 

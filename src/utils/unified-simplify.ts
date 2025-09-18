@@ -473,6 +473,18 @@ function simplifyUnaryExpression(
     return operand;
   }
 
+  // Apply distributive law for negative over addition/subtraction: -(a + b) = -a - b, -(a - b) = -a + b
+  if (node.operator === '-' && operand.type === 'BinaryExpression') {
+    const binaryOperand = operand as BinaryExpression;
+
+    // Use a more comprehensive approach to distribute the negative sign
+    // Extract all terms from the expression and negate them
+    const terms = extractAdditionTerms(binaryOperand);
+    const negatedTerms = terms.map(({ term, sign }) => ({ term, sign: -sign }));
+    const result = buildAdditionFromTerms(negatedTerms);
+    return basicSimplify(result, options, depth + 1);
+  }
+
   return { ...node, operand };
 }
 
