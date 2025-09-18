@@ -11,6 +11,7 @@ import {
   Integral,
   UnaryExpression,
 } from '../types';
+import { canDistribute, applyDistributiveLaw, expandPower } from './distribution';
 import { astToPolynomial, factorPolynomial, Polynomial } from './polynomial';
 import {
   gcd,
@@ -101,7 +102,31 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         ) {
           return `${left}(${right})`;
         }
-        // Number * expression should have space
+        // Number * expression should have space (unless it's a simple variable product)
+        if (
+          node.right.type === 'BinaryExpression' &&
+          node.right.operator === '*' &&
+          node.right.left.type === 'Identifier' &&
+          node.right.right.type === 'Identifier'
+        ) {
+          // Special case: number * (var * var) should be "2xy" not "2 x y"
+          return `${left}${right}`;
+        }
+        // Handle deeper nested variable multiplication
+        if (node.right.type === 'BinaryExpression' && node.right.operator === '*') {
+          // Check if the entire right side is only variables
+          const isAllVariables = (expr: ASTNode): boolean => {
+            if (expr.type === 'Identifier') return true;
+            if (expr.type === 'BinaryExpression' && expr.operator === '*') {
+              return isAllVariables(expr.left) && isAllVariables(expr.right);
+            }
+            return false;
+          };
+
+          if (isAllVariables(node.right)) {
+            return `${left}${right}`;
+          }
+        }
         return `${left} ${right}`;
       }
 
@@ -111,6 +136,11 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
           return `${right}${node.left.name === 'pi' ? '\\pi' : node.left.name}`;
         }
         return `${right}${left}`;
+      }
+
+      // Variable * Variable should be combined without space (xy, not x y)
+      if (node.left.type === 'Identifier' && node.right.type === 'Identifier') {
+        return `${left}${right}`;
       }
 
       // Default: LaTeXでは通常乗算記号を省略し、スペースで区切る
@@ -275,6 +305,19 @@ export function simplifyAST(node: ASTNode): ASTNode {
       return simplifyUnaryExpression(node);
 
     case 'FunctionCall':
+      // Check if this is actually implicit multiplication rather than a function call
+      // Pattern: single variable name followed by an expression (e.g., "x(y + z)")
+      if (node.args.length === 1 && node.name.match(/^[a-zA-Z]$/) && node.args[0]) {
+        // Convert FunctionCall to multiplication: x(expr) → x * expr
+        const implicitMultiplication: BinaryExpression = {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: { type: 'Identifier', name: node.name },
+          right: node.args[0],
+        };
+        return simplifyAST(implicitMultiplication);
+      }
+
       return {
         ...node,
         args: node.args.map(arg => simplifyAST(arg)),
@@ -729,10 +772,11 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       }
 
       // Try factoring common factors
-      const factoredExpr = factorCommonFactors(buildAdditionFromTerms(nonZeroTerms));
-      if (!areEquivalentExpressions(factoredExpr, buildAdditionFromTerms(nonZeroTerms))) {
-        return simplifyAST(factoredExpr);
-      }
+      // Inner system use formula as all multiplications are expanded.
+      // const factoredExpr = factorCommonFactors(buildAdditionFromTerms(nonZeroTerms));
+      // if (!areEquivalentExpressions(factoredExpr, buildAdditionFromTerms(nonZeroTerms))) {
+      //   return simplifyAST(factoredExpr);
+      // }
 
       // No simplification possible
       return { ...node, left, right };
@@ -1016,8 +1060,23 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
         });
       }
 
-      // Distributive law temporarily disabled to prevent infinite recursion
-      // TODO: Implement with proper recursion depth control
+      // Same variable multiplication: x * x → x^2
+      if (left.type === 'Identifier' && right.type === 'Identifier' && left.name === right.name) {
+        return {
+          type: 'BinaryExpression',
+          operator: '^',
+          left: left,
+          right: { type: 'NumberLiteral', value: 2 },
+        };
+      }
+
+      // Apply distributive law if applicable
+      if (canDistribute(node)) {
+        const distributed = applyDistributiveLaw(node);
+        if (distributed !== node) {
+          return simplifyAST(distributed);
+        }
+      }
 
       break;
 
@@ -1079,6 +1138,20 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       ) {
         return left;
       }
+
+      // Handle power expansion for simple integer exponents
+      if (
+        right.type === 'NumberLiteral' &&
+        Number.isInteger(right.value) &&
+        right.value > 1 &&
+        right.value <= 4
+      ) {
+        const expanded = expandPower(left, right.value);
+        if (expanded !== left) {
+          return simplifyAST(expanded);
+        }
+      }
+
       // Simplify power expressions like x^(3-1) → x^2
       if (
         right.type === 'BinaryExpression' &&

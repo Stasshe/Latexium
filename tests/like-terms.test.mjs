@@ -11,27 +11,32 @@ const testCases = [
   {
     input: '2x + 3x',
     task: 'evaluate',
-    expected: '5 x'  // Updated to match actual output format
+    expected: '5x'  // Updated to match actual output format
   },
   {
     input: 'x + x',
     task: 'evaluate', 
-    expected: '2 x'
+    expected: '2x'
+  },
+  {
+    input: '-x - x',
+    task: 'evaluate',
+    expected: '-2x'
   },
   {
     input: '3x + 2x + x',
     task: 'evaluate',
-    expected: '6 x'
+    expected: '6x'
   },
   {
     input: '2x + 3y + 4x',
     task: 'evaluate',
-    expected: '6 x + 3 y'
+    expected: '6x + 3y'
   },
   {
     input: 'x^2 + 2x^2',
     task: 'evaluate',
-    expected: '3 x^{2}'
+    expected: '3x^{2}'
   },
   {
     input: '\\pi + 2\\pi',  // Use pi instead of \pi
