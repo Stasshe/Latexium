@@ -43,10 +43,23 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
       }
 
       const binaryNode = node as BinaryExpression;
+      let leftSquareRoot: ASTNode | null = null;
+      let rightSquareRoot: ASTNode | null = null;
 
-      // Extract the square roots
-      const leftSquareRoot = this.extractSquareRoot(binaryNode.left);
-      const rightSquareRoot = this.extractSquareRoot(binaryNode.right);
+      // Handle standard a - b form
+      if (binaryNode.operator === '-') {
+        leftSquareRoot = this.extractSquareRoot(binaryNode.left);
+        rightSquareRoot = this.extractSquareRoot(binaryNode.right);
+      }
+      // Handle a + (-b) form where -b is UnaryExpression
+      else if (
+        binaryNode.operator === '+' &&
+        binaryNode.right.type === 'UnaryExpression' &&
+        binaryNode.right.operator === '-'
+      ) {
+        leftSquareRoot = this.extractSquareRoot(binaryNode.left);
+        rightSquareRoot = this.extractSquareRoot(binaryNode.right.operand);
+      }
 
       if (!leftSquareRoot || !rightSquareRoot) {
         return {
@@ -79,7 +92,7 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
         changed: true,
         steps,
         strategyUsed: this.name,
-        canContinue: true,
+        canContinue: true, // Allow further factorization of the result
       };
     } catch (error) {
       return {
@@ -97,14 +110,23 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
    * Check if expression is a difference of squares
    */
   private isDifferenceOfSquares(node: ASTNode): boolean {
-    if (node.type !== 'BinaryExpression' || node.operator !== '-') {
-      return false;
+    // Handle standard a - b form
+    if (node.type === 'BinaryExpression' && node.operator === '-') {
+      const leftIsSquare = this.isSquareExpression(node.left);
+      const rightIsSquare = this.isSquareExpression(node.right);
+      return leftIsSquare && rightIsSquare;
     }
 
-    const leftIsSquare = this.isSquareExpression(node.left);
-    const rightIsSquare = this.isSquareExpression(node.right);
+    // Handle a + (-b) form (where -b is a UnaryExpression)
+    if (node.type === 'BinaryExpression' && node.operator === '+') {
+      if (node.right.type === 'UnaryExpression' && node.right.operator === '-') {
+        const leftIsSquare = this.isSquareExpression(node.left);
+        const rightIsSquare = this.isSquareExpression(node.right.operand);
+        return leftIsSquare && rightIsSquare;
+      }
+    }
 
-    return leftIsSquare && rightIsSquare;
+    return false;
   }
 
   /**
@@ -113,19 +135,33 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
   private isSquareExpression(node: ASTNode): boolean {
     // Check for explicit x^2 form
     if (node.type === 'BinaryExpression' && node.operator === '^') {
-      return node.right.type === 'NumberLiteral' && node.right.value === 2;
+      if (node.right.type === 'NumberLiteral' && node.right.value === 2) {
+        return true;
+      }
+      // Check for x^4 = (x^2)^2, x^6 = (x^3)^2, etc.
+      if (node.right.type === 'NumberLiteral' && node.right.value % 2 === 0) {
+        return true;
+      }
     }
 
     // Check for x*x form
     if (node.type === 'BinaryExpression' && node.operator === '*') {
-      return this.areEquivalentExpressions(node.left, node.right);
-    }
+      if (this.areEquivalentExpressions(node.left, node.right)) {
+        return true;
+      }
 
-    // Check for coefficient * x^2 form
-    if (node.type === 'BinaryExpression' && node.operator === '*') {
-      const hasSquare = this.isSquareExpression(node.left) || this.isSquareExpression(node.right);
-      const hasNumber = node.left.type === 'NumberLiteral' || node.right.type === 'NumberLiteral';
-      return hasSquare && hasNumber;
+      // Check for coefficient * perfect_square form like 9x^2
+      if (node.left.type === 'NumberLiteral') {
+        const coeff = node.left.value;
+        const coeffSqrt = Math.sqrt(Math.abs(coeff));
+        return Number.isInteger(coeffSqrt) && this.isSquareExpression(node.right);
+      }
+
+      if (node.right.type === 'NumberLiteral') {
+        const coeff = node.right.value;
+        const coeffSqrt = Math.sqrt(Math.abs(coeff));
+        return Number.isInteger(coeffSqrt) && this.isSquareExpression(node.left);
+      }
     }
 
     // Check for perfect square numbers
@@ -141,10 +177,17 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
    * Extract the square root of a square expression
    */
   private extractSquareRoot(node: ASTNode): ASTNode | null {
-    // Handle x^2 case
+    // Handle x^n case where n is even
     if (node.type === 'BinaryExpression' && node.operator === '^') {
-      if (node.right.type === 'NumberLiteral' && node.right.value === 2) {
-        return node.left;
+      if (node.right.type === 'NumberLiteral') {
+        if (node.right.value === 2) {
+          return node.left;
+        }
+        // Handle x^4 = (x^2)^2, x^6 = (x^3)^2, etc.
+        if (node.right.value % 2 === 0) {
+          const halfPower = node.right.value / 2;
+          return ASTBuilder.binary('^', node.left, ASTBuilder.number(halfPower));
+        }
       }
     }
 
@@ -155,21 +198,23 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
       }
     }
 
-    // Handle coefficient * x^2 case
+    // Handle coefficient * perfect_square case (e.g., 9x^2 -> 3x)
     if (node.type === 'BinaryExpression' && node.operator === '*') {
       if (node.left.type === 'NumberLiteral') {
-        const sqrt = Math.sqrt(Math.abs(node.left.value));
+        const coeff = node.left.value;
+        const coeffSqrt = Math.sqrt(Math.abs(coeff));
         const rightRoot = this.extractSquareRoot(node.right);
-        if (Number.isInteger(sqrt) && rightRoot) {
-          return ASTBuilder.multiply(ASTBuilder.number(sqrt), rightRoot);
+        if (Number.isInteger(coeffSqrt) && rightRoot) {
+          return ASTBuilder.multiply(ASTBuilder.number(coeffSqrt), rightRoot);
         }
       }
 
       if (node.right.type === 'NumberLiteral') {
-        const sqrt = Math.sqrt(Math.abs(node.right.value));
+        const coeff = node.right.value;
+        const coeffSqrt = Math.sqrt(Math.abs(coeff));
         const leftRoot = this.extractSquareRoot(node.left);
-        if (Number.isInteger(sqrt) && leftRoot) {
-          return ASTBuilder.multiply(leftRoot, ASTBuilder.number(sqrt));
+        if (Number.isInteger(coeffSqrt) && leftRoot) {
+          return ASTBuilder.multiply(leftRoot, ASTBuilder.number(coeffSqrt));
         }
       }
     }

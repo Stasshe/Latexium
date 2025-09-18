@@ -11,7 +11,7 @@ import {
   Identifier,
   UnaryExpression,
   Fraction,
-} from '../types';
+} from '@/types';
 
 /**
  * Basic simplification function for use in distribution.ts

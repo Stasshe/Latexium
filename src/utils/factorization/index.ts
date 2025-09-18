@@ -16,12 +16,19 @@ import { ASTNode } from '../../types';
 // Create and configure the factorization engine
 const factorizationEngine = new FactorizationEngine();
 
-// Register all strategies
-factorizationEngine.registerStrategy(new CommonFactorStrategy());
-factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
-factorizationEngine.registerStrategy(new QuadraticFactorizationStrategy());
-factorizationEngine.registerStrategy(new GroupingStrategy());
-factorizationEngine.registerStrategy(new CubicFactorizationStrategy());
+// Register all strategies with error handling
+try {
+  factorizationEngine.registerStrategy(new CommonFactorStrategy());
+  factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
+  factorizationEngine.registerStrategy(new QuadraticFactorizationStrategy());
+  factorizationEngine.registerStrategy(new GroupingStrategy());
+  factorizationEngine.registerStrategy(new CubicFactorizationStrategy());
+} catch (strategyError) {
+  //push.error('Error registering factorization strategies:', strategyError);
+  throw new Error(
+    `Strategy registration failed: ${strategyError instanceof Error ? strategyError.message : 'Unknown error'}`
+  );
+}
 
 /**
  * Main factorization function - replaces the old factorExpression function
@@ -43,12 +50,18 @@ export function factorWithSteps(
   variable: string = 'x',
   preferences: Partial<FactorizationPreferences> = {}
 ): { ast: ASTNode; steps: string[]; changed: boolean } {
-  const result = factorizationEngine.factor(node, variable, preferences);
-  return {
-    ast: result.ast,
-    steps: result.steps,
-    changed: result.changed,
-  };
+  try {
+    const result = factorizationEngine.factor(node, variable, preferences);
+    return {
+      ast: result.ast,
+      steps: result.steps,
+      changed: result.changed,
+    };
+  } catch (error) {
+    throw new Error(
+      `Factorization engine error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+  }
 }
 
 // Export the engine for advanced usage

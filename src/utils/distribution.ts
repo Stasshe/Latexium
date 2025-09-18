@@ -4,8 +4,9 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
-import { basicSimplify } from './basic-simplify';
-import { MAX_EXPANSION_POWER } from '../config';
+import { basicSimplify } from './simplify/basic-simplify';
+
+import { MAX_EXPANSION_POWER } from '@/config';
 
 /**
  * Extract all terms from an addition/subtraction expression

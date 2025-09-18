@@ -106,6 +106,15 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
 
   switch (node.operator) {
     case '+':
+      // Handle x + (-y) as x - y
+      if (
+        node.right.type === 'UnaryExpression' &&
+        node.right.operator === '-' &&
+        node.right.operand
+      ) {
+        const rightOperand = astToLatex(node.right.operand);
+        return `${left} - ${rightOperand}`;
+      }
       return `${left} + ${right}`;
     case '-':
       return `${left} - ${right}`;

@@ -113,6 +113,7 @@ export class FactorizationEngine {
     while (context.currentIteration < context.maxIterations) {
       context.currentIteration++;
       let iterationChanged = false;
+      const shouldContinue = true;
 
       for (const strategy of this.strategies) {
         if (strategy.canApply(currentNode, context)) {
@@ -125,12 +126,26 @@ export class FactorizationEngine {
             hasChanged = true;
             iterationChanged = true;
             totalSteps.push(...result.steps);
-            context.steps.push(`✓ Applied ${strategy.name}: ${astToLatex(currentNode)}`);
 
-            if (!result.canContinue) {
-              context.steps.push('Factorization complete');
-              break;
+            // Safe LaTeX conversion with error handling
+            try {
+              const latexStr = astToLatex(currentNode);
+              context.steps.push(`✓ Applied ${strategy.name}: ${latexStr}`);
+            } catch (latexError) {
+              context.steps.push(`✓ Applied ${strategy.name}: [LaTeX conversion failed]`);
+              throw new Error(
+                `LaTeX conversion failed after ${strategy.name}: ${latexError instanceof Error ? latexError.message : 'Unknown error'}`
+              );
             }
+
+            // Check if this strategy wants to stop further processing
+            // Note: For multi-step factorization, we should allow other strategies
+            // to try factoring the result, even if this strategy can't continue
+            // if (!result.canContinue) {
+            //   shouldContinue = false;
+            // }
+
+            // Continue to next iteration to try other strategies on the new result
             break;
           } else if (!result.success) {
             context.steps.push(`✗ ${strategy.name} failed: ${result.steps.join(', ')}`);
@@ -142,11 +157,26 @@ export class FactorizationEngine {
         context.steps.push('No further factorization possible');
         break;
       }
+
+      // Stop if any applied strategy requested to stop
+      if (!shouldContinue) {
+        context.steps.push('Factorization complete');
+        break;
+      }
     }
 
     if (context.currentIteration >= context.maxIterations) {
       context.steps.push('Maximum iterations reached');
     }
+
+    // After main factorization, recursively factor subexpressions
+    if (hasChanged) {
+      context.steps.push('Attempting recursive factorization of subexpressions...');
+      currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
+    }
+
+    // Ensure all context steps are included in totalSteps
+    totalSteps.push(...context.steps.slice(totalSteps.length));
 
     return {
       success: true,
@@ -156,6 +186,72 @@ export class FactorizationEngine {
       strategyUsed: hasChanged ? 'Multiple strategies' : 'No change',
       canContinue: false,
     };
+  }
+
+  /**
+   * Recursively factor subexpressions in the result
+   */
+  private recursivelyFactorSubexpressions(node: ASTNode, context: FactorizationContext): ASTNode {
+    context.steps.push(`Recursive check: ${node.type} node`);
+
+    switch (node.type) {
+      case 'BinaryExpression':
+        if (node.operator === '*') {
+          context.steps.push(
+            'Found multiplication - checking both sides for further factorization'
+          );
+
+          // Factor left and right sides of multiplication
+          const newLeft = this.recursivelyFactorSubexpressions(node.left, context);
+          const newRight = this.recursivelyFactorSubexpressions(node.right, context);
+
+          // Try to factor both sides if they're polynomials
+          const leftFactored = this.attemptFactorization(newLeft, context);
+          const rightFactored = this.attemptFactorization(newRight, context);
+
+          return {
+            ...node,
+            left: leftFactored,
+            right: rightFactored,
+          };
+        } else {
+          // For other operators, just recurse on left and right
+          return {
+            ...node,
+            left: this.recursivelyFactorSubexpressions(node.left, context),
+            right: this.recursivelyFactorSubexpressions(node.right, context),
+          };
+        }
+      default:
+        return node;
+    }
+  }
+
+  /**
+   * Attempt factorization on a single expression
+   */
+  private attemptFactorization(node: ASTNode, context: FactorizationContext): ASTNode {
+    // Create a fresh context for recursive factorization to avoid iteration limit issues
+    const recursiveContext: FactorizationContext = {
+      ...context,
+      currentIteration: 0, // Reset iteration counter for recursive calls
+      steps: [], // Use separate steps array to avoid cluttering main output
+    };
+
+    // Try factorization strategies on this subexpression
+    for (const strategy of this.strategies) {
+      if (strategy.canApply(node, recursiveContext)) {
+        const result = strategy.apply(node, recursiveContext);
+        if (result.success && result.changed) {
+          context.steps.push(`  Subfactor: Applied ${strategy.name} to subexpression`);
+
+          // If factorization was successful, recursively factor the result
+          return this.recursivelyFactorSubexpressions(result.ast, context);
+        }
+      }
+    }
+
+    return node;
   }
 
   /**
@@ -211,9 +307,7 @@ export class PolynomialAnalyzer {
    * Extract terms from an addition/subtraction expression
    * Returns array of {coefficient: number, variables: Map<string, number>, sign: 1|-1}
    */
-  static extractTerms(
-    node: ASTNode
-  ): Array<{
+  static extractTerms(node: ASTNode): Array<{
     coefficient: number;
     variables: Map<string, number>;
     sign: number;
@@ -260,13 +354,11 @@ export class PolynomialAnalyzer {
     sign: number
   ): { coefficient: number; variables: Map<string, number>; sign: number } {
     const variables = new Map<string, number>();
-    let coefficient = 1;
 
     const result = this.extractTermComponents(node, variables);
-    coefficient = result.coefficient;
 
     return {
-      coefficient: coefficient,
+      coefficient: result.coefficient,
       variables,
       sign,
     };

@@ -125,12 +125,12 @@ export class QuadraticFactorizationStrategy implements FactorizationStrategy {
     steps.push('Detected perfect square trinomial');
 
     // For perfect square: ax² + bx + c = a(x + k)² where k = b/(2a)
-    const k = -b / (2 * a);
+    const k = b / (2 * a);
 
     steps.push(`Using formula: a(x + k)² where k = ${k}`);
 
     let innerExpression: ASTNode;
-    if (k === 0) {
+    if (Math.abs(k) < 1e-10) {
       innerExpression = ASTBuilder.variable(variable);
     } else if (k > 0) {
       innerExpression = ASTBuilder.add(ASTBuilder.variable(variable), ASTBuilder.number(k));

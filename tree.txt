@@ -6,7 +6,6 @@
 ├── SPECIFICATION.md
 ├── TODO.md
 ├── eslint.config.js
-├── jest.config.js
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
@@ -41,18 +40,30 @@
 │       ├── _scope.ts
 │       ├── ast.ts
 │       ├── distribution.ts
+│       ├── factorization
+│       │   ├── framework.ts
+│       │   ├── index.ts
+│       │   └── strategies
+│       │       ├── common-factor.ts
+│       │       ├── cubic.ts
+│       │       ├── difference-of-squares.ts
+│       │       ├── grouping.ts
+│       │       ├── index.ts
+│       │       ├── quadratic.ts
+│       │       └── simple-common-factor.ts
 │       ├── factorization.ts
 │       ├── index.ts
 │       ├── simplify
+│       │   ├── basic-simplify.ts
 │       │   ├── commutative.ts
 │       │   └── simplification.ts
 │       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
 ├── tests
+│   ├── advanced-factorization.test.mjs
 │   ├── complex-simplify.test.mjs
 │   ├── cubic-factorization.test.mjs
-│   ├── direct-simplify.test.mjs
 │   ├── distribution-unified.test.mjs
 │   ├── enhanced-simplify.test.mjs
 │   ├── factorization.test.mjs
@@ -65,23 +76,48 @@
 │   │   └── test-summary.txt
 │   ├── simplify.test.mjs
 │   ├── temp
+│   │   ├── additional-recursive-tests.test.mjs
+│   │   ├── comprehensive-factorization-test.test.mjs
+│   │   ├── debug-advanced-factorization.test.mjs
+│   │   ├── debug-ast-latex.test.mjs
+│   │   ├── debug-ast-parsing.test.mjs
+│   │   ├── debug-ast-rendering.test.mjs
 │   │   ├── debug-ast-structure.test.mjs
+│   │   ├── debug-ast-to-latex.test.mjs
+│   │   ├── debug-ast-validation.test.mjs
+│   │   ├── debug-coefficient-calc.test.mjs
 │   │   ├── debug-coefficient-preservation.test.mjs
+│   │   ├── debug-common-factor.test.mjs
+│   │   ├── debug-complex-distribution.test.mjs
 │   │   ├── debug-complex-factorization.test.mjs
+│   │   ├── debug-complex-simplify.test.mjs
 │   │   ├── debug-complex.test.mjs
 │   │   ├── debug-cubic-expansion.test.mjs
 │   │   ├── debug-distribution-detailed.test.mjs
 │   │   ├── debug-distribution.test.mjs
-│   │   ├── debug-expansion-structure.test.mjs
-│   │   ├── debug-extraction.test.mjs
-│   │   ├── debug-like-terms.test.mjs
+│   │   ├── debug-double-negative.test.mjs
+│   │   ├── debug-engine-output.test.mjs
+│   │   ├── debug-expansion.test.mjs
+│   │   ├── debug-factorization-engine.test.mjs
+│   │   ├── debug-factorization-issues.test.mjs
+│   │   ├── debug-inner-expr.test.mjs
+│   │   ├── debug-latex-conversion.test.mjs
 │   │   ├── debug-multiple-like-terms.test.mjs
 │   │   ├── debug-multiplication.test.mjs
+│   │   ├── debug-negative-multiplication.test.mjs
 │   │   ├── debug-new-system.test.mjs
 │   │   ├── debug-quotient-rule.test.mjs
+│   │   ├── debug-recursive-factorization.test.mjs
 │   │   ├── debug-simple-expansion.test.mjs
 │   │   ├── debug-simple-term.test.mjs
 │   │   ├── debug-simple.test.mjs
+│   │   ├── debug-square-detection.test.mjs
+│   │   ├── debug-step-by-step.test.mjs
+│   │   ├── debug-term-extraction.test.mjs
+│   │   ├── detailed-verification.test.mjs
+│   │   ├── extended-factorization-test.test.mjs
+│   │   ├── final-debug.test.mjs
+│   │   ├── manual-calculation.test.mjs
 │   │   ├── tri-gcd-ast-debug.mjs
 │   │   └── tri-gcd-simplify.test.mjs
 │   ├── test-distribution.test.mjs
@@ -90,15 +126,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-14 directories, 77 files
+16 directories, 111 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 10528
-Total Characters: 286945
-Total File Size (bytes): 288285
+Total Lines: 12802
+Total Characters: 360580
+Total File Size (bytes): 361910
 
 Development Size
-157M	.
+162M	.
 
 Build Size
-2.8M	dist
+3.5M	dist

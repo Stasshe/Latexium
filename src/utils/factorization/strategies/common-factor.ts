@@ -95,10 +95,12 @@ export class CommonFactorStrategy implements FactorizationStrategy {
       } else {
         const parts: ASTNode[] = [];
 
+        // Add coefficient first (if not 1)
         if (Math.abs(newCoeff) !== 1) {
           parts.push(ASTBuilder.number(Math.abs(newCoeff)));
         }
 
+        // Add variables
         for (const [variable, power] of newVariables) {
           if (power === 1) {
             parts.push(ASTBuilder.variable(variable));
@@ -109,20 +111,26 @@ export class CommonFactorStrategy implements FactorizationStrategy {
           }
         }
 
+        // Build the term node
         if (parts.length === 0) {
           termNode = ASTBuilder.number(Math.abs(newCoeff));
         } else if (parts.length === 1 && parts[0]) {
           termNode = parts[0];
-          if (Math.abs(newCoeff) !== 1) {
-            termNode = ASTBuilder.binary('*', ASTBuilder.number(Math.abs(newCoeff)), termNode);
+        } else if (parts.length > 1) {
+          // Filter out any undefined values and reduce
+          const validParts = parts.filter((part): part is ASTNode => part !== undefined);
+          if (validParts.length === 0) {
+            termNode = ASTBuilder.number(Math.abs(newCoeff));
+          } else if (validParts.length === 1) {
+            termNode = validParts[0]!; // Safe assertion after filter
+          } else {
+            termNode = validParts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
           }
         } else {
-          termNode = parts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
-          if (Math.abs(newCoeff) !== 1) {
-            termNode = ASTBuilder.binary('*', ASTBuilder.number(Math.abs(newCoeff)), termNode);
-          }
+          termNode = ASTBuilder.number(Math.abs(newCoeff));
         }
 
+        // Apply negative sign if needed
         if (newCoeff < 0) {
           termNode = { type: 'UnaryExpression', operator: '-', operand: termNode };
         }
@@ -135,16 +143,34 @@ export class CommonFactorStrategy implements FactorizationStrategy {
     let remainingExpression: ASTNode;
     if (remainingTerms.length === 1 && remainingTerms[0]) {
       remainingExpression = remainingTerms[0];
+    } else if (remainingTerms.length > 1) {
+      const validTerms = remainingTerms.filter((term): term is ASTNode => term !== undefined);
+      if (validTerms.length === 0) {
+        remainingExpression = ASTBuilder.number(1);
+      } else if (validTerms.length === 1) {
+        remainingExpression = validTerms[0]!; // Safe assertion after filter
+      } else {
+        remainingExpression = validTerms.reduce((acc, term) => ASTBuilder.binary('+', acc, term));
+      }
     } else {
-      remainingExpression = remainingTerms.reduce((acc, term) => ASTBuilder.binary('+', acc, term));
+      remainingExpression = ASTBuilder.number(1);
     }
 
     // Build the final factored expression
     let commonFactor: ASTNode;
     if (factorParts.length === 1 && factorParts[0]) {
       commonFactor = factorParts[0];
+    } else if (factorParts.length > 1) {
+      const validFactors = factorParts.filter((part): part is ASTNode => part !== undefined);
+      if (validFactors.length === 0) {
+        commonFactor = ASTBuilder.number(1);
+      } else if (validFactors.length === 1) {
+        commonFactor = validFactors[0]!;
+      } else {
+        commonFactor = validFactors.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
+      }
     } else {
-      commonFactor = factorParts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
+      commonFactor = ASTBuilder.number(1);
     }
 
     const result = ASTBuilder.binary('*', commonFactor, remainingExpression);
