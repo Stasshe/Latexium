@@ -2,6 +2,7 @@
 ├── Development
 │   ├── QUICK_REFERENCE.md
 │   └── README.md
+├── LICENSE
 ├── README.md
 ├── SPECIFICATION.md
 ├── TODO.md
@@ -57,10 +58,12 @@
 │       ├── simplify
 │       │   ├── basic-simplify.ts
 │       │   ├── commutative.ts
+│       │   ├── exponential.ts
 │       │   └── simplification.ts
 │       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
+├── test-specification.txt
 ├── tests
 │   ├── advanced-factorization.test.mjs
 │   ├── complex-simplify.test.mjs
@@ -71,26 +74,32 @@
 │   ├── final-distribution-test.test.mjs
 │   ├── final-validation.test.mjs
 │   ├── main.test.mjs
+│   ├── master.test.mjs
 │   ├── output
+│   │   ├── master-test-log.txt
+│   │   ├── master-test-results.json
+│   │   ├── master-test-summary.txt
 │   │   ├── test-log.txt
 │   │   ├── test-results.json
 │   │   └── test-summary.txt
 │   ├── simplify.test.mjs
+│   ├── temp
+│   │   └── sqrt-exponential.test.mjs
 │   ├── test-distribution.test.mjs
 │   └── unified-simplify.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-15 directories, 68 files
+16 directories, 76 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 12860
-Total Characters: 362168
-Total File Size (bytes): 363498
+Total Lines: 13806
+Total Characters: 388796
+Total File Size (bytes): 390132
 
 Development Size
-163M	.
+167M	.
 
 Build Size
-3.5M	dist
+3.7M	dist
