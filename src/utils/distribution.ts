@@ -4,7 +4,8 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
-import { combineCommutativeLikeTerms } from './commutative';
+import { advancedSimplifyTerms } from './commutative';
+import { simplify } from './unified-simplify';
 import { MAX_EXPANSION_POWER } from '../config';
 
 /**
@@ -42,8 +43,8 @@ export function buildExpressionFromTerms(terms: { term: ASTNode; sign: number }[
     return { type: 'NumberLiteral', value: 0 };
   }
 
-  // Combine like terms with commutative consideration
-  const combinedTerms = combineCommutativeLikeTerms(terms);
+  // Combine like terms with advanced algorithm
+  const combinedTerms = advancedSimplifyTerms(terms);
 
   if (combinedTerms.length === 0) {
     return { type: 'NumberLiteral', value: 0 };

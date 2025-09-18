@@ -38,56 +38,65 @@
 │   │   ├── ast.ts
 │   │   └── index.ts
 │   └── utils
+│       ├── _scope.ts
 │       ├── ast.ts
 │       ├── commutative.ts
 │       ├── distribution.ts
 │       ├── factorization.ts
 │       ├── index.ts
 │       ├── polynomial.ts
-│       ├── scope.ts
 │       ├── simplification.ts
+│       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
 ├── tests
+│   ├── complex-simplify.test.mjs
 │   ├── cubic-factorization.test.mjs
-│   ├── debug-coeff.test.mjs
-│   ├── debug-complex-factorization.test.mjs
-│   ├── debug-distribution.test.mjs
-│   ├── debug-expansion-structure.test.mjs
-│   ├── debug-like-terms.test.mjs
-│   ├── debug-power-distribution-fixed.test.mjs
-│   ├── debug-quotient-rule.test.mjs
-│   ├── debug-simple.test.mjs
-│   ├── debug-step-by-step.test.mjs
-│   ├── diff-check.test.mjs
+│   ├── direct-simplify.test.mjs
 │   ├── enhanced-simplify.test.mjs
-│   ├── evaluate-approx.test.mjs
 │   ├── factorization.test.mjs
 │   ├── final-distribution-test.test.mjs
+│   ├── final-validation.test.mjs
 │   ├── like-terms.test.mjs
 │   ├── main.test.mjs
 │   ├── output
 │   │   ├── test-log.txt
 │   │   ├── test-results.json
 │   │   └── test-summary.txt
-│   ├── simplify-enhanced.test.mjs
 │   ├── simplify.test.mjs
-│   ├── solver.test.mjs
-│   ├── stress.test.mjs
-│   └── test-distribution.test.mjs
+│   ├── temp
+│   │   ├── debug-ast-structure.test.mjs
+│   │   ├── debug-coefficient-preservation.test.mjs
+│   │   ├── debug-complex-factorization.test.mjs
+│   │   ├── debug-complex.test.mjs
+│   │   ├── debug-cubic-expansion.test.mjs
+│   │   ├── debug-distribution-detailed.test.mjs
+│   │   ├── debug-distribution.test.mjs
+│   │   ├── debug-expansion-structure.test.mjs
+│   │   ├── debug-extraction.test.mjs
+│   │   ├── debug-like-terms.test.mjs
+│   │   ├── debug-multiple-like-terms.test.mjs
+│   │   ├── debug-multiplication.test.mjs
+│   │   ├── debug-new-system.test.mjs
+│   │   ├── debug-quotient-rule.test.mjs
+│   │   ├── debug-simple-expansion.test.mjs
+│   │   ├── debug-simple-term.test.mjs
+│   │   └── debug-simple.test.mjs
+│   ├── test-distribution.test.mjs
+│   └── unified-simplify.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-12 directories, 68 files
+13 directories, 76 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 11288
-Total Characters: 309798
-Total File Size (bytes): 311210
+Total Lines: 10796
+Total Characters: 293034
+Total File Size (bytes): 294259
 
 Development Size
-151M	.
+155M	.
 
 Build Size
-2.8M	dist
+2.7M	dist

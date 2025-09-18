@@ -14,7 +14,7 @@ import {
   RESERVED_SYMBOLS,
 } from '../types';
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
-import { resolveScopeInAST } from '../utils/scope';
+import { resolveScopeInAST } from '../utils/_scope';
 import { validateFunctionArgs } from '../utils/validation';
 
 export class LaTeXParser {

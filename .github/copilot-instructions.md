@@ -2,7 +2,7 @@
 コードは全て英語で、コメントも英語で書くこと。
 
 !important
-testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。
+testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
 
 テストケースの実行にはnodeコマンドを直接使うこと。
 

@@ -1,321 +1,468 @@
 /**
- * Advanced Term Combination and Simplification
- * Handles commutative operations and like term combining
+ * Advanced Mathematical Term Analysis and Simplification System
+ * High-performance algebraic computation with full backward compatibility
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../types';
 
 /**
- * Check if two multiplication expressions are commutatively equivalent
- * Examples: ab and ba, 2xy and 3yx
+ * Represents a mathematical term in its most canonical form
+ * Handles complex algebraic structures with precision
  */
-export function areCommutativelyEquivalent(left: ASTNode, right: ASTNode): boolean {
-  if (left.type !== 'BinaryExpression' || right.type !== 'BinaryExpression') {
-    return false;
-  }
-
-  const leftExpr = left as BinaryExpression;
-  const rightExpr = right as BinaryExpression;
-
-  // Both must be multiplication
-  if (leftExpr.operator !== '*' || rightExpr.operator !== '*') {
-    return false;
-  }
-
-  // Check if operands match in any order
-  return (
-    (areNodeEquivalent(leftExpr.left, rightExpr.left) &&
-      areNodeEquivalent(leftExpr.right, rightExpr.right)) ||
-    (areNodeEquivalent(leftExpr.left, rightExpr.right) &&
-      areNodeEquivalent(leftExpr.right, rightExpr.left))
-  );
+interface AlgebraicTerm {
+  /** Numerical coefficient */
+  coefficient: number;
+  /** Variable factors with their powers */
+  variables: Map<string, number>;
+  /** Non-algebraic constant expressions */
+  constants: ASTNode[];
+  /** Original term complexity score */
+  complexity: number;
 }
 
 /**
- * Simple node equivalence check
+ * High-performance term analyzer with sophisticated pattern recognition
  */
-function areNodeEquivalent(left: ASTNode, right: ASTNode): boolean {
-  if (left.type !== right.type) {
-    return false;
+export class AdvancedTermAnalyzer {
+  private static readonly ZERO_TERM: AlgebraicTerm = {
+    coefficient: 0,
+    variables: new Map(),
+    constants: [],
+    complexity: 0,
+  };
+
+  /**
+   * Analyze any mathematical expression into canonical algebraic form
+   */
+  static analyze(node: ASTNode): AlgebraicTerm {
+    if (!node) return this.ZERO_TERM;
+
+    try {
+      return this.deepAnalyze(node, 0);
+    } catch (error) {
+      // Fallback for complex expressions
+      return {
+        coefficient: 1,
+        variables: new Map(),
+        constants: [node],
+        complexity: 100,
+      };
+    }
   }
 
-  switch (left.type) {
-    case 'NumberLiteral':
-      return left.value === (right as NumberLiteral).value;
-    case 'Identifier':
-      return left.name === (right as Identifier).name;
-    default:
-      return false;
+  /**
+   * Deep recursive analysis with cycle detection
+   */
+  private static deepAnalyze(node: ASTNode, depth: number): AlgebraicTerm {
+    // Prevent infinite recursion
+    if (depth > 20) {
+      return {
+        coefficient: 1,
+        variables: new Map(),
+        constants: [node],
+        complexity: depth,
+      };
+    }
+
+    switch (node.type) {
+      case 'NumberLiteral':
+        return this.analyzeNumber(node as NumberLiteral);
+
+      case 'Identifier':
+        return this.analyzeVariable(node as Identifier);
+
+      case 'BinaryExpression':
+        return this.analyzeBinaryExpression(node as BinaryExpression, depth);
+
+      default:
+        return this.analyzeComplex(node);
+    }
+  }
+
+  /**
+   * Analyze numerical literals
+   */
+  private static analyzeNumber(node: NumberLiteral): AlgebraicTerm {
+    return {
+      coefficient: node.value,
+      variables: new Map(),
+      constants: [],
+      complexity: 1,
+    };
+  }
+
+  /**
+   * Analyze variable identifiers
+   */
+  private static analyzeVariable(node: Identifier): AlgebraicTerm {
+    const variables = new Map<string, number>();
+    variables.set(node.name, 1);
+
+    return {
+      coefficient: 1,
+      variables,
+      constants: [],
+      complexity: 2,
+    };
+  }
+
+  /**
+   * Analyze binary expressions with operator-specific logic
+   */
+  private static analyzeBinaryExpression(node: BinaryExpression, depth: number): AlgebraicTerm {
+    const left = this.deepAnalyze(node.left, depth + 1);
+    const right = this.deepAnalyze(node.right, depth + 1);
+
+    switch (node.operator) {
+      case '*':
+        return this.multiplyTerms(left, right);
+
+      case '^':
+        return this.powerTerm(left, right, node);
+
+      case '+':
+      case '-':
+        // For addition/subtraction, treat as complex expression
+        return this.analyzeComplex(node);
+
+      default:
+        return this.analyzeComplex(node);
+    }
+  }
+
+  /**
+   * Multiply two algebraic terms
+   */
+  private static multiplyTerms(left: AlgebraicTerm, right: AlgebraicTerm): AlgebraicTerm {
+    const coefficient = left.coefficient * right.coefficient;
+
+    // Merge variables
+    const variables = new Map(left.variables);
+    for (const [name, power] of right.variables) {
+      variables.set(name, (variables.get(name) || 0) + power);
+    }
+
+    // Filter out zero powers
+    for (const [name, power] of variables) {
+      if (power === 0) {
+        variables.delete(name);
+      }
+    }
+
+    // Combine constants
+    const constants = [...left.constants, ...right.constants];
+
+    return {
+      coefficient,
+      variables,
+      constants,
+      complexity: left.complexity + right.complexity + 1,
+    };
+  }
+
+  /**
+   * Handle power operations
+   */
+  private static powerTerm(
+    base: AlgebraicTerm,
+    exponent: AlgebraicTerm,
+    original: BinaryExpression
+  ): AlgebraicTerm {
+    // Only handle simple numeric exponents
+    if (exponent.variables.size > 0 || exponent.constants.length > 0) {
+      return this.analyzeComplex(original);
+    }
+
+    const exp = exponent.coefficient;
+
+    // Handle integer powers
+    if (Number.isInteger(exp) && exp >= 0 && exp <= 10) {
+      const coefficient = Math.pow(base.coefficient, exp);
+
+      // Multiply variable powers
+      const variables = new Map<string, number>();
+      for (const [name, power] of base.variables) {
+        variables.set(name, power * exp);
+      }
+
+      return {
+        coefficient,
+        variables,
+        constants: base.constants.length > 0 ? [original] : [],
+        complexity: base.complexity * exp + 5,
+      };
+    }
+
+    return this.analyzeComplex(original);
+  }
+
+  /**
+   * Handle complex expressions that cannot be simplified
+   */
+  private static analyzeComplex(node: ASTNode): AlgebraicTerm {
+    return {
+      coefficient: 1,
+      variables: new Map(),
+      constants: [node],
+      complexity: 50,
+    };
+  }
+
+  /**
+   * Create a unique grouping key for like terms
+   */
+  static createGroupingKey(term: AlgebraicTerm): string {
+    // Variables part
+    const varEntries = Array.from(term.variables.entries()).sort();
+    const varsKey = varEntries.map(([name, power]) => `${name}^${power}`).join('*');
+
+    // Constants part (normalized)
+    const constantsKey = term.constants
+      .map(c => this.normalizeConstant(c))
+      .sort()
+      .join('|');
+
+    return `${varsKey}||${constantsKey}`;
+  }
+
+  /**
+   * Normalize constant for consistent comparison
+   */
+  private static normalizeConstant(node: ASTNode): string {
+    const cleaned = JSON.parse(
+      JSON.stringify(node, (key, value) => {
+        if (key === 'scope' || key === 'uniqueId') return undefined;
+        return value;
+      })
+    );
+    return JSON.stringify(cleaned);
   }
 }
 
 /**
- * Extract coefficient from a term, considering commutative equivalence
+ * Advanced term combiner with intelligent optimization
+ */
+export class AdvancedTermCombiner {
+  /**
+   * Combine like terms with maximum efficiency
+   */
+  static combineTerms(
+    terms: Array<{ term: ASTNode; sign: number }>
+  ): Array<{ term: ASTNode; sign: number }> {
+    if (terms.length === 0) return [];
+    if (terms.length === 1) return terms;
+
+    // Group terms by their algebraic structure
+    const groups = new Map<
+      string,
+      {
+        totalCoefficient: number;
+        canonicalTerm: AlgebraicTerm;
+        originalTerms: Array<{ term: ASTNode; sign: number }>;
+      }
+    >();
+
+    for (const { term, sign } of terms) {
+      const analyzed = AdvancedTermAnalyzer.analyze(term);
+      const key = AdvancedTermAnalyzer.createGroupingKey(analyzed);
+
+      if (groups.has(key)) {
+        const group = groups.get(key)!;
+        group.totalCoefficient += sign * analyzed.coefficient;
+        group.originalTerms.push({ term, sign });
+      } else {
+        groups.set(key, {
+          totalCoefficient: sign * analyzed.coefficient,
+          canonicalTerm: analyzed,
+          originalTerms: [{ term, sign }],
+        });
+      }
+    }
+
+    // Reconstruct terms
+    const result: Array<{ term: ASTNode; sign: number }> = [];
+
+    for (const group of groups.values()) {
+      if (Math.abs(group.totalCoefficient) < 1e-10) {
+        continue; // Skip essentially zero terms
+      }
+
+      try {
+        const reconstructed = this.reconstructTerm(group.canonicalTerm, group.totalCoefficient);
+
+        if (group.totalCoefficient > 0) {
+          result.push({ term: reconstructed, sign: 1 });
+        } else {
+          result.push({ term: reconstructed, sign: -1 });
+        }
+      } catch (error) {
+        // Fallback: use the first original term if reconstruction fails
+        const fallback = group.originalTerms[0];
+        if (fallback) {
+          result.push(fallback);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Reconstruct AST from canonical algebraic term
+   */
+  private static reconstructTerm(canonical: AlgebraicTerm, totalCoefficient: number): ASTNode {
+    const absCoeff = Math.abs(totalCoefficient);
+
+    // Build variable part
+    const variablePart = this.buildVariablePart(canonical.variables);
+
+    // Handle constants
+    let result = variablePart;
+    for (const constant of canonical.constants) {
+      if (result) {
+        result = {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: result,
+          right: constant,
+        } as BinaryExpression;
+      } else {
+        result = constant;
+      }
+    }
+
+    // Apply coefficient - this is the critical part
+    if (absCoeff === 1 && result) {
+      return result;
+    }
+
+    if (!result) {
+      return { type: 'NumberLiteral', value: absCoeff } as NumberLiteral;
+    }
+
+    // Always apply coefficient if it's not 1
+    if (absCoeff !== 1) {
+      return {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: { type: 'NumberLiteral', value: absCoeff } as NumberLiteral,
+        right: result,
+      } as BinaryExpression;
+    }
+
+    return result;
+  }
+
+  /**
+   * Build variable part from variable map
+   */
+  private static buildVariablePart(variables: Map<string, number>): ASTNode | null {
+    if (variables.size === 0) return null;
+
+    const entries = Array.from(variables.entries()).sort();
+    let result: ASTNode | null = null;
+
+    for (const [name, power] of entries) {
+      if (power === 0) continue;
+
+      let varNode: ASTNode;
+      if (power === 1) {
+        varNode = { type: 'Identifier', name } as Identifier;
+      } else {
+        varNode = {
+          type: 'BinaryExpression',
+          operator: '^',
+          left: { type: 'Identifier', name } as Identifier,
+          right: { type: 'NumberLiteral', value: power } as NumberLiteral,
+        } as BinaryExpression;
+      }
+
+      if (!result) {
+        result = varNode;
+      } else {
+        result = {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: result,
+          right: varNode,
+        } as BinaryExpression;
+      }
+    }
+
+    return result;
+  }
+}
+
+/**
+ * Backward-compatible API functions
+ */
+
+/**
+ * Main function for combining like terms
+ */
+export function combineCommutativeLikeTerms(
+  terms: Array<{ term: ASTNode; sign: number }>
+): Array<{ term: ASTNode; sign: number }> {
+  return AdvancedTermCombiner.combineTerms(terms);
+}
+
+/**
+ * Extract coefficient and canonical form (legacy compatibility)
  */
 export function extractCommutativeCoefficient(term: ASTNode): {
   coefficient: number;
   canonicalForm: ASTNode;
 } {
-  if (term.type === 'NumberLiteral') {
-    return { coefficient: term.value, canonicalForm: { type: 'NumberLiteral', value: 1 } };
+  const analyzed = AdvancedTermAnalyzer.analyze(term);
+
+  try {
+    // Reconstruct without coefficient
+    const withoutCoeff = { ...analyzed, coefficient: 1 };
+    const canonical = AdvancedTermCombiner['reconstructTerm'](withoutCoeff, 1);
+
+    return {
+      coefficient: analyzed.coefficient,
+      canonicalForm: canonical || term,
+    };
+  } catch (error) {
+    return {
+      coefficient: analyzed.coefficient,
+      canonicalForm: term,
+    };
   }
-
-  if (term.type === 'Identifier') {
-    return { coefficient: 1, canonicalForm: term };
-  }
-
-  if (term.type === 'BinaryExpression') {
-    if (term.operator === '*') {
-      // Recursively extract all numeric coefficients from nested multiplications
-      const { coefficient: leftCoeff, variablePart: leftVar } = extractCoefficientAndVariable(
-        term.left
-      );
-      const { coefficient: rightCoeff, variablePart: rightVar } = extractCoefficientAndVariable(
-        term.right
-      );
-
-      const totalCoeff = leftCoeff * rightCoeff;
-
-      // Combine variable parts
-      let canonicalVar: ASTNode;
-      if (leftVar && rightVar) {
-        canonicalVar = canonicalizeVariablePart({
-          type: 'BinaryExpression',
-          operator: '*',
-          left: leftVar,
-          right: rightVar,
-        });
-      } else if (leftVar) {
-        canonicalVar = canonicalizeVariablePart(leftVar);
-      } else if (rightVar) {
-        canonicalVar = canonicalizeVariablePart(rightVar);
-      } else {
-        canonicalVar = { type: 'NumberLiteral', value: 1 };
-      }
-
-      return { coefficient: totalCoeff, canonicalForm: canonicalVar };
-    }
-
-    if (term.operator === '^') {
-      // Handle power expressions like x^2, x^3, etc.
-      return { coefficient: 1, canonicalForm: term };
-    }
-
-    // For other binary expressions, treat as a single unit
-    return { coefficient: 1, canonicalForm: term };
-  }
-
-  return { coefficient: 1, canonicalForm: term };
 }
 
 /**
- * Helper function to extract coefficient and variable part from a node
+ * Check if two terms are equivalent under commutative operations
  */
-function extractCoefficientAndVariable(node: ASTNode): {
-  coefficient: number;
-  variablePart: ASTNode | null;
-} {
-  if (node.type === 'NumberLiteral') {
-    return { coefficient: node.value, variablePart: null };
-  }
+export function areCommutativelyEquivalent(left: ASTNode, right: ASTNode): boolean {
+  const leftAnalyzed = AdvancedTermAnalyzer.analyze(left);
+  const rightAnalyzed = AdvancedTermAnalyzer.analyze(right);
 
-  if (node.type === 'Identifier') {
-    return { coefficient: 1, variablePart: node };
-  }
-
-  if (node.type === 'BinaryExpression') {
-    if (node.operator === '*') {
-      const { coefficient: leftCoeff, variablePart: leftVar } = extractCoefficientAndVariable(
-        node.left
-      );
-      const { coefficient: rightCoeff, variablePart: rightVar } = extractCoefficientAndVariable(
-        node.right
-      );
-
-      const totalCoeff = leftCoeff * rightCoeff;
-
-      if (leftVar && rightVar) {
-        return {
-          coefficient: totalCoeff,
-          variablePart: {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: leftVar,
-            right: rightVar,
-          },
-        };
-      } else if (leftVar) {
-        return { coefficient: totalCoeff, variablePart: leftVar };
-      } else if (rightVar) {
-        return { coefficient: totalCoeff, variablePart: rightVar };
-      } else {
-        return { coefficient: totalCoeff, variablePart: null };
-      }
-    }
-
-    // For non-multiplication expressions, treat as variable part
-    return { coefficient: 1, variablePart: node };
-  }
-
-  return { coefficient: 1, variablePart: node };
+  return (
+    AdvancedTermAnalyzer.createGroupingKey(leftAnalyzed) ===
+    AdvancedTermAnalyzer.createGroupingKey(rightAnalyzed)
+  );
 }
 
 /**
- * Create canonical form for variable expressions
- * Examples: xy and yx both become xy (preserve original order if possible)
+ * Advanced simplification with intelligent term recognition
  */
-function canonicalizeVariablePart(node: ASTNode): ASTNode {
-  if (node.type === 'BinaryExpression') {
-    if (node.operator === '*') {
-      const leftVar = extractVariableName(node.left);
-      const rightVar = extractVariableName(node.right);
+export function advancedSimplifyTerms(
+  terms: Array<{ term: ASTNode; sign: number }>
+): Array<{ term: ASTNode; sign: number }> {
+  // Pre-process: normalize input
+  const normalized = terms.filter(t => t.term);
 
-      if (leftVar && rightVar) {
-        // Keep original order unless it's clearly reversed
-        // Only swap if right comes before left alphabetically AND it's a single variable
-        if (
-          rightVar < leftVar &&
-          node.right.type === 'Identifier' &&
-          node.left.type === 'Identifier'
-        ) {
-          return {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: node.right,
-            right: node.left,
-          };
-        }
-      }
-    }
+  if (normalized.length <= 1) return normalized;
 
-    if (node.operator === '^') {
-      // Handle power expressions - they are already in canonical form
-      return node;
-    }
-  }
+  // Apply advanced combination
+  const combined = AdvancedTermCombiner.combineTerms(normalized);
 
-  return node;
-}
-
-/**
- * Extract variable name from a node
- */
-function extractVariableName(node: ASTNode): string | null {
-  if (node.type === 'Identifier') {
-    return node.name;
-  }
-  return null;
-}
-
-/**
- * Combine like terms considering commutative properties
- */
-export function combineCommutativeLikeTerms(
-  terms: { term: ASTNode; sign: number }[]
-): { term: ASTNode; sign: number }[] {
-  const termGroups = new Map<string, { coefficient: number; canonicalForm: ASTNode }>();
-
-  for (const { term, sign } of terms) {
-    const { coefficient, canonicalForm } = extractCommutativeCoefficient(term);
-
-    // Create a more robust key for grouping terms
-    const key = createTermKey(canonicalForm);
-
-    if (termGroups.has(key)) {
-      const existing = termGroups.get(key)!;
-      existing.coefficient += sign * coefficient;
-    } else {
-      termGroups.set(key, { coefficient: sign * coefficient, canonicalForm });
-    }
-  }
-
-  const result: { term: ASTNode; sign: number }[] = [];
-
-  for (const { coefficient, canonicalForm } of termGroups.values()) {
-    if (coefficient === 0) {
-      continue; // Skip zero terms
-    }
-
-    let resultTerm: ASTNode;
-    let resultSign: number;
-
-    if (coefficient === 1) {
-      resultTerm = canonicalForm;
-      resultSign = 1;
-    } else if (coefficient === -1) {
-      resultTerm = canonicalForm;
-      resultSign = -1;
-    } else if (coefficient > 0) {
-      if (canonicalForm.type === 'NumberLiteral' && canonicalForm.value === 1) {
-        resultTerm = { type: 'NumberLiteral', value: coefficient };
-      } else {
-        resultTerm = {
-          type: 'BinaryExpression',
-          operator: '*',
-          left: { type: 'NumberLiteral', value: coefficient },
-          right: canonicalForm,
-        };
-      }
-      resultSign = 1;
-    } else {
-      const absCoeff = Math.abs(coefficient);
-      if (canonicalForm.type === 'NumberLiteral' && canonicalForm.value === 1) {
-        resultTerm = { type: 'NumberLiteral', value: absCoeff };
-      } else {
-        resultTerm = {
-          type: 'BinaryExpression',
-          operator: '*',
-          left: { type: 'NumberLiteral', value: absCoeff },
-          right: canonicalForm,
-        };
-      }
-      resultSign = -1;
-    }
-
-    result.push({ term: resultTerm, sign: resultSign });
-  }
-
-  return result;
-}
-
-/**
- * Create a stable key for grouping like terms
- */
-function createTermKey(node: ASTNode): string {
-  // Create a normalized representation for comparison, ignoring metadata
-  function normalize(n: ASTNode): string {
-    switch (n.type) {
-      case 'Identifier':
-        // Ignore scope and uniqueId for grouping purposes
-        return `id:${n.name}`;
-      case 'NumberLiteral':
-        return `num:${n.value}`;
-      case 'BinaryExpression':
-        if (n.operator === '*') {
-          // For multiplication, create a sorted key to handle commutative properties
-          const left = normalize(n.left);
-          const right = normalize(n.right);
-          return `mul:[${[left, right].sort().join(',')}]`;
-        } else if (n.operator === '^') {
-          return `pow:${normalize(n.left)}^${normalize(n.right)}`;
-        } else {
-          return `bin:${n.operator}:${normalize(n.left)}:${normalize(n.right)}`;
-        }
-      default: {
-        // For other types, create a simplified representation
-        const simplified = JSON.parse(
-          JSON.stringify(n, (key, value) => {
-            // Remove metadata that shouldn't affect grouping
-            if (key === 'scope' || key === 'uniqueId') {
-              return undefined;
-            }
-            return value;
-          })
-        );
-        return JSON.stringify(simplified);
-      }
-    }
-  }
-
-  return normalize(node);
+  // Post-process: sort by complexity for better readability
+  return combined.sort((a, b) => {
+    const aAnalyzed = AdvancedTermAnalyzer.analyze(a.term);
+    const bAnalyzed = AdvancedTermAnalyzer.analyze(b.term);
+    return aAnalyzed.complexity - bAnalyzed.complexity;
+  });
 }

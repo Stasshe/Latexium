@@ -22,6 +22,8 @@ import { analyzeEvaluate, analyzeApprox } from './evaluator';
 import { analyzeFactorization, analyzePolynomial, analyzeDistribution } from './factorization';
 import { analyzeIntegrate } from './integrator';
 import { analyzeSolve } from './solver';
+import { astToLatex } from '../utils/ast';
+import { simplify } from '../utils/unified-simplify';
 
 /**
  * Main analyze function that handles different tasks
@@ -62,6 +64,17 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
 
       case 'analyze-polynomial':
         return analyzePolynomial(ast, options as AnalyzeOptions & { task: 'analyze-polynomial' });
+
+      case 'simplify': {
+        const simplified = simplify(ast);
+        return {
+          steps: ['Simplified expression'],
+          value: astToLatex(simplified),
+          valueType: 'symbolic',
+          ast: simplified,
+          error: null,
+        };
+      }
 
       case 'min':
       case 'max':
