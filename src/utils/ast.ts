@@ -155,7 +155,7 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
             return `${left}${right}`;
           }
         }
-        return `${left} ${right}`;
+        return `${left}${right}`;
       }
 
       // Variable/constant * number should reorder for display
@@ -181,8 +181,8 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         return simplifiedMultiplication;
       }
 
-      // Default: LaTeXでは通常乗算記号を省略し、スペースで区切る
-      return `${left} ${right}`;
+      // For any other multiplication, use no space to keep terms together
+      return `${left}${right}`;
     }
     case '/':
       return `\\frac{${left}}{${right}}`;
@@ -227,7 +227,30 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
 
 function unaryExpressionToLatex(node: UnaryExpression): string {
   const operand = astToLatex(node.operand);
-  return node.operator === '-' ? `-${operand}` : `+${operand}`;
+
+  // For negative expressions, handle multiplication specially
+  if (node.operator === '-') {
+    // If operand is a multiplication, we want -xy not - x y
+    if (node.operand.type === 'BinaryExpression' && node.operand.operator === '*') {
+      // Check if the multiplication would normally render without spaces
+      const leftIsNumber = node.operand.left.type === 'NumberLiteral';
+      const rightIsVariable = node.operand.right.type === 'Identifier';
+      const leftIsVariable = node.operand.left.type === 'Identifier';
+      const rightIsNumber = node.operand.right.type === 'NumberLiteral';
+
+      // Cases like -2x or -xy should be rendered as -2x or -xy
+      if (
+        (leftIsNumber && rightIsVariable) ||
+        (leftIsVariable && rightIsVariable) ||
+        (leftIsVariable && rightIsNumber)
+      ) {
+        return `-${operand}`;
+      }
+    }
+    return `-${operand}`;
+  }
+
+  return `+${operand}`;
 }
 
 function functionCallToLatex(node: FunctionCall): string {

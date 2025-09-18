@@ -93,6 +93,11 @@ const simplifyTests = [
     task: 'evaluate',
     expected: '\\frac{3}{2}', // 複分数の簡約
     description: 'Complex fraction simplification'
+  },
+  {
+    expression: '-x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1',
+    task: 'simplify',
+    expected: 'x^3 + 4x^2 + 2x - 2',
   }
 ];
 

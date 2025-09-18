@@ -1,6 +1,7 @@
 /**
  * Unified Mathematical Simplification System
- * Complete algebraic simplification with advanced term analysis
+ * Basic algebraic simplification within expression scope only
+ * For distribution/expansion, use distribution.ts functions explicitly
  */
 
 import {
@@ -12,6 +13,7 @@ import {
   Fraction,
   Integral,
 } from '../types';
+import { expandExpression } from './distribution';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
 import {
   gcd as gcd_simplify,
@@ -38,20 +40,20 @@ export interface SimplifyOptions {
 }
 
 /**
- * Default simplification options
+ * Default simplification options - treating everything as polynomials by default
  */
 const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
   combineLikeTerms: true,
-  expand: false,
-  factor: false,
+  expand: true, // Enable expansion by default for polynomial handling
+  factor: true, // Enable factoring for fraction simplification
   simplifyFractions: true,
   applyIdentities: true,
   maxDepth: 10,
 };
 
 /**
- * Main unified simplification function
- * Applies all mathematical simplifications in optimal order
+ * Enhanced simplification function
+ * For complex expressions, applies distribution first, then basic simplification
  */
 export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
@@ -59,7 +61,14 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
   if (!node) return node;
 
   try {
-    return deepSimplify(node, opts, 0);
+    // For complex expressions involving multiplication of sums/differences,
+    // apply expansion first to handle cases like -x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1
+    if (needsExpansion(node)) {
+      const expanded = expandExpression(node);
+      return basicSimplify(expanded, opts, 0);
+    }
+
+    return basicSimplify(node, opts, 0);
   } catch (error) {
     // Fallback: return original node if simplification fails
     return node;
@@ -67,30 +76,76 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
 }
 
 /**
- * Deep recursive simplification with cycle detection
+ * Check if an expression needs expansion before simplification
  */
-function deepSimplify(node: ASTNode, options: Required<SimplifyOptions>, depth: number): ASTNode {
+function needsExpansion(node: ASTNode): boolean {
+  if (node.type === 'BinaryExpression') {
+    if (node.operator === '*') {
+      // Check if we're multiplying by a complex expression
+      return hasComplexStructure(node.left) || hasComplexStructure(node.right);
+    }
+    // Recursively check child nodes for multiplication
+    return needsExpansion(node.left) || needsExpansion(node.right);
+  }
+
+  if (node.type === 'UnaryExpression') {
+    // Check if we have -(...complex expression...)
+    if (node.operator === '-' && hasComplexStructure(node.operand)) {
+      return true;
+    }
+    return needsExpansion(node.operand);
+  }
+
+  return false;
+}
+
+/**
+ * Check if a node has complex structure that benefits from expansion
+ */
+function hasComplexStructure(node: ASTNode): boolean {
+  if (node.type === 'BinaryExpression') {
+    if (node.operator === '+' || node.operator === '-') {
+      return true; // Sum/difference expressions
+    }
+    if (node.operator === '*') {
+      // Check for nested multiplication with sums
+      return hasComplexStructure(node.left) || hasComplexStructure(node.right);
+    }
+    // Check for nested expressions
+    return hasComplexStructure(node.left) || hasComplexStructure(node.right);
+  }
+
+  if (node.type === 'UnaryExpression') {
+    // Negative of complex expressions
+    return hasComplexStructure(node.operand);
+  }
+
+  return false;
+}
+
+/**
+ * Basic recursive simplification focused on local scope only
+ * No distribution or complex expansion - those are handled by distribution.ts
+ */
+function basicSimplify(node: ASTNode, options: Required<SimplifyOptions>, depth: number): ASTNode {
   // Prevent infinite recursion
   if (depth > options.maxDepth) {
     return node;
   }
 
-  // Apply basic simplifications first
+  // Apply only basic local simplifications
   const basicSimplified = applyBasicSimplifications(node, options, depth);
 
-  // Apply structural simplifications
-  const structuralSimplified = applyStructuralSimplifications(basicSimplified, options, depth);
-
-  // Apply algebraic simplifications
-  const algebraicSimplified = applyAlgebraicSimplifications(structuralSimplified, options, depth);
+  // Skip structural and algebraic simplifications that involve distribution
+  // Those are handled by distribution.ts
 
   // If no change occurred, return the result
-  if (areEquivalentExpressions(node, algebraicSimplified)) {
-    return algebraicSimplified;
+  if (areEquivalentExpressions(node, basicSimplified)) {
+    return basicSimplified;
   }
 
-  // If changes occurred, apply one more round of simplification
-  return deepSimplify(algebraicSimplified, options, depth + 1);
+  // If changes occurred, apply one more round of basic simplification
+  return basicSimplify(basicSimplified, options, depth + 1);
 }
 
 /**
@@ -116,7 +171,7 @@ function applyBasicSimplifications(
       {
         // スコープエラー回避のためcase全体をブロックで囲む
         // Recursively simplify arguments
-        const simplifiedArgs = node.args.map(arg => deepSimplify(arg, options, depth + 1));
+        const simplifiedArgs = node.args.map(arg => basicSimplify(arg, options, depth + 1));
         const funcName = node.name;
         // Only single-argument functions for now
         if (simplifiedArgs.length === 1) {
@@ -233,13 +288,13 @@ function applyBasicSimplifications(
     case 'Integral': {
       const result: Integral = {
         ...node,
-        integrand: deepSimplify(node.integrand, options, depth + 1),
+        integrand: basicSimplify(node.integrand, options, depth + 1),
       };
       if (node.lowerBound) {
-        result.lowerBound = deepSimplify(node.lowerBound, options, depth + 1);
+        result.lowerBound = basicSimplify(node.lowerBound, options, depth + 1);
       }
       if (node.upperBound) {
-        result.upperBound = deepSimplify(node.upperBound, options, depth + 1);
+        result.upperBound = basicSimplify(node.upperBound, options, depth + 1);
       }
       return result;
     }
@@ -248,9 +303,9 @@ function applyBasicSimplifications(
     case 'Product':
       return {
         ...node,
-        expression: deepSimplify(node.expression, options, depth + 1),
-        lowerBound: deepSimplify(node.lowerBound, options, depth + 1),
-        upperBound: deepSimplify(node.upperBound, options, depth + 1),
+        expression: basicSimplify(node.expression, options, depth + 1),
+        lowerBound: basicSimplify(node.lowerBound, options, depth + 1),
+        upperBound: basicSimplify(node.upperBound, options, depth + 1),
       };
 
     default:
@@ -304,10 +359,78 @@ function simplifyMultiplication(
   // x * 1 = x
   if (left.type === 'NumberLiteral' && left.value === 1) return right;
   if (right.type === 'NumberLiteral' && right.value === 1) return left;
+
+  // x * (-1) = -x
+  if (
+    right.type === 'UnaryExpression' &&
+    right.operator === '-' &&
+    right.operand.type === 'NumberLiteral' &&
+    right.operand.value === 1
+  ) {
+    return { type: 'UnaryExpression', operator: '-', operand: left };
+  }
+  if (
+    left.type === 'UnaryExpression' &&
+    left.operator === '-' &&
+    left.operand.type === 'NumberLiteral' &&
+    left.operand.value === 1
+  ) {
+    return { type: 'UnaryExpression', operator: '-', operand: right };
+  }
+
   // Number * Number
   if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
     return { type: 'NumberLiteral', value: left.value * right.value };
   }
+
+  // Handle negative multiplications: A * (-B) = -(A * B)
+  if (right.type === 'UnaryExpression' && right.operator === '-') {
+    const positiveResult = simplifyMultiplication(left, right.operand, options, depth + 1);
+    return { type: 'UnaryExpression', operator: '-', operand: positiveResult };
+  }
+
+  // Handle negative multiplications: (-A) * B = -(A * B)
+  if (left.type === 'UnaryExpression' && left.operator === '-') {
+    const positiveResult = simplifyMultiplication(left.operand, right, options, depth + 1);
+    return { type: 'UnaryExpression', operator: '-', operand: positiveResult };
+  }
+
+  // Handle negative multiplications: (-A) * (-B) = A * B
+  if (
+    left.type === 'UnaryExpression' &&
+    left.operator === '-' &&
+    right.type === 'UnaryExpression' &&
+    right.operator === '-'
+  ) {
+    return simplifyMultiplication(left.operand, right.operand, options, depth + 1);
+  }
+
+  // Handle negative numbers: x * (-2) = -2x
+  if (left.type === 'NumberLiteral' && left.value < 0) {
+    return {
+      type: 'UnaryExpression',
+      operator: '-',
+      operand: simplifyMultiplication(
+        { type: 'NumberLiteral', value: -left.value },
+        right,
+        options,
+        depth + 1
+      ),
+    };
+  }
+  if (right.type === 'NumberLiteral' && right.value < 0) {
+    return {
+      type: 'UnaryExpression',
+      operator: '-',
+      operand: simplifyMultiplication(
+        left,
+        { type: 'NumberLiteral', value: -right.value },
+        options,
+        depth + 1
+      ),
+    };
+  }
+
   // Advanced term analysis (optional, fallback)
   if (options.combineLikeTerms) {
     const analyzed = AdvancedTermAnalyzer.analyze({
@@ -333,7 +456,7 @@ function simplifyUnaryExpression(
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
-  const operand = deepSimplify(node.operand, options, depth + 1);
+  const operand = basicSimplify(node.operand, options, depth + 1);
 
   // Double negation: --x = x
   if (node.operator === '-' && operand.type === 'UnaryExpression' && operand.operator === '-') {
@@ -361,8 +484,8 @@ function simplifyBinaryExpression(
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
-  const left = deepSimplify(node.left, options, depth + 1);
-  const right = deepSimplify(node.right, options, depth + 1);
+  const left = basicSimplify(node.left, options, depth + 1);
+  const right = basicSimplify(node.right, options, depth + 1);
 
   // Apply operator-specific simplifications
   switch (node.operator) {
@@ -535,15 +658,89 @@ function simplifyPower(
 }
 
 /**
- * Simplify fractions
+ * Simplify fractions with polynomial support
  */
 function simplifyFraction(
   node: Fraction,
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
-  const numerator = deepSimplify(node.numerator, options, depth + 1);
-  const denominator = deepSimplify(node.denominator, options, depth + 1);
+  // First, expand both numerator and denominator if they contain distributive expressions
+  let numerator = node.numerator;
+  let denominator = node.denominator;
+
+  // Handle complex fractions first: (a/b) / (c/d) = (a*d) / (b*c)
+  if (numerator.type === 'Fraction' && denominator.type === 'Fraction') {
+    const newNumerator = {
+      type: 'BinaryExpression' as const,
+      operator: '*' as const,
+      left: numerator.numerator,
+      right: denominator.denominator,
+    };
+    const newDenominator = {
+      type: 'BinaryExpression' as const,
+      operator: '*' as const,
+      left: numerator.denominator,
+      right: denominator.numerator,
+    };
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: newNumerator,
+        denominator: newDenominator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
+  // Handle (a/b) / c = a / (b*c)
+  if (numerator.type === 'Fraction') {
+    const newDenominator = {
+      type: 'BinaryExpression' as const,
+      operator: '*' as const,
+      left: numerator.denominator,
+      right: denominator,
+    };
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: numerator.numerator,
+        denominator: newDenominator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
+  // Handle a / (b/c) = (a*c) / b
+  if (denominator.type === 'Fraction') {
+    const newNumerator = {
+      type: 'BinaryExpression' as const,
+      operator: '*' as const,
+      left: numerator,
+      right: denominator.denominator,
+    };
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: newNumerator,
+        denominator: denominator.numerator,
+      },
+      options,
+      depth + 1
+    );
+  }
+
+  // Apply expansion to handle polynomial expressions in fractions
+  if (options.expand) {
+    numerator = expandExpression(numerator);
+    denominator = expandExpression(denominator);
+  }
+
+  // Then apply basic simplification
+  numerator = basicSimplify(numerator, options, depth + 1);
+  denominator = basicSimplify(denominator, options, depth + 1);
 
   // x / 1 = x
   if (denominator.type === 'NumberLiteral' && denominator.value === 1) {
@@ -573,7 +770,58 @@ function simplifyFraction(
     };
   }
 
+  // For polynomial fractions, look for common factors
+  if (options.simplifyFractions && options.factor) {
+    const simplified = simplifyPolynomialFraction(numerator, denominator);
+    if (simplified) {
+      return simplified;
+    }
+  }
+
   return { type: 'Fraction', numerator, denominator };
+}
+
+/**
+ * Simplify polynomial fractions by finding common factors
+ */
+function simplifyPolynomialFraction(numerator: ASTNode, denominator: ASTNode): ASTNode | null {
+  // For now, handle simple cases
+  // This could be expanded to handle more complex polynomial GCD
+
+  // Check if numerator and denominator are identical
+  if (areEquivalentExpressions(numerator, denominator)) {
+    return { type: 'NumberLiteral', value: 1 };
+  }
+
+  // Check for multiplication patterns: (a*b) / a = b
+  if (numerator.type === 'BinaryExpression' && numerator.operator === '*') {
+    if (areEquivalentExpressions(numerator.left, denominator)) {
+      return numerator.right;
+    }
+    if (areEquivalentExpressions(numerator.right, denominator)) {
+      return numerator.left;
+    }
+  }
+
+  // Check for multiplication patterns in denominator: a / (a*b) = 1/b
+  if (denominator.type === 'BinaryExpression' && denominator.operator === '*') {
+    if (areEquivalentExpressions(numerator, denominator.left)) {
+      return {
+        type: 'Fraction',
+        numerator: { type: 'NumberLiteral', value: 1 },
+        denominator: denominator.right,
+      };
+    }
+    if (areEquivalentExpressions(numerator, denominator.right)) {
+      return {
+        type: 'Fraction',
+        numerator: { type: 'NumberLiteral', value: 1 },
+        denominator: denominator.left,
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
