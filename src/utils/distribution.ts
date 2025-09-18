@@ -5,6 +5,7 @@
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
 import { combineCommutativeLikeTerms } from './commutative';
+import { MAX_EXPANSION_POWER } from '../config';
 
 /**
  * Extract all terms from an addition/subtraction expression
@@ -196,6 +197,40 @@ export function applyDistributiveLaw(node: ASTNode): ASTNode {
 
   const expr = node as BinaryExpression;
 
+  // Handle exponentiation: expand (base)^n where base is a sum/difference
+  if (expr.operator === '^') {
+    const base = expr.left;
+    const exponent = expr.right;
+
+    // Check if exponent is a positive integer
+    if (
+      exponent.type === 'NumberLiteral' &&
+      Number.isInteger(exponent.value) &&
+      exponent.value > 0
+    ) {
+      // Check if base contains addition/subtraction
+      if (base.type === 'BinaryExpression' && (base.operator === '+' || base.operator === '-')) {
+        // Expand the power
+        return expandPower(base, exponent.value);
+      }
+    }
+
+    // Recursively process the base and exponent
+    const processedBase = applyDistributiveLaw(base);
+    const processedExponent = applyDistributiveLaw(exponent);
+
+    if (processedBase !== base || processedExponent !== exponent) {
+      return {
+        type: 'BinaryExpression',
+        operator: '^',
+        left: processedBase,
+        right: processedExponent,
+      };
+    }
+
+    return node;
+  }
+
   if (expr.operator === '*' && canDistribute(node)) {
     return distributeMultiplication(expr.left, expr.right);
   }
@@ -245,7 +280,25 @@ export function expandPower(base: ASTNode, exponent: number): ASTNode {
     return distributeMultiplication(base, base);
   }
 
-  // For higher powers, use repeated multiplication
+  if (exponent === 3) {
+    // Special case for cubed terms: (a + b)^3 = (a + b)^2 * (a + b)
+    const squared = distributeMultiplication(base, base);
+    return distributeMultiplication(squared, base);
+  }
+
+  // For higher powers, we need to be careful about computational complexity
+  // For very large exponents, we might want to keep it unexpanded
+  if (exponent > MAX_EXPANSION_POWER) {
+    // Keep large powers unexpanded to avoid excessive computation
+    return {
+      type: 'BinaryExpression',
+      operator: '^',
+      left: base,
+      right: { type: 'NumberLiteral', value: exponent },
+    };
+  }
+
+  // For moderate powers (4-20), use repeated multiplication
   let result = base;
   for (let i = 1; i < exponent; i++) {
     result = distributeMultiplication(result, base);

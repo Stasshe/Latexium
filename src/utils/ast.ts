@@ -70,6 +70,111 @@ export function astToLatex(node: ASTNode): string {
   }
 }
 
+/**
+ * Simplify variable multiplication patterns for better LaTeX display
+ * Converts patterns like x*x*x to x^3
+ */
+function simplifyVariableMultiplication(node: BinaryExpression): string | null {
+  if (node.operator !== '*') return null;
+
+  // Count occurrences of each variable in a multiplication chain
+  const variableCounts = new Map<string, number>();
+
+  function countVariables(expr: ASTNode): void {
+    if (expr.type === 'Identifier') {
+      const count = variableCounts.get(expr.name) || 0;
+      variableCounts.set(expr.name, count + 1);
+    } else if (expr.type === 'BinaryExpression' && expr.operator === '*') {
+      countVariables(expr.left);
+      countVariables(expr.right);
+    }
+  }
+
+  countVariables(node);
+
+  // If we have repeated variables, convert to exponent form
+  const parts: string[] = [];
+  for (const [variable, count] of variableCounts) {
+    if (count === 1) {
+      parts.push(variable);
+    } else {
+      parts.push(`${variable}^{${count}}`);
+    }
+  }
+
+  // Only return simplified form if we actually simplified something
+  if (Array.from(variableCounts.values()).some(count => count > 1)) {
+    return parts.join('');
+  }
+
+  return null;
+}
+
+/**
+ * Simplify variable multiplication patterns in AST structure
+ * Converts patterns like x*x*x to x^3 in the actual AST
+ */
+function simplifyVariableMultiplicationAST(node: BinaryExpression): ASTNode | null {
+  if (node.operator !== '*') return null;
+
+  // Count occurrences of each variable in a multiplication chain
+  const variableCounts = new Map<string, number>();
+
+  function countVariables(expr: ASTNode): void {
+    if (expr.type === 'Identifier') {
+      const count = variableCounts.get(expr.name) || 0;
+      variableCounts.set(expr.name, count + 1);
+    } else if (expr.type === 'BinaryExpression' && expr.operator === '^') {
+      // Handle power expressions like x^2
+      if (expr.left.type === 'Identifier' && expr.right.type === 'NumberLiteral') {
+        const count = variableCounts.get(expr.left.name) || 0;
+        variableCounts.set(expr.left.name, count + expr.right.value);
+      }
+    } else if (expr.type === 'BinaryExpression' && expr.operator === '*') {
+      countVariables(expr.left);
+      countVariables(expr.right);
+    }
+  }
+
+  countVariables(node);
+
+  // Check if we have any repeated variables or powers to combine
+  const hasSimplification = Array.from(variableCounts.values()).some(count => count > 1);
+  if (!hasSimplification) return null;
+
+  // Build simplified expression
+  const parts: ASTNode[] = [];
+  for (const [variable, count] of variableCounts) {
+    if (count === 1) {
+      parts.push({ type: 'Identifier', name: variable });
+    } else {
+      parts.push({
+        type: 'BinaryExpression',
+        operator: '^',
+        left: { type: 'Identifier', name: variable },
+        right: { type: 'NumberLiteral', value: count },
+      });
+    }
+  }
+
+  // Combine parts with multiplication
+  if (parts.length === 1) {
+    return parts[0]!;
+  }
+
+  let result = parts[0]!;
+  for (let i = 1; i < parts.length; i++) {
+    result = {
+      type: 'BinaryExpression',
+      operator: '*',
+      left: result,
+      right: parts[i]!,
+    };
+  }
+
+  return result;
+}
+
 function binaryExpressionToLatex(node: BinaryExpression): string {
   const left = astToLatex(node.left);
   const right = astToLatex(node.right);
@@ -79,7 +184,7 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
       return `${left} + ${right}`;
     case '-':
       return `${left} - ${right}`;
-    case '*':
+    case '*': {
       // Handle coefficient * constant/variable patterns
       if (node.left.type === 'NumberLiteral') {
         // Number * π/e should display as "2π" or "2e"
@@ -138,14 +243,37 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
 
       // Variable * Variable should be combined without space (xy, not x y)
       if (node.left.type === 'Identifier' && node.right.type === 'Identifier') {
+        // Same variable: x * x -> x^2 representation in LaTeX
+        if (node.left.name === node.right.name) {
+          return `${left}^{2}`;
+        }
         return `${left}${right}`;
+      }
+
+      // Handle complex variable multiplication patterns and convert to exponent form
+      const simplifiedMultiplication = simplifyVariableMultiplication(node);
+      if (simplifiedMultiplication !== null) {
+        return simplifiedMultiplication;
       }
 
       // Default: LaTeXでは通常乗算記号を省略し、スペースで区切る
       return `${left} ${right}`;
+    }
     case '/':
       return `\\frac{${left}}{${right}}`;
-    case '^':
+    case '^': {
+      // Add parentheses around complex base expressions for clarity
+      let baseStr = left;
+      if (
+        node.left.type === 'BinaryExpression' &&
+        (node.left.operator === '+' ||
+          node.left.operator === '-' ||
+          node.left.operator === '*' ||
+          node.left.operator === '/')
+      ) {
+        baseStr = `(${left})`;
+      }
+
       // Simplify exponent display for simple numbers
       if (
         node.right.type === 'NumberLiteral' &&
@@ -153,9 +281,10 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         node.right.value >= 0 &&
         node.right.value <= 9
       ) {
-        return `${left}^{${right}}`;
+        return `${baseStr}^{${right}}`;
       }
-      return `${left}^{${right}}`;
+      return `${baseStr}^{${right}}`;
+    }
     case '=':
       return `${left} = ${right}`;
     case '>':
@@ -474,6 +603,10 @@ function extractCoefficientAndVariable(node: ASTNode): {
       return { coefficient: 1, variablePart: node };
 
     case 'BinaryExpression':
+      if (node.operator === '^') {
+        // Handle power expressions like x^2
+        return { coefficient: 1, variablePart: node };
+      }
       if (node.operator === '*') {
         // Check if left is number and right is variable part
         if (node.left.type === 'NumberLiteral') {
@@ -540,6 +673,16 @@ function extractCoefficientAndVariable(node: ASTNode): {
 }
 
 /**
+ * Normalize variable part to combine powers of the same variable
+ * For example: x^2 * x -> x^3, x * x * x -> x^3
+ */
+function normalizeVariablePart(node: ASTNode): ASTNode {
+  // For now, keep it simple and just return the node as is
+  // The main variable simplification will be handled by simplifyVariableMultiplicationAST
+  return node;
+}
+
+/**
  * Combine like terms in addition
  */
 function combineLikeTerms(terms: ASTNode[]): ASTNode[] {
@@ -548,14 +691,17 @@ function combineLikeTerms(terms: ASTNode[]): ASTNode[] {
   for (const term of terms) {
     const { coefficient, variablePart } = extractCoefficientAndVariable(term);
 
-    // Use LaTeX representation of variable part as key
-    const key = variablePart ? astToLatex(variablePart) : 'constant';
+    // Normalize the variable part to combine powers
+    const normalizedVarPart = variablePart ? normalizeVariablePart(variablePart) : null;
+
+    // Use LaTeX representation of normalized variable part as key
+    const key = normalizedVarPart ? astToLatex(normalizedVarPart) : 'constant';
 
     if (termMap.has(key)) {
       const existing = termMap.get(key)!;
       existing.coefficient += coefficient;
     } else {
-      termMap.set(key, { coefficient, variablePart });
+      termMap.set(key, { coefficient, variablePart: normalizedVarPart });
     }
   }
 
@@ -889,7 +1035,7 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       break;
     }
 
-    case '*':
+    case '*': {
       // 0 * x = 0, x * 0 = 0
       if (left.type === 'NumberLiteral' && left.value === 0) return left;
       if (right.type === 'NumberLiteral' && right.value === 0) return right;
@@ -1068,6 +1214,12 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
         };
       }
 
+      // Handle complex variable multiplication chains: x*x*x → x^3
+      const simplifiedVarMult = simplifyVariableMultiplicationAST({ ...node, left, right });
+      if (simplifiedVarMult) {
+        return simplifiedVarMult; // Don't recursively simplify to avoid stack overflow
+      }
+
       // Apply distributive law if applicable
       if (canDistribute(node)) {
         const distributed = applyDistributiveLaw(node);
@@ -1077,6 +1229,7 @@ function simplifyBinaryExpression(node: BinaryExpression): ASTNode {
       }
 
       break;
+    }
 
     case '/':
       // 0 / x = 0 (x ≠ 0)

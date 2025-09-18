@@ -1,10 +1,10 @@
 /**
  * Factorization Analyzer
- * Handles factorization tasks
+ * Handles factorization and distribution tasks
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
-import { astToLatex } from '../utils/ast';
+import { astToLatex, simplifyAST } from '../utils/ast';
 import { expandExpression } from '../utils/distribution';
 import { factorExpression } from '../utils/factorization';
 
@@ -68,6 +68,76 @@ export function analyzeFactorization(
       valueType: 'symbolic',
       ast: null,
       error: error instanceof Error ? error.message : 'Factorization failed',
+    };
+  }
+}
+
+/**
+ * Analyze distribution/expansion task
+ */
+export function analyzeDistribution(
+  ast: ASTNode,
+  options: AnalyzeOptions & { task: 'distribute' }
+): AnalyzeResult {
+  const steps: string[] = [];
+
+  try {
+    steps.push(`Original expression: ${astToLatex(ast)}`);
+
+    // Expand the expression
+    const expanded = expandExpression(ast);
+    const expandedLatex = astToLatex(expanded);
+
+    // Check if expansion was performed
+    if (expandedLatex !== astToLatex(ast)) {
+      steps.push(`After distribution/expansion: ${expandedLatex}`);
+
+      // Apply simplification to combine like terms
+      const simplified = simplifyAST(expanded);
+      const simplifiedLatex = astToLatex(simplified);
+
+      // Check if simplification made changes
+      if (simplifiedLatex !== expandedLatex) {
+        steps.push(`After combining like terms: ${simplifiedLatex}`);
+
+        return {
+          steps,
+          value: simplifiedLatex,
+          valueType: 'symbolic',
+          ast: simplified,
+          error: null,
+        };
+      }
+
+      return {
+        steps,
+        value: expandedLatex,
+        valueType: 'symbolic',
+        ast: expanded,
+        error: null,
+      };
+    } else {
+      steps.push('Expression is already in expanded form');
+
+      return {
+        steps,
+        value: expandedLatex,
+        valueType: 'symbolic',
+        ast: expanded,
+        error: null,
+      };
+    }
+  } catch (error) {
+    steps.push(
+      `Error during distribution: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+
+    return {
+      steps,
+      value: null,
+      valueType: 'symbolic',
+      ast: null,
+      error: error instanceof Error ? error.message : 'Distribution failed',
     };
   }
 }
@@ -188,4 +258,34 @@ function analyzePolynomialDegree(
   maxDegree = findDegree(ast);
 
   return { degree: maxDegree, leadingCoeff };
+}
+
+/**
+ * Generate step-by-step factorization explanation
+ */
+function getFactorizationSteps(original: ASTNode, factored: ASTNode, variable: string): string[] {
+  const steps: string[] = [];
+
+  // Analyze what type of factorization was performed
+  const originalLatex = astToLatex(original);
+  const factoredLatex = astToLatex(factored);
+
+  // Simple heuristics to determine factorization type
+  if (factoredLatex.includes('(') && factoredLatex.includes(')')) {
+    if (factoredLatex.includes('^{2}')) {
+      steps.push('Identified perfect square trinomial pattern');
+      steps.push('Applied formula: a² ± 2ab + b² = (a ± b)²');
+    } else if (factoredLatex.includes(' + ') && factoredLatex.includes(' - ')) {
+      steps.push('Identified difference of squares pattern');
+      steps.push('Applied formula: a² - b² = (a + b)(a - b)');
+    } else if (factoredLatex.match(/\([^)]*\)\([^)]*\)/)) {
+      steps.push('Factored using quadratic factorization');
+      steps.push('Found linear factors using roots or factorization techniques');
+    }
+  } else if (factoredLatex.includes('(')) {
+    steps.push('Factored out common factors');
+    steps.push('Applied distributive property: ab + ac = a(b + c)');
+  }
+
+  return steps;
 }

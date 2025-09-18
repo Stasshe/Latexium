@@ -6,7 +6,7 @@ export { analyzeDifferentiate, differentiateAST } from './differentiator';
 export { analyzeEvaluate, analyzeApprox, evaluateAST } from './evaluator';
 export { analyzeIntegrate, integrateAST } from './integrator';
 export { analyzeSolve, solveEquation } from './solver';
-export { analyzeFactorization, analyzePolynomial } from './factorization';
+export { analyzeFactorization, analyzePolynomial, analyzeDistribution } from './factorization';
 
 // Export new integration engine
 export { IntegrationEngine } from './integration';
@@ -19,7 +19,7 @@ export { IntegrationEngine } from './integration';
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { analyzeDifferentiate } from './differentiator';
 import { analyzeEvaluate, analyzeApprox } from './evaluator';
-import { analyzeFactorization, analyzePolynomial } from './factorization';
+import { analyzeFactorization, analyzePolynomial, analyzeDistribution } from './factorization';
 import { analyzeIntegrate } from './integrator';
 import { analyzeSolve } from './solver';
 
@@ -56,6 +56,9 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
 
       case 'factor':
         return analyzeFactorization(ast, options as AnalyzeOptions & { task: 'factor' });
+
+      case 'distribute':
+        return analyzeDistribution(ast, options as AnalyzeOptions & { task: 'distribute' });
 
       case 'analyze-polynomial':
         return analyzePolynomial(ast, options as AnalyzeOptions & { task: 'analyze-polynomial' });
