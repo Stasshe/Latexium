@@ -1,6 +1,6 @@
 import { ASTNode, BinaryExpression } from '../../../types/ast';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
-import { ASTBuilder } from '../framework';
+import { PolynomialAnalyzer, ASTBuilder } from '../framework';
 
 /**
  * Strategy for factoring out common factors
@@ -12,94 +12,144 @@ export class CommonFactorStrategy implements FactorizationStrategy {
   priority = 100; // High priority - should be tried first
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
-    return this.isAddition(node) && this.hasCommonFactor(node);
+    const terms = PolynomialAnalyzer.extractTerms(node);
+    return terms.length >= 2 && this.hasCommonFactors(terms);
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
     const steps: string[] = [];
+    const terms = PolynomialAnalyzer.extractTerms(node);
 
-    if (node.type !== 'BinaryExpression' || node.operator !== '+') {
-      return {
-        success: false,
-        ast: node,
-        changed: false,
-        steps: ['Not an addition expression'],
-        strategyUsed: this.name,
-        canContinue: false,
-      };
+    steps.push(`Analyzing ${terms.length} terms for common factors`);
+
+    // Extract coefficients and find GCD
+    const coefficients = terms.map(term => Math.abs(term.coefficient * term.sign));
+    const numericGCD = PolynomialAnalyzer.findGCD(coefficients);
+
+    // Find common variable factors
+    const commonVariables = PolynomialAnalyzer.findCommonVariableFactors(terms);
+
+    steps.push(`Numeric GCD: ${numericGCD}`);
+    if (commonVariables.size > 0) {
+      const varFactors = Array.from(commonVariables.entries())
+        .map(([var_, power]) => (power === 1 ? var_ : `${var_}^${power}`))
+        .join('');
+      steps.push(`Common variable factors: ${varFactors}`);
     }
 
-    // For simple case: 6x + 9
-    const left = node.left; // 6x (BinaryExpression * with 6 and x)
-    const right = node.right; // 9 (NumberLiteral)
-
-    steps.push(`Analyzing addition: ${this.nodeToString(left)} + ${this.nodeToString(right)}`);
-
-    // Extract coefficients manually for debugging
-    const leftCoeff = this.extractCoefficient(left);
-    const rightCoeff = this.extractCoefficient(right);
-
-    steps.push(`Left coefficient: ${leftCoeff}, Right coefficient: ${rightCoeff}`);
-
-    if (leftCoeff === null || rightCoeff === null) {
+    // Check if we have meaningful common factors
+    if (numericGCD === 1 && commonVariables.size === 0) {
       return {
         success: false,
         ast: node,
         changed: false,
-        steps: [...steps, 'Could not extract coefficients'],
-        strategyUsed: this.name,
-        canContinue: false,
-      };
-    }
-
-    const gcd = this.gcd(Math.abs(leftCoeff), Math.abs(rightCoeff));
-    steps.push(`GCD of ${Math.abs(leftCoeff)} and ${Math.abs(rightCoeff)} is ${gcd}`);
-
-    if (gcd <= 1) {
-      return {
-        success: false,
-        ast: node,
-        changed: false,
-        steps: [...steps, 'No common factor greater than 1'],
+        steps: ['No common factors found'],
         strategyUsed: this.name,
         canContinue: true,
       };
     }
 
-    // Factor out the GCD
-    const newLeftCoeff = leftCoeff / gcd;
-    const newRightCoeff = rightCoeff / gcd;
+    // Build the factored form
+    const factorParts: ASTNode[] = [];
 
-    steps.push(`After factoring out ${gcd}: left=${newLeftCoeff}, right=${newRightCoeff}`);
-
-    // Build the factored expression: gcd * (newLeft + newRight)
-    let newLeft: ASTNode;
-    if (
-      left.type === 'BinaryExpression' &&
-      left.operator === '*' &&
-      left.left.type === 'NumberLiteral' &&
-      left.right.type === 'Identifier'
-    ) {
-      // Replace coefficient in 6x -> 2x
-      newLeft =
-        newLeftCoeff === 1
-          ? left.right
-          : ASTBuilder.binary('*', ASTBuilder.number(newLeftCoeff), left.right);
-    } else if (left.type === 'Identifier') {
-      // Handle pure variable like 'x' -> coefficient is implicitly 1
-      newLeft =
-        newLeftCoeff === 1 ? left : ASTBuilder.binary('*', ASTBuilder.number(newLeftCoeff), left);
-    } else {
-      newLeft = ASTBuilder.number(newLeftCoeff);
+    // Add numeric factor if > 1
+    if (numericGCD > 1) {
+      factorParts.push(ASTBuilder.number(numericGCD));
     }
 
-    const newRight = ASTBuilder.number(newRightCoeff);
-    const factorContent = ASTBuilder.binary('+', newLeft, newRight);
-    const result = ASTBuilder.binary('*', ASTBuilder.number(gcd), factorContent);
+    // Add variable factors
+    for (const [variable, power] of commonVariables) {
+      if (power === 1) {
+        factorParts.push(ASTBuilder.variable(variable));
+      } else {
+        factorParts.push(
+          ASTBuilder.binary('^', ASTBuilder.variable(variable), ASTBuilder.number(power))
+        );
+      }
+    }
 
-    steps.push(
-      `Final result: ${gcd} * (${this.nodeToString(newLeft)} + ${this.nodeToString(newRight)})`
-    );
+    // Build remaining terms after factoring out common factors
+    const remainingTerms: ASTNode[] = [];
+
+    for (const term of terms) {
+      const newCoeff = (term.coefficient * term.sign) / numericGCD;
+      const newVariables = new Map(term.variables);
+
+      // Remove common variable factors
+      for (const [variable, commonPower] of commonVariables) {
+        const termPower = newVariables.get(variable) || 0;
+        const remainingPower = termPower - commonPower;
+        if (remainingPower > 0) {
+          newVariables.set(variable, remainingPower);
+        } else {
+          newVariables.delete(variable);
+        }
+      }
+
+      // Build the remaining term
+      let termNode: ASTNode;
+
+      if (Math.abs(newCoeff) === 1 && newVariables.size === 0) {
+        // Just 1 or -1
+        termNode = ASTBuilder.number(newCoeff);
+      } else {
+        const parts: ASTNode[] = [];
+
+        if (Math.abs(newCoeff) !== 1) {
+          parts.push(ASTBuilder.number(Math.abs(newCoeff)));
+        }
+
+        for (const [variable, power] of newVariables) {
+          if (power === 1) {
+            parts.push(ASTBuilder.variable(variable));
+          } else {
+            parts.push(
+              ASTBuilder.binary('^', ASTBuilder.variable(variable), ASTBuilder.number(power))
+            );
+          }
+        }
+
+        if (parts.length === 0) {
+          termNode = ASTBuilder.number(Math.abs(newCoeff));
+        } else if (parts.length === 1 && parts[0]) {
+          termNode = parts[0];
+          if (Math.abs(newCoeff) !== 1) {
+            termNode = ASTBuilder.binary('*', ASTBuilder.number(Math.abs(newCoeff)), termNode);
+          }
+        } else {
+          termNode = parts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
+          if (Math.abs(newCoeff) !== 1) {
+            termNode = ASTBuilder.binary('*', ASTBuilder.number(Math.abs(newCoeff)), termNode);
+          }
+        }
+
+        if (newCoeff < 0) {
+          termNode = { type: 'UnaryExpression', operator: '-', operand: termNode };
+        }
+      }
+
+      remainingTerms.push(termNode);
+    }
+
+    // Combine remaining terms
+    let remainingExpression: ASTNode;
+    if (remainingTerms.length === 1 && remainingTerms[0]) {
+      remainingExpression = remainingTerms[0];
+    } else {
+      remainingExpression = remainingTerms.reduce((acc, term) => ASTBuilder.binary('+', acc, term));
+    }
+
+    // Build the final factored expression
+    let commonFactor: ASTNode;
+    if (factorParts.length === 1 && factorParts[0]) {
+      commonFactor = factorParts[0];
+    } else {
+      commonFactor = factorParts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
+    }
+
+    const result = ASTBuilder.binary('*', commonFactor, remainingExpression);
+
+    steps.push(`Factored form: common factor times remaining expression`);
 
     return {
       success: true,
@@ -111,64 +161,17 @@ export class CommonFactorStrategy implements FactorizationStrategy {
     };
   }
 
-  private isAddition(node: ASTNode): boolean {
-    return node.type === 'BinaryExpression' && node.operator === '+';
-  }
-
-  private hasCommonFactor(node: ASTNode): boolean {
-    if (node.type !== 'BinaryExpression' || node.operator !== '+') return false;
-
-    const leftCoeff = this.extractCoefficient(node.left);
-    const rightCoeff = this.extractCoefficient(node.right);
-
-    if (leftCoeff === null || rightCoeff === null) return false;
-
-    return this.gcd(Math.abs(leftCoeff), Math.abs(rightCoeff)) > 1;
-  }
-
-  private extractCoefficient(node: ASTNode): number | null {
-    switch (node.type) {
-      case 'NumberLiteral':
-        return node.value;
-
-      case 'BinaryExpression':
-        if (node.operator === '*') {
-          if (node.left.type === 'NumberLiteral') {
-            return node.left.value;
-          }
-          if (node.right.type === 'NumberLiteral') {
-            return node.right.value;
-          }
-        }
-        return 1;
-
-      case 'Identifier':
-        return 1;
-
-      default:
-        return null;
+  private hasCommonFactors(
+    terms: Array<{ coefficient: number; variables: Map<string, number>; sign: number }>
+  ): boolean {
+    // Check for numeric GCD > 1
+    const coefficients = terms.map(term => Math.abs(term.coefficient * term.sign));
+    if (PolynomialAnalyzer.findGCD(coefficients) > 1) {
+      return true;
     }
-  }
 
-  private gcd(a: number, b: number): number {
-    while (b !== 0) {
-      const temp = b;
-      b = a % b;
-      a = temp;
-    }
-    return a;
-  }
-
-  private nodeToString(node: ASTNode): string {
-    switch (node.type) {
-      case 'NumberLiteral':
-        return node.value.toString();
-      case 'Identifier':
-        return node.name;
-      case 'BinaryExpression':
-        return `(${this.nodeToString(node.left)} ${node.operator} ${this.nodeToString(node.right)})`;
-      default:
-        return 'unknown';
-    }
+    // Check for common variables
+    const commonVariables = PolynomialAnalyzer.findCommonVariableFactors(terms);
+    return commonVariables.size > 0;
   }
 }
