@@ -4,7 +4,6 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral } from '../types';
-import { advancedSimplifyTerms } from './simplify/commutative';
 import { simplify } from './unified-simplify';
 import { MAX_EXPANSION_POWER } from '../config';
 
@@ -43,71 +42,31 @@ export function buildExpressionFromTerms(terms: { term: ASTNode; sign: number }[
     return { type: 'NumberLiteral', value: 0 };
   }
 
-  // Combine like terms with advanced algorithm
-  const combinedTerms = advancedSimplifyTerms(terms);
-
-  if (combinedTerms.length === 0) {
-    return { type: 'NumberLiteral', value: 0 };
-  }
-
-  if (combinedTerms.length === 1) {
-    const firstTerm = combinedTerms[0];
-    if (!firstTerm) {
-      return { type: 'NumberLiteral', value: 0 };
-    }
-
-    const { term, sign } = firstTerm;
-    if (sign === 1) {
-      return simplify(term);
-    }
-    const result: BinaryExpression = {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: { type: 'NumberLiteral', value: -1 },
-      right: term,
-    };
-    return simplify(result);
-  }
-
-  const firstTerm = combinedTerms[0];
-  if (!firstTerm) {
-    return { type: 'NumberLiteral', value: 0 };
-  }
-
-  let result =
-    firstTerm.sign === 1
-      ? firstTerm.term
-      : ({
-          type: 'BinaryExpression',
-          operator: '*',
-          left: { type: 'NumberLiteral', value: -1 },
-          right: firstTerm.term,
-        } as ASTNode);
-
-  for (let i = 1; i < combinedTerms.length; i++) {
-    const currentTerm = combinedTerms[i];
-    if (!currentTerm) continue;
-
-    const { term, sign } = currentTerm;
-    if (sign === 1) {
-      result = {
+  // Build a sum/difference chain from the terms
+  let expr: ASTNode | null = null;
+  for (const { term, sign } of terms) {
+    const signedTerm =
+      sign === 1
+        ? term
+        : ({
+            type: 'BinaryExpression',
+            operator: '*',
+            left: { type: 'NumberLiteral', value: -1 },
+            right: term,
+          } as BinaryExpression);
+    if (expr === null) {
+      expr = signedTerm;
+    } else {
+      expr = {
         type: 'BinaryExpression',
         operator: '+',
-        left: result,
-        right: term,
-      };
-    } else {
-      result = {
-        type: 'BinaryExpression',
-        operator: '-',
-        left: result,
-        right: term,
-      };
+        left: expr,
+        right: signedTerm,
+      } as BinaryExpression;
     }
   }
-
-  // Apply simplification to the final result
-  return simplify(result);
+  // Let unified-simplify handle all further simplification
+  return simplify(expr!);
 }
 
 /**

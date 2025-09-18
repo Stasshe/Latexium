@@ -112,11 +112,120 @@ function applyBasicSimplifications(
     case 'BinaryExpression':
       return simplifyBinaryExpression(node, options, depth);
 
-    case 'FunctionCall':
-      return {
-        ...node,
-        args: node.args.map(arg => deepSimplify(arg, options, depth + 1)),
-      };
+    case 'FunctionCall': {
+      {
+        // スコープエラー回避のためcase全体をブロックで囲む
+        // Recursively simplify arguments
+        const simplifiedArgs = node.args.map(arg => deepSimplify(arg, options, depth + 1));
+        const funcName = node.name;
+        // Only single-argument functions for now
+        if (simplifiedArgs.length === 1) {
+          const arg = simplifiedArgs[0] as ASTNode;
+          // Try to evaluate if possible (sin, cos, tan, etc. with numeric/constant/fractional argument)
+          let argVal: number | undefined = undefined;
+          // Try to extract value for famous angles (π, e, and their rational multiples)
+          argVal = extractFamousConstantValue(arg);
+          if (argVal !== undefined && typeof argVal === 'number') {
+            let result: number | undefined = undefined;
+            switch (funcName) {
+              case 'sin':
+                result = Math.sin(argVal);
+                break;
+              case 'cos':
+                result = Math.cos(argVal);
+                break;
+              case 'tan':
+                result = Math.tan(argVal);
+                break;
+              case 'log':
+              case 'ln':
+                result = Math.log(argVal);
+                break;
+              case 'exp':
+                result = Math.exp(argVal);
+                break;
+              case 'sqrt':
+                result = Math.sqrt(argVal);
+                break;
+              case 'abs':
+                result = Math.abs(argVal);
+                break;
+              // 他の関数も必要に応じて追加
+            }
+            if (result !== undefined && isFinite(result)) {
+              // 0, -0, 1, -1, 0.0 などは丸める
+              if (Math.abs(result) < 1e-14) result = 0;
+              if (Math.abs(result - 1) < 1e-14) result = 1;
+              if (Math.abs(result + 1) < 1e-14) result = -1;
+              return { type: 'NumberLiteral', value: result };
+            }
+          }
+        }
+        // Otherwise, return simplified FunctionCall
+        return {
+          ...node,
+          args: simplifiedArgs,
+        };
+        // --- famous constant extraction helper ---
+        function extractFamousConstantValue(node: ASTNode): number | undefined {
+          // NumberLiteral
+          if (node.type === 'NumberLiteral') return node.value;
+          // π, pi, e
+          if (node.type === 'Identifier') {
+            if (node.name === 'π' || node.name === 'pi') return Math.PI;
+            if (node.name === 'e') return Math.E;
+          }
+          // Fraction: k * π / n, k * e / n, π / n, e / n, ...
+          if (node.type === 'Fraction') {
+            // numerator, denominator
+            const num = extractFamousConstantValue(node.numerator);
+            const den = extractFamousConstantValue(node.denominator);
+            if (num !== undefined && den !== undefined && den !== 0) {
+              return num / den;
+            }
+          }
+          // k * π, k * e, ...
+          if (node.type === 'BinaryExpression') {
+            const left = node.left,
+              right = node.right;
+            if (node.operator === '*') {
+              const lval = extractFamousConstantValue(left);
+              const rval = extractFamousConstantValue(right);
+              if (lval !== undefined && rval !== undefined) {
+                return lval * rval;
+              }
+            } else if (node.operator === '/') {
+              const lval = extractFamousConstantValue(left);
+              const rval = extractFamousConstantValue(right);
+              if (lval !== undefined && rval !== undefined && rval !== 0) {
+                return lval / rval;
+              }
+            } else if (node.operator === '+') {
+              const lval = extractFamousConstantValue(left);
+              const rval = extractFamousConstantValue(right);
+              if (lval !== undefined && rval !== undefined) {
+                return lval + rval;
+              }
+            } else if (node.operator === '-') {
+              const lval = extractFamousConstantValue(left);
+              const rval = extractFamousConstantValue(right);
+              if (lval !== undefined && rval !== undefined) {
+                return lval - rval;
+              }
+            }
+          }
+          // UnaryExpression
+          if (node.type === 'UnaryExpression') {
+            const val = extractFamousConstantValue(node.operand);
+            if (val !== undefined) {
+              if (node.operator === '-') return -val;
+              if (node.operator === '+') return val;
+            }
+          }
+          return undefined;
+        }
+      }
+    }
 
     case 'Fraction':
       return simplifyFraction(node, options, depth);
@@ -149,6 +258,73 @@ function applyBasicSimplifications(
   }
 }
 
+// Add missing function declarations for subtraction and multiplication
+function simplifySubtraction(
+  left: ASTNode,
+  right: ASTNode,
+  options: Required<SimplifyOptions>,
+  depth: number
+): ASTNode {
+  // x - 0 = x
+  if (right.type === 'NumberLiteral' && right.value === 0) return left;
+  // 0 - x = -x
+  if (left.type === 'NumberLiteral' && left.value === 0) {
+    return { type: 'UnaryExpression', operator: '-', operand: right };
+  }
+  // Number - Number
+  if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
+    return { type: 'NumberLiteral', value: left.value - right.value };
+  }
+  // x - x = 0
+  if (areEquivalentExpressions(left, right)) {
+    return { type: 'NumberLiteral', value: 0 };
+  }
+  // a - b = a + (-b)
+  const negativeRight: ASTNode = {
+    type: 'UnaryExpression',
+    operator: '-',
+    operand: right,
+  };
+  return simplifyAddition(left, negativeRight, options, depth);
+}
+
+function simplifyMultiplication(
+  left: ASTNode,
+  right: ASTNode,
+  options: Required<SimplifyOptions>,
+  depth: number
+): ASTNode {
+  // x * 0 = 0
+  if (
+    (left.type === 'NumberLiteral' && left.value === 0) ||
+    (right.type === 'NumberLiteral' && right.value === 0)
+  ) {
+    return { type: 'NumberLiteral', value: 0 };
+  }
+  // x * 1 = x
+  if (left.type === 'NumberLiteral' && left.value === 1) return right;
+  if (right.type === 'NumberLiteral' && right.value === 1) return left;
+  // Number * Number
+  if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
+    return { type: 'NumberLiteral', value: left.value * right.value };
+  }
+  // Advanced term analysis (optional, fallback)
+  if (options.combineLikeTerms) {
+    const analyzed = AdvancedTermAnalyzer.analyze({
+      type: 'BinaryExpression',
+      operator: '*',
+      left,
+      right,
+    });
+    if (analyzed.coefficient !== 1 || analyzed.variables.size > 0) {
+      const reconstructed = AdvancedTermCombiner['reconstructTerm'](analyzed, analyzed.coefficient);
+      if (reconstructed) {
+        return reconstructed;
+      }
+    }
+  }
+  return { type: 'BinaryExpression', operator: '*', left, right };
+}
 /**
  * Simplify unary expressions
  */
@@ -223,6 +399,53 @@ function simplifyAddition(
     return { type: 'NumberLiteral', value: left.value + right.value };
   }
 
+  // Fraction + Fraction (通分して加算)
+  if (left.type === 'Fraction' && right.type === 'Fraction') {
+    // 通分: a/b + c/d = (ad + cb) / bd
+    const lnum = left.numerator,
+      lden = left.denominator;
+    const rnum = right.numerator,
+      rden = right.denominator;
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: simplifyAddition(
+          simplifyMultiplication(lnum, rden, options, depth + 1),
+          simplifyMultiplication(rnum, lden, options, depth + 1),
+          options,
+          depth + 1
+        ),
+        denominator: simplifyMultiplication(lden, rden, options, depth + 1),
+      },
+      options,
+      depth + 1
+    );
+  }
+  // Fraction + NumberLiteral
+  if (left.type === 'Fraction' && right.type === 'NumberLiteral') {
+    // a/b + c = (a + bc)/b
+    const lnum = left.numerator,
+      lden = left.denominator;
+    return simplifyFraction(
+      {
+        type: 'Fraction',
+        numerator: simplifyAddition(
+          lnum,
+          simplifyMultiplication(right, lden, options, depth + 1),
+          options,
+          depth + 1
+        ),
+        denominator: lden,
+      },
+      options,
+      depth + 1
+    );
+  }
+  if (left.type === 'NumberLiteral' && right.type === 'Fraction') {
+    // c + a/b = (a + bc)/b
+    return simplifyAddition(right, left, options, depth);
+  }
+
   // Like terms combination
   if (options.combineLikeTerms) {
     const terms = extractAdditionTerms({ type: 'BinaryExpression', operator: '+', left, right });
@@ -252,90 +475,6 @@ function simplifyAddition(
   }
 
   return { type: 'BinaryExpression', operator: '+', left, right };
-}
-
-/**
- * Simplify subtraction by converting to addition and processing like terms
- */
-function simplifySubtraction(
-  left: ASTNode,
-  right: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
-  // x - 0 = x
-  if (right.type === 'NumberLiteral' && right.value === 0) return left;
-
-  // 0 - x = -x
-  if (left.type === 'NumberLiteral' && left.value === 0) {
-    return { type: 'UnaryExpression', operator: '-', operand: right };
-  }
-
-  // Number - Number
-  if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
-    return { type: 'NumberLiteral', value: left.value - right.value };
-  }
-
-  // x - x = 0
-  if (areEquivalentExpressions(left, right)) {
-    return { type: 'NumberLiteral', value: 0 };
-  }
-
-  // Convert subtraction to addition with negative term
-  // a - b becomes a + (-b)
-  const negativeRight: ASTNode = {
-    type: 'UnaryExpression',
-    operator: '-',
-    operand: right,
-  };
-
-  // Use addition simplification logic
-  return simplifyAddition(left, negativeRight, options, depth);
-}
-
-/**
- * Simplify multiplication with advanced coefficient handling
- */
-function simplifyMultiplication(
-  left: ASTNode,
-  right: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
-  // x * 0 = 0
-  if (
-    (left.type === 'NumberLiteral' && left.value === 0) ||
-    (right.type === 'NumberLiteral' && right.value === 0)
-  ) {
-    return { type: 'NumberLiteral', value: 0 };
-  }
-
-  // x * 1 = x
-  if (left.type === 'NumberLiteral' && left.value === 1) return right;
-  if (right.type === 'NumberLiteral' && right.value === 1) return left;
-
-  // Number * Number
-  if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
-    return { type: 'NumberLiteral', value: left.value * right.value };
-  }
-
-  // Apply advanced term analysis for complex multiplications
-  if (options.combineLikeTerms) {
-    const analyzed = AdvancedTermAnalyzer.analyze({
-      type: 'BinaryExpression',
-      operator: '*',
-      left,
-      right,
-    });
-    if (analyzed.coefficient !== 1 || analyzed.variables.size > 0) {
-      const reconstructed = AdvancedTermCombiner['reconstructTerm'](analyzed, analyzed.coefficient);
-      if (reconstructed) {
-        return reconstructed;
-      }
-    }
-  }
-
-  return { type: 'BinaryExpression', operator: '*', left, right };
 }
 
 /**
@@ -391,22 +530,7 @@ function simplifyPower(
     return { type: 'NumberLiteral', value: Math.pow(base.value, exponent.value) };
   }
 
-  // (x^a)^b = x^(a*b)
-  if (
-    base.type === 'BinaryExpression' &&
-    base.operator === '^' &&
-    base.right.type === 'NumberLiteral' &&
-    exponent.type === 'NumberLiteral'
-  ) {
-    const newExponent = base.right.value * exponent.value;
-    return {
-      type: 'BinaryExpression',
-      operator: '^',
-      left: base.left,
-      right: { type: 'NumberLiteral', value: newExponent },
-    };
-  }
-
+  // Default: return as BinaryExpression
   return { type: 'BinaryExpression', operator: '^', left: base, right: exponent };
 }
 

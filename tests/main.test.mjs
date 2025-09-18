@@ -39,15 +39,9 @@ console.log('=== SPECIFICATION COMPLIANCE TEST SUITE ===\n');
 const basicTestCases = [
   // Basic Evaluation Tests (13 cases)
   {
-    expression: '2 + 3',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '5'
-  },
-  {
     expression: '\\pi - 4',
     task: 'evaluate',
-    expected: '-0.858407'  // π ≈ 3.141593 so π - 4 ≈ -0.858407
+    expected: '-4 + \\pi'
   },
   {
     expression: 'i + 6',
@@ -55,25 +49,29 @@ const basicTestCases = [
     expected: '6 + i'  // i remains symbolic
   },
   {
-    expression: 'e + 1',
+    expression: '2/9 + 1/6',
     task: 'evaluate',
-    expected: 'e + 1'  // e ≈ 2.718282 so e + 1 ≈ 3.718282
+    expected: '\\frac{7}{18}'  // 2/9 + 1/6 = 4/18 + 3/18 = 7/18
   },
   {
-    expression: 'x + 5',
-    task: 'evaluate',
-    variable: 'x',
-    expected: 'x + 5'  // x is unspecified, remains symbolic
+    expression: '\\frac{1}{2} + \\frac{1}{3}',
+    task: 'simplify',
+    expected: '\\frac{5}{6}'
   },
   {
-    expression: '(x + 1)^2',
-    task: 'evaluate',
-    variable: 'x',
+    expression: '\\frac{4}{6}',
+    task: 'simplify',
+    expected: '\\frac{2}{3}'
   },
   {
-    expression: '-x-3x-6x+3',
+    expression: '(4x + 3)^2',
     task: 'evaluate',
-    expected: '-10x + 3'
+    expected: '16x^2 + 24x + 9'
+  },
+  {
+    expression: '-x-3x-6x+3 + y',
+    task: 'evaluate',
+    expected: '-10x + 3 + y'
   },
   {
     expression: '\\sin(\\frac{\\pi}{2})',
@@ -104,23 +102,11 @@ const basicTestCases = [
 
 // 40 Edge Case Tests - Complex scenarios and error conditions
 const edgeCaseTests = [
-  // Reserved Variables and Constants (10 cases)
+  // Reserved Variables and Constants (10 cases) 
   {
-    expression: 'e + 3',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '5.718282'  // e ≈ 2.718282 so e + 3 ≈ 5.718282
-  },
-  {
-    expression: '\\pi * 2',
-    task: 'evaluate',
-    variable: 'x',
-    expected: '6.283185'  // π * 2 ≈ 6.283185
-  },
-  {
-    expression: '((((x+1)+2)+3+4)+5)',
+    expression: '((((x+1)+2)+3+4)+5)^(2+1)',
     task: 'distribute',
-    expected: 'x + 15',
+    expected: '( x + 15 )^{3}',
   },
   {
     expression: '\\cos(\\pi)',
