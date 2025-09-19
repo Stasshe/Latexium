@@ -6,6 +6,8 @@
 
 import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
 import { expandExpression } from './distribution';
+import { advancedFactor } from './factorization/index';
+// Import the legacy factorExpression function
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
 import {
   convertSqrtToExponential,
@@ -880,7 +882,10 @@ function simplifyFraction(
 
   // For polynomial fractions, look for common factors
   if (options.simplifyFractions && options.factor) {
-    const simplified = simplifyPolynomialFraction(numerator, denominator);
+    // Currently, the variable option is not used to specify whitch variables should be factored.
+    const factoredNumerator = advancedFactor(numerator);
+    const factoredDenominator = advancedFactor(denominator);
+    const simplified = simplifyPolynomialFraction(factoredNumerator, factoredDenominator);
     if (simplified) {
       return simplified;
     }
@@ -1027,13 +1032,6 @@ function buildAdditionFromTerms(terms: Array<{ term: ASTNode; sign: number }>): 
   }
 
   return result;
-}
-
-/**
- * Legacy compatibility function
- */
-export function simplifyAST(node: ASTNode): ASTNode {
-  return simplify(node);
 }
 
 export function gcd(a: number, b: number): number {

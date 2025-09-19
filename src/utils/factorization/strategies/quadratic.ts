@@ -3,8 +3,6 @@
  * Factors quadratic expressions ax² + bx + c into linear factors
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../../../types';
-import { astToLatex } from '../../ast';
 import {
   FactorizationStrategy,
   FactorizationContext,
@@ -12,6 +10,8 @@ import {
   PolynomialAnalyzer,
   ASTBuilder,
 } from '../framework';
+
+import type { ASTNode } from '@/types';
 
 export class QuadraticFactorizationStrategy implements FactorizationStrategy {
   name = 'Quadratic Factorization';

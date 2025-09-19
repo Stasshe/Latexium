@@ -4,7 +4,6 @@
  */
 
 import { ASTNode, BinaryExpression, FunctionCall, Integral, UnaryExpression } from '../types';
-import { simplify } from './unified-simplify';
 
 /**
  * Convert AST to LaTeX string representation
@@ -378,12 +377,4 @@ export function cloneAST(node: ASTNode): ASTNode {
     default:
       throw new Error(`Unsupported AST node type for cloning: ${(node as { type: string }).type}`);
   }
-}
-
-/**
- * Legacy compatibility function - Use unified-simplify.ts instead
- * Now properly delegates to the unified simplify function
- */
-export function simplifyAST(node: ASTNode): ASTNode {
-  return simplify(node);
 }

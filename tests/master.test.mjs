@@ -71,7 +71,7 @@ const complexTestCases = [
     id: 5,
     expression: '(x^2 + 2x + 1)(x - 3)',
     task: 'distribute',
-    expected: 'x^3 - 3x^2 + 2x^2 - 6x + x - 3',
+    expected: 'x^{3} - x^{2} - 5x - 3',
     description: 'Polynomial multiplication'
   },
   {

@@ -1,4 +1,4 @@
-import { ASTNode, BinaryExpression } from '../../../types/ast';
+import { ASTNode } from '../../../types/ast';
 import { basicSimplify } from '../../simplify/basic-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 import { PolynomialAnalyzer, ASTBuilder } from '../framework';

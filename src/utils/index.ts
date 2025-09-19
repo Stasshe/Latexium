@@ -14,6 +14,3 @@ export * from './simplify/simplification';
 export * from './variables';
 export { simplify } from './unified-simplify';
 export type { SimplifyOptions } from './unified-simplify';
-
-// Export legacy compatibility function
-export { simplifyAST } from './ast';

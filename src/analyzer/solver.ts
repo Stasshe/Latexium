@@ -4,7 +4,8 @@
  */
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
-import { astToLatex, simplifyAST } from '../utils/ast';
+import { astToLatex } from '../utils/ast';
+import { simplify as simplifyAST } from '../utils/unified-simplify';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**

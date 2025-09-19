@@ -4,14 +4,7 @@
  * Used by both unified-simplify.ts and distribution.ts to avoid circular dependencies
  */
 
-import {
-  ASTNode,
-  BinaryExpression,
-  NumberLiteral,
-  Identifier,
-  UnaryExpression,
-  Fraction,
-} from '@/types';
+import type { ASTNode, BinaryExpression, UnaryExpression, Fraction } from '@/types';
 
 /**
  * Basic simplification function for use in distribution.ts
