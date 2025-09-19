@@ -5,7 +5,8 @@
  */
 
 import { ASTNode, Fraction } from '../types';
-import { advancedFactor } from './factorization/index';
+import { stepsAstToLatex } from './ast';
+import { factorWithSteps } from './factorization/index';
 import {
   simplify as middleSimplify,
   SimplifyOptions as MiddleSimplifyOptions,
@@ -33,8 +34,8 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
   convertSqrtToExponential: true,
   advancedExponentialSimplification: true,
   maxDepth: 10,
-  usePatternRecognition: false,
-  factor: false,
+  usePatternRecognition: true,
+  factor: true,
 };
 
 // Initialize pattern recognition engine
@@ -68,27 +69,34 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
     if (steps) steps.push('After middle-simplify');
 
     // Step 2: Apply pattern recognition for factorization if enabled
-    if (opts.usePatternRecognition) {
-      if (steps) steps.push('Applying pattern recognition');
-      const patternResult = patternEngine.applyPattern(result);
-      if (patternResult) {
-        result = patternResult;
-        if (steps) steps.push('Pattern recognition applied');
-      }
-    }
+    // if (opts.usePatternRecognition) {
+    //   if (steps) steps.push('Applying pattern recognition');
+    //   const patternResult = patternEngine.applyPattern(result);
+    //   if (patternResult) {
+    //     result = patternResult;
+    //     if (steps) steps.push('Pattern recognition applied');
+    //   }
+    // }
 
     // Step 3: Apply advanced factorization if requested
     if (opts.factor) {
       if (steps) steps.push('Applying advanced factorization');
-      const factored = advancedFactor(result);
-      if (factored) {
-        result = factored;
+      const factorResult = factorWithSteps(result, 'x', {
+        preferCompleteFactorization: true,
+        extractCommonFactors: true,
+        simplifyCoefficients: true,
+      });
+      if (factorResult && factorResult.ast) {
+        result = factorResult.ast;
+        if (steps && Array.isArray(factorResult.steps)) {
+          factorResult.steps.forEach(s => steps.push(s));
+        }
         if (steps) steps.push('Advanced factorization applied');
       }
     }
 
     // Step 4: Final pass with expand: false (middle-simplify)
-    if (steps) steps.push('Final pass with expand: false');
+    if (steps) steps.push('Final pass with expand: false', stepsAstToLatex(result));
     result = middleSimplify(
       result,
       {
@@ -121,9 +129,19 @@ export function simplifyPolynomialFractionWithFactorization(
   denominator: ASTNode
 ): Fraction | null {
   try {
-    // Factor both numerator and denominator using advanced factorization
-    const factoredNumerator = advancedFactor(numerator);
-    const factoredDenominator = advancedFactor(denominator);
+    // Factor both numerator and denominator using factorWithSteps
+    const factorNum = factorWithSteps(numerator, 'x', {
+      preferCompleteFactorization: true,
+      extractCommonFactors: true,
+      simplifyCoefficients: true,
+    });
+    const factorDen = factorWithSteps(denominator, 'x', {
+      preferCompleteFactorization: true,
+      extractCommonFactors: true,
+      simplifyCoefficients: true,
+    });
+    const factoredNumerator = factorNum && factorNum.ast ? factorNum.ast : numerator;
+    const factoredDenominator = factorDen && factorDen.ast ? factorDen.ast : denominator;
 
     // Use middle-simplify's polynomial fraction simplification
     const simplified = simplifyPolynomialFraction(factoredNumerator, factoredDenominator);
@@ -161,4 +179,4 @@ export { PatternRecognitionEngine } from './pattern-recognition';
 /**
  * Direct access to advanced factorization
  */
-export { advancedFactor } from './factorization/index';
+// export { advancedFactor } from './factorization/index';

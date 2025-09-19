@@ -6,7 +6,6 @@
 import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
 import { astToLatex } from '../utils/ast';
 import { expandExpression } from '../utils/distribution';
-import { factorWithSteps } from '../utils/factorization/index';
 import { simplify } from '../utils/unified-simplify';
 
 /**
@@ -32,63 +31,22 @@ export function analyzeFactorization(
       steps.push(`After expansion: ${expandedLatex}`);
     }
 
-    // Use the new advanced factorization system
-    const factorizationResult = factorWithSteps(expanded, variable, {
-      preferCompleteFactorization: true,
-      extractCommonFactors: true,
-      simplifyCoefficients: true,
-    });
+    // Use unified-simplify with factorization enabled
+    const simplified = simplify(expanded, { factor: true, expand: false }, steps);
+    const simplifiedLatex = astToLatex(simplified);
 
-    const factoredLatex = astToLatex(factorizationResult.ast);
-
-    // Add detailed steps from the factorization engine
-    if (factorizationResult.steps.length > 0) {
-      steps.push('Factorization process:');
-      factorizationResult.steps.forEach(step => {
-        if (step.trim() && !step.includes('Starting factorization')) {
-          steps.push(`  ${step}`);
-        }
-      });
-    }
-
-    // Check if factorization was successful (expression changed)
-    if (
-      factorizationResult.changed &&
-      factoredLatex !== expandedLatex &&
-      factoredLatex !== astToLatex(ast)
-    ) {
-      steps.push(`Final factored form: ${factoredLatex}`);
-
-      // Apply unified-simplify (expand: false) to the factored result
-      const simplified = simplify(factorizationResult.ast, { expand: false }, steps);
-      const simplifiedLatex = astToLatex(simplified);
-      if (simplifiedLatex !== factoredLatex) {
-        steps.push(`After final simplification: ${simplifiedLatex}`);
-      }
-
-      return {
-        steps,
-        value: simplifiedLatex,
-        valueType: 'symbolic',
-        ast: simplified,
-        error: null,
-      };
-    } else {
-      steps.push('No further factorization possible');
-
-      return {
-        steps,
-        value: expandedLatex,
-        valueType: 'symbolic',
-        ast: expanded,
-        error: null,
-      };
-    }
+    steps.push(`Final factored form: ${simplifiedLatex}`);
+    return {
+      steps,
+      value: simplifiedLatex,
+      valueType: 'symbolic',
+      ast: simplified,
+      error: null,
+    };
   } catch (error) {
     steps.push(
       `Error during factorization: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
-
     return {
       steps,
       value: null,

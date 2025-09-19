@@ -254,6 +254,13 @@ const complexTestCases = [
     description: 'Square root evaluation'
   },
   {
+    id: 24.5,
+    expression: 'x^3 - 1',
+    task: 'factor',
+    expected: '(x - 1)(x^2 + x + 1)',
+    description: 'Difference of cubes'
+  },
+  {
     id: 25,
     expression: '\\frac{x^3 - 1}{x - 1}',
     task: 'factor',
