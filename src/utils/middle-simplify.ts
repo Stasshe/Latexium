@@ -8,6 +8,7 @@ import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '
 import { stepsAstToLatex } from './ast';
 import { expandExpression } from './distribution';
 // Import the legacy factorExpression function
+import { applyTrigonometricIdentities } from './identities/trigonometric';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
 import {
   convertSqrtToExponential,
@@ -190,6 +191,12 @@ function applyBasicSimplifications(
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
+  // --- Trigonometric identities ---
+  if (options.applyIdentities) {
+    const trigResult = applyTrigonometricIdentities(node);
+    if (trigResult !== node) return trigResult;
+  }
+
   switch (node.type) {
     case 'NumberLiteral':
     case 'Identifier':
