@@ -40,7 +40,7 @@ const complexTestCases = [
   // Distribution Tests (10 cases) - Main focus
   {
     id: 0.8,
-    expression: '(x-1)(x-1)(x-1)+1',
+    expression: '(x-1)(x-1)(x-1)',
     task: 'evaluate',
     expected: '(x-1)^{3}',
   },

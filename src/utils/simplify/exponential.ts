@@ -658,68 +658,87 @@ export function combineExponentialTerms(node: ASTNode): ASTNode {
 
   // Extract all terms from multiplication chains
   const terms = extractMultiplicationTerms(node);
-  
   if (terms.length <= 1) {
     return node;
   }
 
-  // Group exponential terms by base
-  const exponentialGroups = new Map<string, {
-    base: ASTNode,
-    exponents: ASTNode[],
-    coefficient: number
-  }>();
+  // Group terms by structural equivalence (not just atomic base)
+  // Map: baseKey -> { base, exponentSum, count, coefficient }
+  const groups = new Map<
+    string,
+    {
+      base: ASTNode;
+      exponentSum: ASTNode;
+      count: number;
+      coefficient: number;
+    }
+  >();
   const otherTerms: ASTNode[] = [];
 
   for (const term of terms) {
-    const analyzed = analyzeExponentialTerm(term);
-    
-    if (analyzed.isExponential) {
-      const baseKey = JSON.stringify(analyzed.base);
-      
-      if (exponentialGroups.has(baseKey)) {
-        const group = exponentialGroups.get(baseKey)!;
-        group.exponents.push(analyzed.exponent);
-        group.coefficient *= analyzed.coefficient;
-      } else {
-        exponentialGroups.set(baseKey, {
-          base: analyzed.base,
-          exponents: [analyzed.exponent],
-          coefficient: analyzed.coefficient
-        });
-      }
-    } else {
+    // Try to extract as exponential (base^exp or base)
+
+    let base: ASTNode = { type: 'NumberLiteral', value: 1 },
+      exponent: ASTNode = { type: 'NumberLiteral', value: 1 },
+      coefficient = 1;
+    if (term.type === 'BinaryExpression' && term.operator === '^') {
+      base = term.left;
+      exponent = term.right;
+    } else if (
+      term.type === 'Identifier' ||
+      term.type === 'BinaryExpression' ||
+      term.type === 'FunctionCall'
+    ) {
+      // treat as base^1
+      base = term;
+      exponent = { type: 'NumberLiteral', value: 1 };
+    } else if (term.type === 'NumberLiteral') {
+      // treat as coefficient only, skip exponentiation logic
+      coefficient = (term as NumberLiteral).value;
       otherTerms.push(term);
+      continue;
+    } else {
+      // fallback: treat as other
+      otherTerms.push(term);
+      continue;
+    }
+
+    // Use JSON.stringify for structural key
+    const baseKey = JSON.stringify(base);
+    if (groups.has(baseKey)) {
+      const group = groups.get(baseKey)!;
+      group.exponentSum = addExponents(group.exponentSum, exponent);
+      group.count++;
+      group.coefficient *= coefficient;
+    } else {
+      groups.set(baseKey, {
+        base,
+        exponentSum: exponent,
+        count: 1,
+        coefficient,
+      });
     }
   }
 
   // Reconstruct combined exponential terms
   const combinedTerms: ASTNode[] = [];
-
-  for (const group of exponentialGroups.values()) {
-    if (group.exponents.length === 1) {
-      // Single exponent - reconstruct original term
-      const firstExponent = group.exponents[0];
-      if (!firstExponent) continue;
-      
-      let result: ASTNode = createPowerExpression(group.base, firstExponent);
-      
-      if (group.coefficient !== 1) {
-        result = multiplyByCoefficient(result, group.coefficient);
-      }
-      
-      combinedTerms.push(result);
+  for (const group of groups.values()) {
+    // If repeated, exponent = count if all exponents were 1, else sum
+    let result: ASTNode;
+    if (
+      group.count > 1 &&
+      group.exponentSum.type === 'NumberLiteral' &&
+      (group.exponentSum as NumberLiteral).value === group.count
+    ) {
+      // e.g. (x-1)(x-1)(x-1) => (x-1)^3
+      result = createPowerExpression(group.base, { type: 'NumberLiteral', value: group.count });
     } else {
-      // Multiple exponents - combine them
-      const combinedExponent = combineExponents(group.exponents);
-      let result: ASTNode = createPowerExpression(group.base, combinedExponent);
-      
-      if (group.coefficient !== 1) {
-        result = multiplyByCoefficient(result, group.coefficient);
-      }
-      
-      combinedTerms.push(result);
+      result = createPowerExpression(group.base, group.exponentSum);
     }
+    if (group.coefficient !== 1) {
+      result = multiplyByCoefficient(result, group.coefficient);
+    }
+    combinedTerms.push(result);
   }
 
   // Add other terms
@@ -738,40 +757,37 @@ function extractMultiplicationTerms(node: ASTNode): ASTNode[] {
   }
 
   const expr = node as BinaryExpression;
-  return [
-    ...extractMultiplicationTerms(expr.left),
-    ...extractMultiplicationTerms(expr.right)
-  ];
+  return [...extractMultiplicationTerms(expr.left), ...extractMultiplicationTerms(expr.right)];
 }
 
 /**
  * Analyze a term to extract exponential information
  */
 function analyzeExponentialTerm(node: ASTNode): {
-  isExponential: boolean,
-  base: ASTNode,
-  exponent: ASTNode,
-  coefficient: number
+  isExponential: boolean;
+  base: ASTNode;
+  exponent: ASTNode;
+  coefficient: number;
 } {
   // Handle coefficient multiplication: n * x^a
   if (node.type === 'BinaryExpression' && node.operator === '*') {
     const expr = node as BinaryExpression;
-    
+
     // Check if left is coefficient and right is exponential
     if (expr.left.type === 'NumberLiteral' && isExponentialExpression(expr.right)) {
       const rightAnalysis = analyzeExponentialTerm(expr.right);
       return {
         ...rightAnalysis,
-        coefficient: rightAnalysis.coefficient * (expr.left as NumberLiteral).value
+        coefficient: rightAnalysis.coefficient * (expr.left as NumberLiteral).value,
       };
     }
-    
-    // Check if right is coefficient and left is exponential  
+
+    // Check if right is coefficient and left is exponential
     if (expr.right.type === 'NumberLiteral' && isExponentialExpression(expr.left)) {
       const leftAnalysis = analyzeExponentialTerm(expr.left);
       return {
         ...leftAnalysis,
-        coefficient: leftAnalysis.coefficient * (expr.right as NumberLiteral).value
+        coefficient: leftAnalysis.coefficient * (expr.right as NumberLiteral).value,
       };
     }
   }
@@ -783,7 +799,7 @@ function analyzeExponentialTerm(node: ASTNode): {
       isExponential: true,
       base: expr.left,
       exponent: expr.right,
-      coefficient: 1
+      coefficient: 1,
     };
   }
 
@@ -793,7 +809,7 @@ function analyzeExponentialTerm(node: ASTNode): {
       isExponential: true,
       base: node,
       exponent: { type: 'NumberLiteral', value: 1 },
-      coefficient: 1
+      coefficient: 1,
     };
   }
 
@@ -802,7 +818,7 @@ function analyzeExponentialTerm(node: ASTNode): {
     isExponential: false,
     base: node,
     exponent: { type: 'NumberLiteral', value: 1 },
-    coefficient: 1
+    coefficient: 1,
   };
 }
 
@@ -826,7 +842,7 @@ function combineExponents(exponents: ASTNode[]): ASTNode {
   if (exponents.length === 0) {
     return { type: 'NumberLiteral', value: 0 };
   }
-  
+
   if (exponents.length === 1) {
     const firstExponent = exponents[0];
     return firstExponent || { type: 'NumberLiteral', value: 0 };
@@ -850,7 +866,7 @@ function multiplyByCoefficient(term: ASTNode, coefficient: number): ASTNode {
   if (coefficient === 1) {
     return term;
   }
-  
+
   if (coefficient === 0) {
     return { type: 'NumberLiteral', value: 0 };
   }
@@ -859,7 +875,7 @@ function multiplyByCoefficient(term: ASTNode, coefficient: number): ASTNode {
     type: 'BinaryExpression',
     operator: '*',
     left: { type: 'NumberLiteral', value: coefficient },
-    right: term
+    right: term,
   };
 }
 
@@ -870,7 +886,7 @@ function reconstructMultiplication(terms: ASTNode[]): ASTNode {
   if (terms.length === 0) {
     return { type: 'NumberLiteral', value: 1 };
   }
-  
+
   if (terms.length === 1) {
     const firstTerm = terms[0];
     return firstTerm || { type: 'NumberLiteral', value: 1 };
@@ -884,7 +900,7 @@ function reconstructMultiplication(terms: ASTNode[]): ASTNode {
         type: 'BinaryExpression',
         operator: '*',
         left: result,
-        right: currentTerm
+        right: currentTerm,
       };
     }
   }
@@ -898,13 +914,13 @@ function reconstructMultiplication(terms: ASTNode[]): ASTNode {
 export function enhancedExponentialSimplification(node: ASTNode): ASTNode {
   // First apply standard exponential simplification
   let result = fullExponentialSimplification(node);
-  
+
   // Then apply exponential term combination
   result = combineExponentialTerms(result);
-  
+
   // Apply basic simplification to clean up
   result = basicSimplify(result);
-  
+
   return result;
 }
 
