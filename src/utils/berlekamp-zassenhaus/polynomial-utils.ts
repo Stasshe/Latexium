@@ -282,17 +282,36 @@ export class PolynomialUtils {
       const coeff = coeffs[i];
       if (coeff === undefined || coeff === 0) continue;
 
-      const term = this.createTerm(coeff, i, variable);
+      const term = this.createTerm(Math.abs(coeff), i, variable);
 
       if (result === null) {
-        result = term;
+        // First term
+        if (coeff < 0) {
+          result = {
+            type: 'UnaryExpression',
+            operator: '-',
+            operand: term,
+          };
+        } else {
+          result = term;
+        }
       } else {
-        result = {
-          type: 'BinaryExpression',
-          operator: coeff > 0 ? '+' : '-',
-          left: result,
-          right: coeff > 0 ? term : this.negateTerm(term),
-        };
+        // Subsequent terms
+        if (coeff > 0) {
+          result = {
+            type: 'BinaryExpression',
+            operator: '+',
+            left: result,
+            right: term,
+          };
+        } else {
+          result = {
+            type: 'BinaryExpression',
+            operator: '-',
+            left: result,
+            right: term,
+          };
+        }
       }
     }
 
@@ -301,12 +320,11 @@ export class PolynomialUtils {
 
   /**
    * Create a single term (coefficient * variable^degree)
+   * Note: coeff should always be positive (sign handled in coefficientsToAST)
    */
   private createTerm(coeff: number, degree: number, variable: string): ASTNode {
-    const absCoeff = Math.abs(coeff);
-
     if (degree === 0) {
-      return { type: 'NumberLiteral', value: absCoeff };
+      return { type: 'NumberLiteral', value: coeff };
     }
 
     const varNode: ASTNode = { type: 'Identifier', name: variable };
@@ -320,14 +338,14 @@ export class PolynomialUtils {
             right: { type: 'NumberLiteral', value: degree },
           };
 
-    if (absCoeff === 1) {
+    if (coeff === 1) {
       return powerNode;
     }
 
     return {
       type: 'BinaryExpression',
       operator: '*',
-      left: { type: 'NumberLiteral', value: absCoeff },
+      left: { type: 'NumberLiteral', value: coeff },
       right: powerNode,
     };
   }

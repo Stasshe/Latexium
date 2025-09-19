@@ -6,6 +6,7 @@
 import { ASTNode } from '../../../types';
 import { astToLatex } from '../../ast';
 import { berlekampZassenhausFactor } from '../../berlekamp-zassenhaus';
+import { basicSimplify } from '../../simplify/basic-simplify';
 import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
 
 /**
@@ -50,7 +51,10 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
 
       // Construct factored expression from factors
       const factoredExpression = this.constructFactoredExpression(factors);
-      const factoredLatex = astToLatex(factoredExpression);
+
+      // Apply basic simplification to normalize expressions like (x - -1) → (x + 1)
+      const simplifiedExpression = basicSimplify(factoredExpression);
+      const factoredLatex = astToLatex(simplifiedExpression);
 
       if (factoredLatex === originalLatex) {
         // No change achieved
@@ -66,7 +70,7 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
 
       return {
         success: true,
-        ast: factoredExpression,
+        ast: simplifiedExpression,
         changed: true,
         steps: [
           `Applied Berlekamp-Zassenhaus algorithm`,

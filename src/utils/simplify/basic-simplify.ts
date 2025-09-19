@@ -87,7 +87,12 @@ function simplifyAdditionBasic(left: ASTNode, right: ASTNode): ASTNode {
   if (right.type === 'NumberLiteral' && right.value === 0) return left;
   if (left.type === 'NumberLiteral' && left.value === 0) return right;
 
-  // x + (-n) = x - n (convert addition of negative to subtraction)
+  // x + (-y) = x - y (convert addition of negative to subtraction)
+  if (right.type === 'UnaryExpression' && right.operator === '-') {
+    return simplifySubtractionBasic(left, right.operand);
+  }
+
+  // x + (-n) = x - n (convert addition of negative number to subtraction)
   if (right.type === 'NumberLiteral' && right.value < 0) {
     return {
       type: 'BinaryExpression',
@@ -115,6 +120,28 @@ function simplifySubtractionBasic(left: ASTNode, right: ASTNode): ASTNode {
   // 0 - x = -x
   if (left.type === 'NumberLiteral' && left.value === 0) {
     return { type: 'UnaryExpression', operator: '-', operand: right };
+  }
+
+  // x - (-y) = x + y (subtract negative becomes addition)
+  if (right.type === 'UnaryExpression' && right.operator === '-') {
+    return simplifyAdditionBasic(left, right.operand);
+  }
+
+  // x - (-n) = x + n (subtract negative number)
+  if (right.type === 'NumberLiteral' && right.value < 0) {
+    return simplifyAdditionBasic(left, { type: 'NumberLiteral', value: -right.value });
+  }
+
+  // x - (a + b) = x - a - b (distribute subtraction over addition)
+  if (right.type === 'BinaryExpression' && right.operator === '+') {
+    const step1 = simplifySubtractionBasic(left, right.left);
+    return simplifySubtractionBasic(step1, right.right);
+  }
+
+  // x - (a - b) = x - a + b (distribute subtraction over subtraction)
+  if (right.type === 'BinaryExpression' && right.operator === '-') {
+    const step1 = simplifySubtractionBasic(left, right.left);
+    return simplifyAdditionBasic(step1, right.right);
   }
 
   // Number - Number

@@ -314,6 +314,11 @@ export class LLLFactorizer {
 
     if (typeof constantTerm !== 'number') return null;
 
+    // Special handling for x^n - 1
+    if (constantTerm === -1) {
+      return this.factorDifferenceOfPowersSpecial(n);
+    }
+
     const a = Math.round(Math.pow(-constantTerm, 1 / n));
 
     if (Math.pow(a, n) === -constantTerm) {
@@ -330,6 +335,61 @@ export class LLLFactorizer {
     }
 
     return null;
+  }
+
+  /**
+   * Special handling for x^n - 1
+   */
+  private factorDifferenceOfPowersSpecial(n: number): number[][] | null {
+    if (n === 2) {
+      // x^2 - 1 = (x - 1)(x + 1)
+      return [
+        [-1, 1], // (x - 1)
+        [1, 1], // (x + 1)
+      ];
+    }
+
+    if (n === 4) {
+      // x^4 - 1 = (x^2 - 1)(x^2 + 1) = (x - 1)(x + 1)(x^2 + 1)
+      return [
+        [-1, 1], // (x - 1)
+        [1, 1], // (x + 1)
+        [1, 0, 1], // (x^2 + 1)
+      ];
+    }
+
+    if (n === 3) {
+      // x^3 - 1 = (x - 1)(x^2 + x + 1)
+      return [
+        [-1, 1], // (x - 1)
+        [1, 1, 1], // (x^2 + x + 1)
+      ];
+    }
+
+    if (n === 6) {
+      // x^6 - 1 = (x^3 - 1)(x^3 + 1) = (x - 1)(x^2 + x + 1)(x + 1)(x^2 - x + 1)
+      return [
+        [-1, 1], // (x - 1)
+        [1, 1], // (x + 1)
+        [1, 1, 1], // (x^2 + x + 1)
+        [1, -1, 1], // (x^2 - x + 1)
+      ];
+    }
+
+    // For other degrees, use general factorization
+    return [
+      [-1, 1], // (x - 1)
+      this.buildCyclotomicQuotient(n),
+    ];
+  }
+
+  /**
+   * Build quotient for x^n - 1 = (x - 1) * quotient
+   */
+  private buildCyclotomicQuotient(n: number): number[] {
+    // For x^n - 1 = (x - 1) * (x^(n-1) + x^(n-2) + ... + x + 1)
+    const quotient = new Array(n).fill(1);
+    return quotient;
   }
 
   /**
