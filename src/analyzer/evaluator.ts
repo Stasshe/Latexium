@@ -392,8 +392,11 @@ export function analyzeEvaluate(
   const precision = options.precision || 6;
 
   try {
+    // 1. Add original expression
+    steps.push(`Original expression: ${astToLatex(ast)}`);
     // For evaluate task, keep mathematical constants symbolic
     const astWithConstants = substituteMathConstants(ast, false);
+    steps.push('Substituted mathematical constants (symbolic)');
 
     // Extract free variables after constant substitution
     const freeVars = extractFreeVariables(astWithConstants);
@@ -440,7 +443,7 @@ export function analyzeEvaluate(
     });
     const symbolicResult = astToLatex(simplifiedAST);
 
-    steps.push(`Symbolic evaluation (π preserved)`);
+    steps.push('Final symbolic result');
     steps.push(`Result: ${symbolicResult}`);
 
     return {

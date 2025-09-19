@@ -5,6 +5,7 @@
  */
 
 import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
+import { stepsAstToLatex } from './ast';
 import { expandExpression } from './distribution';
 // Import the legacy factorExpression function
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
@@ -55,7 +56,7 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
  * Enhanced simplification function
  * Converts sqrt to exponential form, applies distribution and advanced simplification
  */
-export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode {
+export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: string[]): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
 
   if (!node) return node;
@@ -65,25 +66,45 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
 
     // Step 1: Convert all sqrt functions to exponential form (x^(1/2)) if enabled
     if (opts.convertSqrtToExponential) {
+      const before = result;
       result = convertSqrtToExponential(result);
+      if (steps && before !== result)
+        steps.push(`Converted sqrt to exponential form: ${stepsAstToLatex(result)}`);
     }
 
     // Step 2: Apply full exponential simplification if enabled
     if (opts.advancedExponentialSimplification) {
+      const before = result;
       result = enhancedExponentialSimplification(result);
+      if (steps && before !== result)
+        steps.push(`Applied advanced exponential simplification: ${stepsAstToLatex(result)}`);
     }
 
     // Step 3: Expansion (only if expand: true)
     if (opts.expand) {
       if (needsExpansion(result)) {
+        if (steps) steps.push('Detected need for expansion');
+        const before = result;
         const expanded = expandExpression(result);
-        return basicSimplify(expanded, opts, 0);
+        if (steps && before !== expanded)
+          steps.push(`Expanded expression: ${stepsAstToLatex(expanded)}`);
+        if (steps) steps.push('Applying basic simplification after expansion');
+        const simplified = basicSimplify(expanded, opts, 0);
+        if (steps)
+          steps.push(
+            `Finished basic simplification after expansion: ${stepsAstToLatex(simplified)}`
+          );
+        return simplified;
       }
     }
 
-    return basicSimplify(result, opts, 0);
+    if (steps) steps.push('Applying basic simplification');
+    const simplified = basicSimplify(result, opts, 0);
+    if (steps) steps.push(`Finished basic simplification: ${stepsAstToLatex(simplified)}`);
+    return simplified;
   } catch (error) {
     // Fallback: return original node if simplification fails
+    if (steps) steps.push('Simplification failed, returning original node');
     return node;
   }
 }

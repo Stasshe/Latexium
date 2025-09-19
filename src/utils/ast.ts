@@ -5,6 +5,12 @@
 
 import { ASTNode, BinaryExpression, FunctionCall, Integral, UnaryExpression } from '../types';
 
+import { IS_STEPS_INCLUDE_LATEX } from '@/config';
+
+export function stepsAstToLatex(node: ASTNode): string {
+  return IS_STEPS_INCLUDE_LATEX ? astToLatex(node) : '';
+}
+
 /**
  * Convert AST to LaTeX string representation
  */

@@ -44,53 +44,70 @@ const patternEngine = new PatternRecognitionEngine();
  * Unified simplification function
  * Uses middle-simplify as base, adds factorization capabilities
  */
-export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode {
+export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: string[]): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
 
   if (!node) return node;
 
   try {
+    if (steps) steps.push('Starting unified simplification');
     // Step 1: Apply middle-simplify (polynomial simplification without factorization)
-    let result = middleSimplify(node, {
-      combineLikeTerms: opts.combineLikeTerms,
-      expand: opts.expand,
-      simplifyFractions: opts.simplifyFractions,
-      applyIdentities: opts.applyIdentities,
-      convertSqrtToExponential: opts.convertSqrtToExponential,
-      advancedExponentialSimplification: opts.advancedExponentialSimplification,
-      maxDepth: opts.maxDepth,
-    });
+    let result = middleSimplify(
+      node,
+      {
+        combineLikeTerms: opts.combineLikeTerms,
+        expand: opts.expand,
+        simplifyFractions: opts.simplifyFractions,
+        applyIdentities: opts.applyIdentities,
+        convertSqrtToExponential: opts.convertSqrtToExponential,
+        advancedExponentialSimplification: opts.advancedExponentialSimplification,
+        maxDepth: opts.maxDepth,
+      },
+      steps
+    );
+    if (steps) steps.push('After middle-simplify');
 
     // Step 2: Apply pattern recognition for factorization if enabled
     if (opts.usePatternRecognition) {
+      if (steps) steps.push('Applying pattern recognition');
       const patternResult = patternEngine.applyPattern(result);
       if (patternResult) {
         result = patternResult;
+        if (steps) steps.push('Pattern recognition applied');
       }
     }
 
     // Step 3: Apply advanced factorization if requested
     if (opts.factor) {
+      if (steps) steps.push('Applying advanced factorization');
       const factored = advancedFactor(result);
       if (factored) {
         result = factored;
+        if (steps) steps.push('Advanced factorization applied');
       }
     }
 
     // Step 4: Final pass with expand: false (middle-simplify)
-    result = middleSimplify(result, {
-      combineLikeTerms: opts.combineLikeTerms,
-      expand: false,
-      simplifyFractions: opts.simplifyFractions,
-      applyIdentities: opts.applyIdentities,
-      convertSqrtToExponential: opts.convertSqrtToExponential,
-      advancedExponentialSimplification: opts.advancedExponentialSimplification,
-      maxDepth: opts.maxDepth,
-    });
+    if (steps) steps.push('Final pass with expand: false');
+    result = middleSimplify(
+      result,
+      {
+        combineLikeTerms: opts.combineLikeTerms,
+        expand: false,
+        simplifyFractions: opts.simplifyFractions,
+        applyIdentities: opts.applyIdentities,
+        convertSqrtToExponential: opts.convertSqrtToExponential,
+        advancedExponentialSimplification: opts.advancedExponentialSimplification,
+        maxDepth: opts.maxDepth,
+      },
+      steps
+    );
+    if (steps) steps.push('Unified simplification complete');
 
     return result;
   } catch (error) {
     // Fallback: return original node if simplification fails
+    if (steps) steps.push('Unified simplification failed, returning original node');
     return node;
   }
 }

@@ -5,8 +5,7 @@
 // Maximum power for automatic expansion
 export const MAX_EXPANSION_POWER = 6;
 
-// Precision for numerical calculations
-export const NUMERICAL_PRECISION = 10;
+export const IS_STEPS_INCLUDE_LATEX = true;
 
 // Default simplification settings
 export const DEFAULT_SIMPLIFY_OPTIONS = {
