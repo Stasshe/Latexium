@@ -51,6 +51,7 @@
 │       │   ├── framework.ts
 │       │   ├── index.ts
 │       │   └── strategies
+│       │       ├── berlekamp-zassenhaus.ts
 │       │       ├── common-factor.ts
 │       │       ├── difference-of-squares.ts
 │       │       ├── grouping.ts
@@ -93,12 +94,17 @@
 │   ├── simplify.test.mjs
 │   ├── temp
 │   │   ├── berlekamp-zassenhaus-test.test.mjs
+│   │   ├── debug-ast-passing.test.mjs
+│   │   ├── debug-ast-structure.test.mjs
 │   │   ├── debug-cubic-construction.test.mjs
 │   │   ├── debug-factorization.test.mjs
 │   │   ├── debug-quadratic.test.mjs
 │   │   ├── investigate-ast-structure.test.mjs
 │   │   ├── root-cause-analysis.test.mjs
 │   │   ├── sqrt-exponential.test.mjs
+│   │   ├── test-berlekamp-integration.test.mjs
+│   │   ├── test-improved-bz-integration.test.mjs
+│   │   ├── test-simple-polynomials.test.mjs
 │   │   └── unified-factorization-test.test.mjs
 │   ├── test-distribution.test.mjs
 │   └── unified-simplify.test.mjs
@@ -106,15 +112,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-18 directories, 89 files
+18 directories, 95 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 16009
-Total Characters: 454122
-Total File Size (bytes): 455558
+Total Lines: 16528
+Total Characters: 469234
+Total File Size (bytes): 470676
 
 Development Size
-174M	.
+176M	.
 
 Build Size
-4.1M	dist
+4.4M	dist
