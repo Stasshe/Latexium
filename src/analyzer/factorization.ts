@@ -59,11 +59,18 @@ export function analyzeFactorization(
     ) {
       steps.push(`Final factored form: ${factoredLatex}`);
 
+      // Apply unified-simplify (expand: false) to the factored result
+      const simplified = simplify(factorizationResult.ast, { expand: false }, steps);
+      const simplifiedLatex = astToLatex(simplified);
+      if (simplifiedLatex !== factoredLatex) {
+        steps.push(`After final simplification: ${simplifiedLatex}`);
+      }
+
       return {
         steps,
-        value: factoredLatex,
+        value: simplifiedLatex,
         valueType: 'symbolic',
-        ast: factorizationResult.ast,
+        ast: simplified,
         error: null,
       };
     } else {
