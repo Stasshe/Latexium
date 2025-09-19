@@ -30,7 +30,7 @@
 - 一般的な二次式の解の公式による因数分解
 - 複雑な高次パターン
 
-### 2. Berlekamp-Zassenhaus アルゴリズム (berlekamp-zassenhaus/)（将来的なもの、実装必要なし）
+### 2. Berlekamp-Zassenhaus アルゴリズム (berlekamp-zassenhaus/)
 
 #### Phase 1: 有限体での因数分解
 

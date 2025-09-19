@@ -106,7 +106,22 @@ export class FactorizationEngine {
 
     context.steps.push(`Starting factorization of: ${astToLatex(node)}`);
 
-    let currentNode = this.deepClone(node);
+    let currentNode: ASTNode;
+    try {
+      currentNode = this.deepClone(node);
+    } catch (cloneError) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [
+          `Error during factorization: ${cloneError instanceof Error ? cloneError.message : 'Unknown clone error'}`,
+        ],
+        strategyUsed: 'Error',
+        canContinue: false,
+      };
+    }
+
     let hasChanged = false;
     const totalSteps: string[] = [...context.steps];
 
@@ -346,10 +361,12 @@ export class FactorizationEngine {
           lowerBound: this.deepClone(node.lowerBound),
           upperBound: this.deepClone(node.upperBound),
         };
-      default:
+      default: {
+        const nodeType = (node as { type?: string }).type;
         throw new Error(
-          `Unsupported AST node type for cloning: ${(node as { type: string }).type}`
+          `Unsupported AST node type for cloning: ${nodeType || 'undefined'} - Full node: ${JSON.stringify(node, null, 2)}`
         );
+      }
     }
   }
 }

@@ -4,7 +4,12 @@
  */
 
 import { FactorizationEngine, FactorizationPreferences } from './framework';
-import { CommonFactorStrategy, DifferenceOfSquaresStrategy, GroupingStrategy } from './strategies';
+import {
+  CommonFactorStrategy,
+  DifferenceOfSquaresStrategy,
+  GroupingStrategy,
+  BerlekampZassenhausStrategy,
+} from './strategies';
 import { ASTNode } from '../../types';
 
 // Create and configure the factorization engine
@@ -15,6 +20,7 @@ try {
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
+  factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
   throw new Error(

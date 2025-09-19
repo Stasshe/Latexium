@@ -7,6 +7,7 @@
 ├── SPECIFICATION.md
 ├── TODO.md
 ├── eslint.config.js
+├── factor.md
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
@@ -38,28 +39,35 @@
 │   │   ├── ast.ts
 │   │   └── index.ts
 │   └── utils
-│       ├── _scope.ts
 │       ├── ast.ts
+│       ├── berlekamp-zassenhaus
+│       │   ├── berlekamp.ts
+│       │   ├── finite-field.ts
+│       │   ├── hensel-lifting.ts
+│       │   ├── index.ts
+│       │   └── polynomial-utils.ts
 │       ├── distribution.ts
 │       ├── factorization
 │       │   ├── framework.ts
 │       │   ├── index.ts
 │       │   └── strategies
 │       │       ├── common-factor.ts
-│       │       ├── cubic.ts
 │       │       ├── difference-of-squares.ts
 │       │       ├── grouping.ts
 │       │       ├── index.ts
-│       │       ├── quadratic.ts
-│       │       ├── simple-common-factor.ts
-│       │       └── substitution.ts
-│       ├── factorization.ts
+│       │       └── simple-common-factor.ts
 │       ├── index.ts
+│       ├── middle-simplify.ts
+│       ├── pattern-recognition
+│       │   ├── implementations.ts
+│       │   └── index.ts
+│       ├── scope.ts
 │       ├── simplify
 │       │   ├── basic-simplify.ts
 │       │   ├── commutative.ts
 │       │   ├── exponential.ts
 │       │   └── simplification.ts
+│       ├── unified-simplify-old.ts
 │       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
@@ -84,22 +92,29 @@
 │   │   └── test-summary.txt
 │   ├── simplify.test.mjs
 │   ├── temp
-│   │   └── sqrt-exponential.test.mjs
+│   │   ├── berlekamp-zassenhaus-test.test.mjs
+│   │   ├── debug-cubic-construction.test.mjs
+│   │   ├── debug-factorization.test.mjs
+│   │   ├── debug-quadratic.test.mjs
+│   │   ├── investigate-ast-structure.test.mjs
+│   │   ├── root-cause-analysis.test.mjs
+│   │   ├── sqrt-exponential.test.mjs
+│   │   └── unified-factorization-test.test.mjs
 │   ├── test-distribution.test.mjs
 │   └── unified-simplify.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-16 directories, 76 files
+18 directories, 89 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 13806
-Total Characters: 388796
-Total File Size (bytes): 390132
+Total Lines: 16009
+Total Characters: 454122
+Total File Size (bytes): 455558
 
 Development Size
-167M	.
+174M	.
 
 Build Size
-3.7M	dist
+4.1M	dist
