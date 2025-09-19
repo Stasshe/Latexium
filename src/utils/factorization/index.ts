@@ -10,7 +10,6 @@ import {
   GroupingStrategy,
   BerlekampZassenhausStrategy,
   LLLFactorizationStrategy,
-  QuarticSubstitutionStrategy,
   PowerSubstitutionStrategy,
   PerfectPowerStrategy,
 } from './strategies';
@@ -27,7 +26,6 @@ try {
   factorizationEngine.registerStrategy(new GroupingStrategy());
   factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
   factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
-  factorizationEngine.registerStrategy(new QuarticSubstitutionStrategy());
   factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
