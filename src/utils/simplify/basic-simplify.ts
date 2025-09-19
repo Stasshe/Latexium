@@ -102,6 +102,30 @@ function simplifyAdditionBasic(left: ASTNode, right: ASTNode): ASTNode {
     };
   }
 
+  // x + (-x + n) = n, x + (n - x) = n
+  if (left.type === 'Identifier' && right.type === 'BinaryExpression') {
+    // x + (-x + n)
+    if (
+      right.operator === '+' &&
+      right.left.type === 'UnaryExpression' &&
+      right.left.operator === '-' &&
+      right.left.operand.type === 'Identifier' &&
+      right.left.operand.name === left.name &&
+      right.right.type === 'NumberLiteral'
+    ) {
+      return right.right;
+    }
+    // x + (n - x)
+    if (
+      right.operator === '-' &&
+      right.right.type === 'Identifier' &&
+      right.right.name === left.name &&
+      right.left.type === 'NumberLiteral'
+    ) {
+      return right.left;
+    }
+  }
+
   // Number + Number
   if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
     return { type: 'NumberLiteral', value: left.value + right.value };

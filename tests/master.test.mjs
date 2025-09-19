@@ -54,6 +54,19 @@ const complexTestCases = [
     description: 'Cubic binomial expansion'
   },
   {
+    id: 2.5,
+    expression: '4(x + 1)(x^2 + x + 1)',
+    task: 'distribute',
+    expected: '4x^3 + 8x^2 + 8x + 4',
+    description: 'Distribution of binomials'
+  },
+  {
+    id: 2.6,
+    expression: 'x + (-3x + n)',
+    task: 'distribute',
+    expected: '-2x + n',
+  },
+  {
     id: 3,
     expression: '\\frac{(x+1)(x+2)}{x-1}',
     task: 'distribute',
