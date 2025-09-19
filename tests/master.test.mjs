@@ -314,6 +314,11 @@ const complexTestCases = [
     description: 'Evaluate factorial division (combinatorics)'
   },
   {
+    id: 32.5,
+    expression: '\\frac{(x+1)!}{x!}',
+    task: 'evaluate',
+  },
+  {
     id: 33,
     expression: '\\sin(\\frac{\\pi}{2}) + \\cos(0)',
     task: 'evaluate',

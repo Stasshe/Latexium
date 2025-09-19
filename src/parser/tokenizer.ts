@@ -177,7 +177,8 @@ export class LaTeXTokenizer {
           return { type: 'COMMA', value: ',', position };
         case '!':
           this.advance();
-          return { type: 'FACTORIAL', value: '!', position };
+          // Instead of FACTORIAL, return as COMMAND for unified handling
+          return { type: 'COMMAND', value: '\\factorial', position };
         case '+':
         case '-':
         case '*':

@@ -53,6 +53,10 @@ export function astToLatex(node: ASTNode): string {
     case 'Product':
       return `\\prod_{${node.variable}=${astToLatex(node.lowerBound)}}^{${astToLatex(node.upperBound)}} ${astToLatex(node.expression)}`;
 
+    case 'Factorial':
+      // Always output as \factorial{...}
+      return `\\factorial{${astToLatex(node.argument)}}`;
+
     default:
       throw new Error(`Unsupported AST node type: ${(node as { type: string }).type}`);
   }

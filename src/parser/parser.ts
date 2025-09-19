@@ -396,7 +396,7 @@ export class LaTeXParser {
       }
       return node;
     }
-    // sqrt, frac, pi, e, fallback
+    // sqrt, frac, pi, e, factorial, fallback
     switch (token.value) {
       case '\\frac':
         return this.parseFraction();
@@ -412,6 +412,28 @@ export class LaTeXParser {
           type: 'Identifier',
           name: 'e',
         };
+      case '\\factorial': {
+        // Parse argument for factorial (postfix, so previous expression is the argument)
+        // In this context, parseCommand is only called when COMMAND is at the start of a primary, so we need to handle as prefix (rare)
+        // But for postfix, handled in parsePower (see below)
+        // For robustness, allow {expr} or (expr) or next primary
+        let argument: ASTNode;
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          argument = this.parseExpression();
+          this.consume('RBRACE');
+        } else if (this.expectToken('LPAREN')) {
+          this.consume('LPAREN');
+          argument = this.parseExpression();
+          this.consume('RPAREN');
+        } else {
+          argument = this.parsePrimary();
+        }
+        return {
+          type: 'Factorial',
+          argument,
+        };
+      }
       default:
         throw new Error(`Unsupported LaTeX command: ${token.value} at position ${token.position}`);
     }
@@ -501,9 +523,9 @@ export class LaTeXParser {
       };
     }
 
-    // Factorial support: handle postfix '!'
-    while (this.expectToken('FACTORIAL')) {
-      this.advance(); // consume '!'
+    // Factorial support: handle postfix \factorial (COMMAND)
+    while (this.expectToken('COMMAND') && this.currentToken.value === '\\factorial') {
+      this.advance(); // consume \factorial
       left = {
         type: 'Factorial',
         argument: left,

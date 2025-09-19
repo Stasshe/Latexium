@@ -32,6 +32,10 @@ export type ASTNode =
   | Product
   | Factorial;
 
+/**
+ * Factorial AST node type
+ * Represents n! or \factorial{n}
+ */
 export type Factorial = {
   type: 'Factorial';
   argument: ASTNode;
