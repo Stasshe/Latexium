@@ -9,7 +9,7 @@ import { parseLatex, analyze } from '../dist/index.esm.js';
 function runTest(expression, expected, description) {
   console.log(`\n🧪 Testing: ${description}`);
   console.log(`Expression: ${expression}`);
-  
+
   try {
     const parseResult = parseLatex(expression);
     if (parseResult.error) {
@@ -26,7 +26,7 @@ function runTest(expression, expected, description) {
     const result = analyzeResult.value;
     console.log(`Expected: ${expected}`);
     console.log(`Got: ${result}`);
-    
+
     if (result === expected) {
       console.log(`✅ PASS`);
       return true;
@@ -44,7 +44,7 @@ function runTest(expression, expected, description) {
 function testSimplify(expression, description) {
   console.log(`\n🔧 Testing Simplification: ${description}`);
   console.log(`Expression: ${expression}`);
-  
+
   try {
     const parseResult = parseLatex(expression);
     if (parseResult.error) {
@@ -81,13 +81,21 @@ if (runTest('\\frac{6}{9}', '\\frac{2}{3}', 'Basic fraction reduction')) {
 
 // Test 2: Fraction addition with reduction
 total++;
-if (runTest('\\frac{1}{4} + \\frac{1}{6}', '\\frac{5}{12}', 'Fraction addition with automatic reduction')) {
+if (
+  runTest(
+    '\\frac{1}{4} + \\frac{1}{6}',
+    '\\frac{5}{12}',
+    'Fraction addition with automatic reduction'
+  )
+) {
   passed++;
 }
 
 // Test 3: Fraction multiplication with reduction
 total++;
-if (runTest('\\frac{2}{3} * \\frac{9}{4}', '\\frac{3}{2}', 'Fraction multiplication with reduction')) {
+if (
+  runTest('\\frac{2}{3} * \\frac{9}{4}', '\\frac{3}{2}', 'Fraction multiplication with reduction')
+) {
   passed++;
 }
 
@@ -111,7 +119,13 @@ if (runTest('2 * \\frac{3}{4}', '\\frac{3}{2}', 'Number times fraction')) {
 
 // Test 7: Fraction division (using multiplication by reciprocal)
 total++;
-if (runTest('\\frac{2}{3} * \\frac{5}{4}', '\\frac{5}{6}', 'Fraction multiplication (simulating division)')) {
+if (
+  runTest(
+    '\\frac{2}{3} * \\frac{5}{4}',
+    '\\frac{5}{6}',
+    'Fraction multiplication (simulating division)'
+  )
+) {
   passed++;
 }
 

@@ -8,7 +8,7 @@ function testDistribution(expression, expected, description) {
   console.log(`\n🧪 Testing: ${description}`);
   console.log(`Expression: ${expression}`);
   console.log(`Expected: ${expected}`);
-  
+
   try {
     const parseResult = parseLatex(expression);
     if (parseResult.error) {
@@ -24,7 +24,7 @@ function testDistribution(expression, expected, description) {
 
     const result = analyzeResult.value;
     console.log(`Actual: ${result}`);
-    
+
     if (result === expected) {
       console.log(`✅ PASS`);
     } else {
@@ -43,7 +43,7 @@ testDistribution('2(x + 1)', '2x + 2', 'Basic single term distribution');
 testDistribution('3(a + b)', '3a + 3b', 'Single term times sum');
 testDistribution('x(y + z)', 'xy + xz', 'Variable times sum');
 
-// Reverse distribution  
+// Reverse distribution
 testDistribution('(x + 1) * 2', '2x + 2', 'Reverse distribution');
 testDistribution('(a + b) * c', 'ac + bc', 'Sum times variable');
 
@@ -61,7 +61,11 @@ testDistribution('(x + 1)^{2}', 'x^{2} + 2x + 1', 'Binomial square');
 testDistribution('(a - b)^{2}', 'a^{2} - 2ab + b^{2}', 'Binomial square with subtraction');
 
 // Three terms
-testDistribution('(x + y + z)(a + b + c)', 'xa + xb + xc + ya + yb + yc + za + zb + zc', 'Three term multiplication');
+testDistribution(
+  '(x + y + z)(a + b + c)',
+  'xa + xb + xc + ya + yb + yc + za + zb + zc',
+  'Three term multiplication'
+);
 
 console.log('\n🔬 Testing factorization preference...');
 

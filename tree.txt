@@ -80,77 +80,77 @@
 │       └── variables.ts
 ├── test-specification.txt
 ├── tests
-│   ├── advanced-factorization.test.mjs
-│   ├── complex-simplify.test.mjs
-│   ├── cubic-factorization.test.mjs
-│   ├── distribution-unified.test.mjs
-│   ├── enhanced-simplify.test.mjs
-│   ├── factorization.test.mjs
-│   ├── final-distribution-test.test.mjs
-│   ├── final-validation.test.mjs
 │   ├── main.test.mjs
 │   ├── master.test.mjs
 │   ├── output
-│   │   ├── factorial-fraction-ast.json
 │   │   ├── master-test-log.txt
 │   │   ├── master-test-results.json
 │   │   ├── master-test-summary.txt
 │   │   ├── test-log.txt
 │   │   ├── test-results.json
 │   │   └── test-summary.txt
-│   ├── simplify.test.mjs
-│   ├── temp
-│   │   ├── berlekamp-zassenhaus-test.test.mjs
-│   │   ├── debug-analyze-evaluate-exponential.test.mjs
-│   │   ├── debug-analyze-evaluate-exponential2.test.mjs
-│   │   ├── debug-ast-passing.test.mjs
-│   │   ├── debug-ast-structure.test.mjs
-│   │   ├── debug-coefficients-to-ast.test.mjs
-│   │   ├── debug-cubic-construction.test.mjs
-│   │   ├── debug-detailed-factorization.test.mjs
-│   │   ├── debug-exponential-expand-false-ast.test.mjs
-│   │   ├── debug-exponential-expand-false-distribute.test.mjs
-│   │   ├── debug-exponential-expand-false-eval.test.mjs
-│   │   ├── debug-exponential-expand-false-factor.test.mjs
-│   │   ├── debug-exponential-expand-false-parseonly.test.mjs
-│   │   ├── debug-exponential-expand-false-raw.test.mjs
-│   │   ├── debug-exponential-expand-false.test.mjs
-│   │   ├── debug-factorial.test.mjs
-│   │   ├── debug-factorization.test.mjs
-│   │   ├── debug-perfect-power-simplify.test.mjs
-│   │   ├── debug-quadratic.test.mjs
-│   │   ├── debug-quartic-quadratic.test.mjs
-│   │   ├── debug-underscore-parse.test.mjs
-│   │   ├── debug-underscore-sumprod.test.mjs
-│   │   ├── debug-x3-1.test.mjs
-│   │   ├── debug-x4-1.test.mjs
-│   │   ├── debug-x5-x.test.mjs
-│   │   ├── factorial-fraction.test.mjs
-│   │   ├── investigate-ast-structure.test.mjs
-│   │   ├── root-cause-analysis.test.mjs
-│   │   ├── sqrt-exponential.test.mjs
-│   │   ├── test-berlekamp-integration.test.mjs
-│   │   ├── test-cancel-x.test.mjs
-│   │   ├── test-enhanced-basic-simplify.test.mjs
-│   │   ├── test-improved-bz-integration.test.mjs
-│   │   ├── test-lll-factorization.test.mjs
-│   │   ├── test-simple-polynomials.test.mjs
-│   │   └── unified-factorization-test.test.mjs
-│   ├── test-distribution.test.mjs
-│   └── unified-simplify.test.mjs
+│   ├── partial
+│   │   ├── advanced-factorization.test.mjs
+│   │   ├── complex-simplify.test.mjs
+│   │   ├── cubic-factorization.test.mjs
+│   │   ├── distribution-unified.test.mjs
+│   │   ├── enhanced-simplify.test.mjs
+│   │   ├── factorization.test.mjs
+│   │   ├── final-distribution-test.test.mjs
+│   │   ├── final-validation.test.mjs
+│   │   ├── simplify.test.mjs
+│   │   ├── test-distribution.test.mjs
+│   │   └── unified-simplify.test.mjs
+│   └── temp
+│       ├── berlekamp-zassenhaus-test.test.mjs
+│       ├── debug-analyze-evaluate-exponential.test.mjs
+│       ├── debug-analyze-evaluate-exponential2.test.mjs
+│       ├── debug-ast-passing.test.mjs
+│       ├── debug-ast-structure.test.mjs
+│       ├── debug-coefficients-to-ast.test.mjs
+│       ├── debug-cubic-construction.test.mjs
+│       ├── debug-detailed-factorization.test.mjs
+│       ├── debug-exponential-expand-false-ast.test.mjs
+│       ├── debug-exponential-expand-false-distribute.test.mjs
+│       ├── debug-exponential-expand-false-eval.test.mjs
+│       ├── debug-exponential-expand-false-factor.test.mjs
+│       ├── debug-exponential-expand-false-parseonly.test.mjs
+│       ├── debug-exponential-expand-false-raw.test.mjs
+│       ├── debug-exponential-expand-false.test.mjs
+│       ├── debug-factorial.test.mjs
+│       ├── debug-factorization.test.mjs
+│       ├── debug-perfect-power-simplify.test.mjs
+│       ├── debug-quadratic.test.mjs
+│       ├── debug-quartic-quadratic.test.mjs
+│       ├── debug-underscore-parse.test.mjs
+│       ├── debug-underscore-sumprod.test.mjs
+│       ├── debug-x3-1.test.mjs
+│       ├── debug-x4-1.test.mjs
+│       ├── debug-x5-x.test.mjs
+│       ├── factorial-fraction.test.mjs
+│       ├── investigate-ast-structure.test.mjs
+│       ├── root-cause-analysis.test.mjs
+│       ├── sqrt-exponential.test.mjs
+│       ├── test-berlekamp-integration.test.mjs
+│       ├── test-cancel-x.test.mjs
+│       ├── test-enhanced-basic-simplify.test.mjs
+│       ├── test-improved-bz-integration.test.mjs
+│       ├── test-lll-factorization.test.mjs
+│       ├── test-simple-polynomials.test.mjs
+│       └── unified-factorization-test.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-20 directories, 123 files
+21 directories, 122 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17218
-Total Characters: 491322
-Total File Size (bytes): 493413
+Total Lines: 17114
+Total Characters: 488419
+Total File Size (bytes): 490768
 
 Development Size
-191M	.
+193M	.
 
 Build Size
-4.9M	dist
+4.8M	dist

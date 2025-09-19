@@ -17,8 +17,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts",
+    "format": "prettier --write src/**/*.ts tests/*.mjs",
+    "format:check": "prettier --check src/**/*.ts tests/*.mjs",
     "clean": "rm -rf dist",
     "prepare": "husky"
   },
