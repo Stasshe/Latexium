@@ -3,7 +3,7 @@
  */
 
 // Maximum power for automatic expansion
-export const MAX_EXPANSION_POWER = 5;
+export const MAX_EXPANSION_POWER = 6;
 
 // Precision for numerical calculations
 export const NUMERICAL_PRECISION = 10;

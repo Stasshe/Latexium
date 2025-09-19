@@ -224,11 +224,47 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
     };
     if (root === 0) return powerExpr;
     const operator = root > 0 ? '-' : '+';
+
+    // Helper: convert decimal to fraction if possible
+    function decimalToFraction(x: number, tol = 1e-10): { num: number; den: number } | null {
+      // Only handle finite decimals
+      if (Number.isInteger(x)) return { num: x, den: 1 };
+      const sign = x < 0 ? -1 : 1;
+      x = Math.abs(x);
+      let denominator = 1;
+      while (Math.abs(x * denominator - Math.round(x * denominator)) > tol && denominator < 10000) {
+        denominator *= 10;
+      }
+      const numerator = Math.round(x * denominator);
+      // Reduce fraction
+      function gcd(a: number, b: number): number {
+        return b ? gcd(b, a % b) : Math.abs(a);
+      }
+      const g = gcd(numerator, denominator);
+      return { num: (sign * numerator) / g, den: denominator / g };
+    }
+
+    let rightNode: ASTNode;
+    const absRoot = Math.abs(root);
+    if (Number.isInteger(absRoot)) {
+      rightNode = { type: 'NumberLiteral', value: absRoot };
+    } else {
+      const frac = decimalToFraction(absRoot);
+      if (frac && frac.den !== 1) {
+        rightNode = {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: frac.num },
+          denominator: { type: 'NumberLiteral', value: frac.den },
+        };
+      } else {
+        rightNode = { type: 'NumberLiteral', value: absRoot };
+      }
+    }
     return {
       type: 'BinaryExpression',
       operator,
       left: powerExpr,
-      right: { type: 'NumberLiteral', value: Math.abs(root) },
+      right: rightNode,
     };
   }
 }
