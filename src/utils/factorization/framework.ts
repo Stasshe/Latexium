@@ -221,7 +221,6 @@ export class FactorizationEngine {
           const newRight = this.recursivelyFactorSubexpressions(node.right, context);
 
           // Try to factor both sides if they're polynomials
-          // Skip recursive factorization for certain patterns to avoid incorrect results
           const leftFactored = this.shouldSkipRecursiveFactorization(newLeft, context)
             ? newLeft
             : this.attemptFactorization(newLeft, context);
@@ -229,11 +228,8 @@ export class FactorizationEngine {
             ? newRight
             : this.attemptFactorization(newRight, context);
 
-          return {
-            ...node,
-            left: leftFactored,
-            right: rightFactored,
-          };
+          // If either side was factored into multiple factors, we need to combine them properly
+          return this.combineFactoredMultiplication(leftFactored, rightFactored, context);
         } else {
           // For other operators, just recurse on left and right
           return {
@@ -245,6 +241,54 @@ export class FactorizationEngine {
       default:
         return node;
     }
+  }
+
+  /**
+   * Combine factored left and right sides of multiplication
+   * Handles cases where either side might be a product of multiple factors
+   */
+  private combineFactoredMultiplication(
+    left: ASTNode,
+    right: ASTNode,
+    context: FactorizationContext
+  ): ASTNode {
+    // Extract all factors from both sides
+    const leftFactors = this.extractMultiplicationFactors(left);
+    const rightFactors = this.extractMultiplicationFactors(right);
+
+    // Combine all factors
+    const allFactors = [...leftFactors, ...rightFactors];
+
+    if (allFactors.length <= 1) {
+      return allFactors[0] || { type: 'NumberLiteral', value: 1 };
+    }
+
+    // Build the result as a chain of multiplications
+    let result = allFactors[0]!;
+    for (let i = 1; i < allFactors.length; i++) {
+      result = {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: result,
+        right: allFactors[i]!,
+      };
+    }
+
+    return result;
+  }
+
+  /**
+   * Extract all factors from a multiplication expression
+   * Returns an array of individual factors
+   */
+  private extractMultiplicationFactors(node: ASTNode): ASTNode[] {
+    if (node.type === 'BinaryExpression' && node.operator === '*') {
+      return [
+        ...this.extractMultiplicationFactors(node.left),
+        ...this.extractMultiplicationFactors(node.right),
+      ];
+    }
+    return [node];
   }
 
   /**

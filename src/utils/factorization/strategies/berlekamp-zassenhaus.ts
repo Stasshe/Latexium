@@ -19,6 +19,11 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
   description = 'Advanced polynomial factorization using Berlekamp-Zassenhaus algorithm';
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
+    // Don't apply to already factored expressions (containing multiplications)
+    if (this.containsMultiplication(node)) {
+      return false;
+    }
+
     // Apply to any polynomial that other strategies couldn't handle
     if (!this.isPolynomial(node, context.variable)) {
       return false;
@@ -197,5 +202,20 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
     }
 
     return result;
+  }
+
+  /**
+   * Check if node contains multiplication (indicating it's already factored)
+   */
+  private containsMultiplication(node: ASTNode): boolean {
+    switch (node.type) {
+      case 'BinaryExpression':
+        if (node.operator === '*') {
+          return true;
+        }
+        return this.containsMultiplication(node.left) || this.containsMultiplication(node.right);
+      default:
+        return false;
+    }
   }
 }
