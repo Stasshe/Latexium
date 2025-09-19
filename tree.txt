@@ -56,8 +56,13 @@
 │       │       ├── difference-of-squares.ts
 │       │       ├── grouping.ts
 │       │       ├── index.ts
+│       │       ├── lll-factorization.ts
+│       │       ├── perfect-power.ts
+│       │       ├── power-substitution.ts
 │       │       └── simple-common-factor.ts
 │       ├── index.ts
+│       ├── lll-factorization
+│       │   └── index.ts
 │       ├── middle-simplify.ts
 │       ├── pattern-recognition
 │       │   ├── implementations.ts
@@ -68,7 +73,6 @@
 │       │   ├── commutative.ts
 │       │   ├── exponential.ts
 │       │   └── simplification.ts
-│       ├── unified-simplify-old.ts
 │       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
@@ -94,16 +98,35 @@
 │   ├── simplify.test.mjs
 │   ├── temp
 │   │   ├── berlekamp-zassenhaus-test.test.mjs
+│   │   ├── debug-analyze-evaluate-exponential.test.mjs
+│   │   ├── debug-analyze-evaluate-exponential2.test.mjs
 │   │   ├── debug-ast-passing.test.mjs
 │   │   ├── debug-ast-structure.test.mjs
+│   │   ├── debug-coefficients-to-ast.test.mjs
 │   │   ├── debug-cubic-construction.test.mjs
+│   │   ├── debug-detailed-factorization.test.mjs
+│   │   ├── debug-exponential-expand-false-ast.test.mjs
+│   │   ├── debug-exponential-expand-false-distribute.test.mjs
+│   │   ├── debug-exponential-expand-false-eval.test.mjs
+│   │   ├── debug-exponential-expand-false-factor.test.mjs
+│   │   ├── debug-exponential-expand-false-parseonly.test.mjs
+│   │   ├── debug-exponential-expand-false-raw.test.mjs
+│   │   ├── debug-exponential-expand-false.test.mjs
 │   │   ├── debug-factorization.test.mjs
+│   │   ├── debug-perfect-power-simplify.test.mjs
 │   │   ├── debug-quadratic.test.mjs
+│   │   ├── debug-quartic-quadratic.test.mjs
+│   │   ├── debug-x3-1.test.mjs
+│   │   ├── debug-x4-1.test.mjs
+│   │   ├── debug-x5-x.test.mjs
 │   │   ├── investigate-ast-structure.test.mjs
 │   │   ├── root-cause-analysis.test.mjs
 │   │   ├── sqrt-exponential.test.mjs
 │   │   ├── test-berlekamp-integration.test.mjs
+│   │   ├── test-cancel-x.test.mjs
+│   │   ├── test-enhanced-basic-simplify.test.mjs
 │   │   ├── test-improved-bz-integration.test.mjs
+│   │   ├── test-lll-factorization.test.mjs
 │   │   ├── test-simple-polynomials.test.mjs
 │   │   └── unified-factorization-test.test.mjs
 │   ├── test-distribution.test.mjs
@@ -112,15 +135,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-18 directories, 95 files
+19 directories, 117 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 16528
-Total Characters: 469234
-Total File Size (bytes): 470676
+Total Lines: 16991
+Total Characters: 483797
+Total File Size (bytes): 485750
 
 Development Size
-176M	.
+188M	.
 
 Build Size
-4.4M	dist
+4.8M	dist
