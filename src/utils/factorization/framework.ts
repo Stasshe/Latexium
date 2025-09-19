@@ -207,7 +207,7 @@ export class FactorizationEngine {
    * Recursively factor subexpressions in the result
    */
   private recursivelyFactorSubexpressions(node: ASTNode, context: FactorizationContext): ASTNode {
-    context.steps.push(`Recursive check: ${node.type} node`);
+    context.steps.push(`Recursive check: ${node.type} node ${astToLatex(node)}`);
 
     switch (node.type) {
       case 'BinaryExpression':
