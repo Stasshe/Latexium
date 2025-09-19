@@ -9,6 +9,7 @@ import {
   DifferenceOfSquaresStrategy,
   GroupingStrategy,
   BerlekampZassenhausStrategy,
+  LLLFactorizationStrategy,
 } from './strategies';
 import { ASTNode } from '../../types';
 
@@ -20,6 +21,7 @@ try {
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
+  factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
   factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
