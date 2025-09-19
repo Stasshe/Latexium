@@ -74,7 +74,7 @@ export function analyzeDistribution(
     const expandedLatex = astToLatex(expanded);
 
     // Always apply simplification to handle addition, like terms, etc.
-    const simplified = simplify(expanded, { combineLikeTerms: true }, steps);
+    const simplified = simplify(expanded, { factor: false, combineLikeTerms: true }, steps);
     const simplifiedLatex = astToLatex(simplified);
 
     // Track changes step by step
