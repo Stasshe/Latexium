@@ -359,41 +359,77 @@ function normalizeExpression(expr) {
 
 function checkExpectedValue(actualValue, expectedValue) {
   if (!actualValue || !expectedValue) return false;
-  
+
+  // Helper: parse a sum of monomials into sorted canonical form
+  function canonicalize(expr) {
+    // Remove whitespace, braces, and backslashes, normalize ^{n} to ^n
+    let s = expr.toString()
+      .replace(/\\/g, '')
+      .replace(/\s+/g, '')
+      .replace(/\{([^}]*)\}/g, '$1')
+      .replace(/\^\{([^}]*)\}/g, '^$1')
+      .replace(/\^/g, '^')
+      .replace(/([a-zA-Z])([0-9]+)/g, '$1^$2') // x2 -> x^2
+      .replace(/([\\+\\-])/g, ' $1')
+      .replace(/\*+/g, '')
+      .trim();
+    // Split into terms
+    let terms = s.split(/ (?=[+-])/).map(t => t.trim()).filter(Boolean);
+    // Normalize each term: sort variables in each monomial
+    terms = terms.map(term => {
+      // Separate coefficient and variables
+      let match = term.match(/^([+-]?\d*\.?\d*)?([a-zA-Z][a-zA-Z0-9^]*)*$/);
+      if (!match) return term;
+      let coeff = match[1] || '';
+      let vars = term.replace(/^([+-]?\d*\.?\d*)/, '');
+      // Split variables and sort
+      let varParts = [];
+      let re = /([a-zA-Z]+)(\^(-?\d+))?/g;
+      let m;
+      while ((m = re.exec(vars)) !== null) {
+        varParts.push(m[0]);
+      }
+      varParts.sort();
+      return (coeff ? coeff : (term[0] === '-' ? '-' : '')) + varParts.join('');
+    });
+    // Sort all terms lexicographically
+    terms.sort((a, b) => {
+      // Remove leading + for comparison
+      let aa = a.replace(/^\+/, '');
+      let bb = b.replace(/^\+/, '');
+      return aa.localeCompare(bb);
+    });
+    return terms.join('+').replace(/\+\\-/g, '-');
+  }
+
+  // Direct match (after normalization)
   const normalizedActual = normalizeExpression(actualValue);
   const normalizedExpected = normalizeExpression(expectedValue);
-  
-  // Direct match
   if (normalizedActual === normalizedExpected) return true;
-  
+
+  // Canonicalize and compare as sum of monomials
+  if (canonicalize(actualValue) === canonicalize(expectedValue)) return true;
+
   // Numerical tolerance check
   const actualNum = parseFloat(actualValue);
   const expectedNum = parseFloat(expectedValue);
-  
   if (!isNaN(actualNum) && !isNaN(expectedNum)) {
     const tolerance = 1e-6;
     return Math.abs(actualNum - expectedNum) < tolerance;
   }
-  
-  // Check for mathematical equivalence patterns
+
+  // Check for mathematical equivalence patterns (legacy fallback)
   const mathPatterns = [
-    // Commutative operations
-    [/([a-z]+)\+([a-z]+)/, '$2+$1'],
-    [/([a-z]+)\*([a-z]+)/, '$2*$1'],
-    // Common equivalences
     [/pi/g, 'π'],
     [/exp/g, 'e^'],
     [/ln/g, 'log']
   ];
-  
   let modifiedActual = normalizedActual;
   let modifiedExpected = normalizedExpected;
-  
   for (const [pattern, replacement] of mathPatterns) {
     modifiedActual = modifiedActual.replace(pattern, replacement);
     modifiedExpected = modifiedExpected.replace(pattern, replacement);
   }
-  
   return modifiedActual === modifiedExpected;
 }
 
