@@ -206,8 +206,13 @@ export class FactorizationEngine {
           const newRight = this.recursivelyFactorSubexpressions(node.right, context);
 
           // Try to factor both sides if they're polynomials
-          const leftFactored = this.attemptFactorization(newLeft, context);
-          const rightFactored = this.attemptFactorization(newRight, context);
+          // Skip recursive factorization for certain patterns to avoid incorrect results
+          const leftFactored = this.shouldSkipRecursiveFactorization(newLeft, context)
+            ? newLeft
+            : this.attemptFactorization(newLeft, context);
+          const rightFactored = this.shouldSkipRecursiveFactorization(newRight, context)
+            ? newRight
+            : this.attemptFactorization(newRight, context);
 
           return {
             ...node,
@@ -225,6 +230,33 @@ export class FactorizationEngine {
       default:
         return node;
     }
+  }
+
+  /**
+   * Check if we should skip recursive factorization for this node
+   * Used to avoid incorrect factorization of sum/difference of cubes results
+   */
+  private shouldSkipRecursiveFactorization(node: ASTNode, context: FactorizationContext): boolean {
+    // Skip factorization of expressions that look like x² ± ax + a²
+    // These are typically results from sum/difference of cubes and shouldn't be factored further
+    if (node.type === 'BinaryExpression' && node.operator === '+') {
+      const poly = PolynomialAnalyzer.analyzePolynomial(node, context.variable);
+      if (poly && poly.degree === 2) {
+        const a = poly.coefficients.get(2) || 0;
+        const b = poly.coefficients.get(1) || 0;
+        const c = poly.coefficients.get(0) || 0;
+
+        // Check if discriminant is negative (no real roots)
+        const discriminant = b * b - 4 * a * c;
+        if (discriminant < 0) {
+          context.steps.push(
+            '  Skipping factorization of irreducible quadratic (negative discriminant)'
+          );
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -293,8 +325,31 @@ export class FactorizationEngine {
           numerator: this.deepClone(node.numerator),
           denominator: this.deepClone(node.denominator),
         };
+      case 'Integral':
+        return {
+          ...node,
+          integrand: this.deepClone(node.integrand),
+          ...(node.lowerBound && { lowerBound: this.deepClone(node.lowerBound) }),
+          ...(node.upperBound && { upperBound: this.deepClone(node.upperBound) }),
+        };
+      case 'Sum':
+        return {
+          ...node,
+          expression: this.deepClone(node.expression),
+          lowerBound: this.deepClone(node.lowerBound),
+          upperBound: this.deepClone(node.upperBound),
+        };
+      case 'Product':
+        return {
+          ...node,
+          expression: this.deepClone(node.expression),
+          lowerBound: this.deepClone(node.lowerBound),
+          upperBound: this.deepClone(node.upperBound),
+        };
       default:
-        return node;
+        throw new Error(
+          `Unsupported AST node type for cloning: ${(node as { type: string }).type}`
+        );
     }
   }
 }

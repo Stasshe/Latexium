@@ -118,7 +118,10 @@ export class QuadraticFactorizationStrategy implements FactorizationStrategy {
     // Check if b² = 4ac (perfect square condition)
     const discriminant = b * b - 4 * a * c;
 
+    steps.push(`Perfect square check: a=${a}, b=${b}, c=${c}, discriminant=${discriminant}`);
+
     if (Math.abs(discriminant) > 1e-10) {
+      steps.push(`Not a perfect square (discriminant = ${discriminant})`);
       return null; // Not a perfect square
     }
 

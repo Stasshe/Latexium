@@ -5,6 +5,7 @@
 
 import { ASTNode } from '../../../types';
 import { astToLatex } from '../../ast';
+import { simplify } from '../../unified-simplify';
 import {
   FactorizationStrategy,
   FactorizationContext,
@@ -123,15 +124,24 @@ export class CubicFactorizationStrategy implements FactorizationStrategy {
             ASTBuilder.power(ASTBuilder.variable(variable), ASTBuilder.number(2)),
             ASTBuilder.multiply(ASTBuilder.number(cubeRoot), ASTBuilder.variable(variable))
           ),
-          ASTBuilder.power(ASTBuilder.number(cubeRoot), ASTBuilder.number(2))
+          ASTBuilder.number(cubeRoot * cubeRoot) // Use the actual value, not cubeRoot^2
         );
 
-        return a === 1
-          ? ASTBuilder.multiply(linearFactor, quadraticFactor)
-          : ASTBuilder.multiply(
-              ASTBuilder.number(a),
-              ASTBuilder.multiply(linearFactor, quadraticFactor)
-            );
+        // Simplify the quadratic factor to ensure correct coefficient extraction
+        const simplifiedQuadraticFactor = simplify(quadraticFactor);
+
+        steps.push(`Generated quadratic factor: ${astToLatex(simplifiedQuadraticFactor)}`);
+
+        const result =
+          a === 1
+            ? ASTBuilder.multiply(linearFactor, simplifiedQuadraticFactor)
+            : ASTBuilder.multiply(
+                ASTBuilder.number(a),
+                ASTBuilder.multiply(linearFactor, simplifiedQuadraticFactor)
+              );
+
+        steps.push(`Final factored result: ${astToLatex(result)}`);
+        return result;
       }
     }
 
@@ -152,14 +162,17 @@ export class CubicFactorizationStrategy implements FactorizationStrategy {
             ASTBuilder.power(ASTBuilder.variable(variable), ASTBuilder.number(2)),
             ASTBuilder.multiply(ASTBuilder.number(cubeRoot), ASTBuilder.variable(variable))
           ),
-          ASTBuilder.power(ASTBuilder.number(cubeRoot), ASTBuilder.number(2))
+          ASTBuilder.number(cubeRoot * cubeRoot) // Use the actual value, not cubeRoot^2
         );
 
+        // Simplify the quadratic factor to ensure correct coefficient extraction
+        const simplifiedQuadraticFactor = simplify(quadraticFactor);
+
         return a === 1
-          ? ASTBuilder.multiply(linearFactor, quadraticFactor)
+          ? ASTBuilder.multiply(linearFactor, simplifiedQuadraticFactor)
           : ASTBuilder.multiply(
               ASTBuilder.number(a),
-              ASTBuilder.multiply(linearFactor, quadraticFactor)
+              ASTBuilder.multiply(linearFactor, simplifiedQuadraticFactor)
             );
       }
     }

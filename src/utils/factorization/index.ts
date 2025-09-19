@@ -10,6 +10,8 @@ import {
   QuadraticFactorizationStrategy,
   GroupingStrategy,
   CubicFactorizationStrategy,
+  SubstitutionStrategy,
+  PerfectPowerStrategy,
 } from './strategies';
 import { ASTNode } from '../../types';
 
@@ -23,6 +25,8 @@ try {
   factorizationEngine.registerStrategy(new QuadraticFactorizationStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
   factorizationEngine.registerStrategy(new CubicFactorizationStrategy());
+  factorizationEngine.registerStrategy(new SubstitutionStrategy());
+  factorizationEngine.registerStrategy(new PerfectPowerStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
   throw new Error(

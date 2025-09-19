@@ -8,3 +8,5 @@ export { DifferenceOfSquaresStrategy } from './difference-of-squares';
 export { QuadraticFactorizationStrategy } from './quadratic';
 export { GroupingStrategy } from './grouping';
 export { CubicFactorizationStrategy } from './cubic';
+export { SubstitutionStrategy } from './substitution';
+export { PerfectPowerStrategy } from './perfect-power';
