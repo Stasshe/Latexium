@@ -51,6 +51,12 @@ const complexTestCases = [
     expected: '(x - 1)^3',
   },
   {
+    id: 0.95,
+    expression: 'x(x - 1)(x - 2)',
+    task: 'factor',
+    expected: 'x(x - 1)(x - 2)',
+  },
+  {
     id: 1,
     expression: '(x + y)\\cdot(a + b + c)',
     task: 'distribute',

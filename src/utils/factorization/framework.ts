@@ -232,10 +232,30 @@ export class FactorizationEngine {
           return this.combineFactoredMultiplication(leftFactored, rightFactored, context);
         } else {
           // For other operators, just recurse on left and right
+          const left = this.recursivelyFactorSubexpressions(node.left, context);
+          const right = this.recursivelyFactorSubexpressions(node.right, context);
+          // Combine like terms if possible (for + and -)
+          if (node.operator === '+' || node.operator === '-') {
+            // Try to combine like terms using ASTBuilder.buildPolynomial
+            const variable = context.variable || 'x';
+            const poly = PolynomialAnalyzer.analyzePolynomial(
+              {
+                type: 'BinaryExpression',
+                operator: node.operator,
+                left,
+                right,
+              },
+              variable
+            );
+            if (poly) {
+              return ASTBuilder.buildPolynomial(poly.coefficients, variable);
+            }
+          }
+          // Otherwise, return the rebuilt node
           return {
             ...node,
-            left: this.recursivelyFactorSubexpressions(node.left, context),
-            right: this.recursivelyFactorSubexpressions(node.right, context),
+            left,
+            right,
           };
         }
       default:
