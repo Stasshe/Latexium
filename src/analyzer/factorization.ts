@@ -23,16 +23,16 @@ export function analyzeFactorization(
 
     steps.push(`Original expression: ${astToLatex(ast)}`);
 
-    // First, expand the expression to ensure all terms are visible
-    const expanded = expandExpression(ast);
-    const expandedLatex = astToLatex(expanded);
+    // // First, expand the expression to ensure all terms are visible
+    // const expanded = expandExpression(ast);
+    // const expandedLatex = astToLatex(expanded);
 
-    if (expandedLatex !== astToLatex(ast)) {
-      steps.push(`After expansion: ${expandedLatex}`);
-    }
+    // if (expandedLatex !== astToLatex(ast)) {
+    //   steps.push(`After expansion: ${expandedLatex}`);
+    // }
 
     // Use unified-simplify with factorization enabled
-    const simplified = simplify(expanded, { factor: true, expand: false }, steps);
+    const simplified = simplify(ast, { factor: true, expand: false }, steps);
     const simplifiedLatex = astToLatex(simplified);
 
     steps.push(`Final factored form: ${simplifiedLatex}`);

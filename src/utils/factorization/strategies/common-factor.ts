@@ -1,5 +1,5 @@
 import { ASTNode } from '../../../types/ast';
-import { basicSimplify } from '../../simplify/basic-simplify';
+import { simplify as middleSimplify } from '../../middle-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 import { PolynomialAnalyzer, ASTBuilder } from '../framework';
 
@@ -50,15 +50,11 @@ export class CommonFactorStrategy implements FactorizationStrategy {
       };
     }
 
-    // Build the factored form
+    // Build the factored form (AST for numeric and variable factors)
     const factorParts: ASTNode[] = [];
-
-    // Add numeric factor if > 1
     if (numericGCD > 1) {
       factorParts.push(ASTBuilder.number(numericGCD));
     }
-
-    // Add variable factors
     for (const [variable, power] of commonVariables) {
       if (power === 1) {
         factorParts.push(ASTBuilder.variable(variable));
@@ -69,116 +65,53 @@ export class CommonFactorStrategy implements FactorizationStrategy {
       }
     }
 
-    // Build remaining terms after factoring out common factors
+    // Build the common factor AST (product of all factorParts, or 1 if none)
+    let commonFactor: ASTNode;
+    if (factorParts.length === 0) {
+      commonFactor = ASTBuilder.number(1);
+    } else if (factorParts.length === 1) {
+      commonFactor = factorParts[0]!;
+    } else {
+      commonFactor = factorParts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
+    }
+
+    // 分数を使わず、各項の係数・変数から共通因子を引いた差分で再構成
     const remainingTerms: ASTNode[] = [];
-
     for (const term of terms) {
-      const newCoeff = (term.coefficient * term.sign) / numericGCD;
-      const newVariables = new Map(term.variables);
-
-      // Remove common variable factors
-      for (const [variable, commonPower] of commonVariables) {
-        const termPower = newVariables.get(variable) || 0;
-        const remainingPower = termPower - commonPower;
-        if (remainingPower > 0) {
-          newVariables.set(variable, remainingPower);
-        } else {
-          newVariables.delete(variable);
-        }
+      const coeff = term.coefficient * term.sign;
+      let newCoeff = coeff;
+      if (numericGCD > 1) newCoeff = coeff / numericGCD;
+      const newVars = new Map(term.variables);
+      for (const [v, pow] of commonVariables) {
+        const tPow = newVars.get(v) || 0;
+        const restPow = tPow - pow;
+        if (restPow > 0) newVars.set(v, restPow);
+        else newVars.delete(v);
       }
-
-      // Build the remaining term
-      let termNode: ASTNode;
-
-      if (Math.abs(newCoeff) === 1 && newVariables.size === 0) {
-        // Just 1 or -1
-        termNode = ASTBuilder.number(newCoeff);
+      // 残りの項を再構成
+      let node: ASTNode | null = null;
+      if (newCoeff === 0) {
+        node = ASTBuilder.number(0);
       } else {
         const parts: ASTNode[] = [];
-
-        // Add coefficient first (if not 1)
-        if (Math.abs(newCoeff) !== 1) {
-          parts.push(ASTBuilder.number(Math.abs(newCoeff)));
+        if (Math.abs(newCoeff) !== 1 || newVars.size === 0) parts.push(ASTBuilder.number(newCoeff));
+        for (const [v, pow] of newVars) {
+          if (pow === 1) parts.push(ASTBuilder.variable(v));
+          else parts.push(ASTBuilder.binary('^', ASTBuilder.variable(v), ASTBuilder.number(pow)));
         }
-
-        // Add variables
-        for (const [variable, power] of newVariables) {
-          if (power === 1) {
-            parts.push(ASTBuilder.variable(variable));
-          } else {
-            parts.push(
-              ASTBuilder.binary('^', ASTBuilder.variable(variable), ASTBuilder.number(power))
-            );
-          }
-        }
-
-        // Build the term node
-        if (parts.length === 0) {
-          termNode = ASTBuilder.number(Math.abs(newCoeff));
-        } else if (parts.length === 1 && parts[0]) {
-          termNode = parts[0];
-        } else if (parts.length > 1) {
-          // Filter out any undefined values and reduce
-          const validParts = parts.filter((part): part is ASTNode => part !== undefined);
-          if (validParts.length === 0) {
-            termNode = ASTBuilder.number(Math.abs(newCoeff));
-          } else if (validParts.length === 1) {
-            termNode = validParts[0]!; // Safe assertion after filter
-          } else {
-            termNode = validParts.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
-          }
-        } else {
-          termNode = ASTBuilder.number(Math.abs(newCoeff));
-        }
-
-        // Apply negative sign if needed - use subtraction instead of UnaryExpression
-        if (newCoeff < 0) {
-          // Instead of creating UnaryExpression, create a proper subtraction when combining terms
-          // This will be handled later in the term combination phase
-          termNode = ASTBuilder.number(newCoeff); // Keep the negative number as-is for now
-        }
+        if (parts.length === 0) node = ASTBuilder.number(1);
+        else if (parts.length === 1) node = parts[0]!;
+        else node = parts.reduce((acc, p) => ASTBuilder.binary('*', acc, p));
       }
-
-      remainingTerms.push(termNode);
+      remainingTerms.push(node!);
     }
-
-    // Combine remaining terms
+    // 和としてまとめてmiddle-simplify
     let remainingExpression: ASTNode;
-    if (remainingTerms.length === 1 && remainingTerms[0]) {
-      remainingExpression = remainingTerms[0];
-    } else if (remainingTerms.length > 1) {
-      const validTerms = remainingTerms.filter((term): term is ASTNode => term !== undefined);
-      if (validTerms.length === 0) {
-        remainingExpression = ASTBuilder.number(1);
-      } else if (validTerms.length === 1) {
-        remainingExpression = validTerms[0]!; // Safe assertion after filter
-      } else {
-        remainingExpression = validTerms.reduce((acc, term) => ASTBuilder.binary('+', acc, term));
-      }
-    } else {
-      remainingExpression = ASTBuilder.number(1);
-    }
-
-    // Apply basic simplification to clean up the remaining expression
-    remainingExpression = basicSimplify(remainingExpression);
+    if (remainingTerms.length === 1) remainingExpression = remainingTerms[0]!;
+    else remainingExpression = remainingTerms.reduce((acc, t) => ASTBuilder.binary('+', acc, t));
+    remainingExpression = middleSimplify(remainingExpression);
 
     // Build the final factored expression
-    let commonFactor: ASTNode;
-    if (factorParts.length === 1 && factorParts[0]) {
-      commonFactor = factorParts[0];
-    } else if (factorParts.length > 1) {
-      const validFactors = factorParts.filter((part): part is ASTNode => part !== undefined);
-      if (validFactors.length === 0) {
-        commonFactor = ASTBuilder.number(1);
-      } else if (validFactors.length === 1) {
-        commonFactor = validFactors[0]!;
-      } else {
-        commonFactor = validFactors.reduce((acc, part) => ASTBuilder.binary('*', acc, part));
-      }
-    } else {
-      commonFactor = ASTBuilder.number(1);
-    }
-
     const result = ASTBuilder.binary('*', commonFactor, remainingExpression);
 
     steps.push(`Factored form: common factor times remaining expression`);

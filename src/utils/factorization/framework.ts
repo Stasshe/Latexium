@@ -4,7 +4,8 @@
  */
 
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../../types';
-import { astToLatex } from '../ast';
+import { astToLatex, stepsAstToLatex } from '../ast';
+import { simplify } from '../middle-simplify';
 
 /**
  * Base interface for all factorization strategies
@@ -183,13 +184,8 @@ export class FactorizationEngine {
     if (context.currentIteration >= context.maxIterations) {
       context.steps.push('Maximum iterations reached');
     }
-
-    // After main factorization, recursively factor subexpressions
-    if (hasChanged) {
-      context.steps.push('Attempting recursive factorization of subexpressions...');
-      currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
-    }
-
+    context.steps.push('Attempting recursive factorization of subexpressions...');
+    currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
     // Ensure all context steps are included in totalSteps
     totalSteps.push(...context.steps.slice(totalSteps.length));
 
@@ -207,59 +203,16 @@ export class FactorizationEngine {
    * Recursively factor subexpressions in the result
    */
   private recursivelyFactorSubexpressions(node: ASTNode, context: FactorizationContext): ASTNode {
-    context.steps.push(`Recursive check: ${node.type} node ${astToLatex(node)}`);
-
-    switch (node.type) {
-      case 'BinaryExpression':
-        if (node.operator === '*') {
-          context.steps.push(
-            'Found multiplication - checking both sides for further factorization'
-          );
-
-          // Factor left and right sides of multiplication
-          const newLeft = this.recursivelyFactorSubexpressions(node.left, context);
-          const newRight = this.recursivelyFactorSubexpressions(node.right, context);
-
-          // Try to factor both sides if they're polynomials
-          const leftFactored = this.shouldSkipRecursiveFactorization(newLeft, context)
-            ? newLeft
-            : this.attemptFactorization(newLeft, context);
-          const rightFactored = this.shouldSkipRecursiveFactorization(newRight, context)
-            ? newRight
-            : this.attemptFactorization(newRight, context);
-
-          // If either side was factored into multiple factors, we need to combine them properly
-          return this.combineFactoredMultiplication(leftFactored, rightFactored, context);
-        } else {
-          // For other operators, just recurse on left and right
-          const left = this.recursivelyFactorSubexpressions(node.left, context);
-          const right = this.recursivelyFactorSubexpressions(node.right, context);
-          // Combine like terms if possible (for + and -)
-          if (node.operator === '+' || node.operator === '-') {
-            // Try to combine like terms using ASTBuilder.buildPolynomial
-            const variable = context.variable || 'x';
-            const poly = PolynomialAnalyzer.analyzePolynomial(
-              {
-                type: 'BinaryExpression',
-                operator: node.operator,
-                left,
-                right,
-              },
-              variable
-            );
-            if (poly) {
-              return ASTBuilder.buildPolynomial(poly.coefficients, variable);
-            }
-          }
-          // Otherwise, return the rebuilt node
-          return {
-            ...node,
-            left,
-            right,
-          };
-        }
-      default:
-        return node;
+    // middle-simplifyを利用してサブ式の再帰的因数分解の代わりに簡約を行う
+    try {
+      context.steps.push('[middle-simplify] called for subexpression', stepsAstToLatex(node));
+      const simplified = simplify(node, { expand: false }, context.steps);
+      context.steps.push(`[middle-simplify] result: ${stepsAstToLatex(simplified)}`);
+      return simplified;
+    } catch (e) {
+      const msg = typeof e === 'object' && e && 'message' in e ? e.message : String(e);
+      context.steps.push(`[middle-simplify] failed: ${msg}`);
+      return node;
     }
   }
 
@@ -315,55 +268,55 @@ export class FactorizationEngine {
    * Check if we should skip recursive factorization for this node
    * Used to avoid incorrect factorization of sum/difference of cubes results
    */
-  private shouldSkipRecursiveFactorization(node: ASTNode, context: FactorizationContext): boolean {
-    // Skip factorization of expressions that look like x² ± ax + a²
-    // These are typically results from sum/difference of cubes and shouldn't be factored further
-    if (node.type === 'BinaryExpression' && node.operator === '+') {
-      const poly = PolynomialAnalyzer.analyzePolynomial(node, context.variable);
-      if (poly && poly.degree === 2) {
-        const a = poly.coefficients.get(2) || 0;
-        const b = poly.coefficients.get(1) || 0;
-        const c = poly.coefficients.get(0) || 0;
+  // private shouldSkipRecursiveFactorization(node: ASTNode, context: FactorizationContext): boolean {
+  //   // Skip factorization of expressions that look like x² ± ax + a²
+  //   // These are typically results from sum/difference of cubes and shouldn't be factored further
+  //   if (node.type === 'BinaryExpression' && node.operator === '+') {
+  //     const poly = PolynomialAnalyzer.analyzePolynomial(node, context.variable);
+  //     if (poly && poly.degree === 2) {
+  //       const a = poly.coefficients.get(2) || 0;
+  //       const b = poly.coefficients.get(1) || 0;
+  //       const c = poly.coefficients.get(0) || 0;
 
-        // Check if discriminant is negative (no real roots)
-        const discriminant = b * b - 4 * a * c;
-        if (discriminant < 0) {
-          context.steps.push(
-            '  Skipping factorization of irreducible quadratic (negative discriminant)'
-          );
-          return true;
-        }
-      }
-    }
-    return false;
-  }
+  //       // Check if discriminant is negative (no real roots)
+  //       const discriminant = b * b - 4 * a * c;
+  //       if (discriminant < 0) {
+  //         context.steps.push(
+  //           '  Skipping factorization of irreducible quadratic (negative discriminant)'
+  //         );
+  //         return true;
+  //       }
+  //     }
+  //   }
+  //   return false;
+  // }
 
-  /**
-   * Attempt factorization on a single expression
-   */
-  private attemptFactorization(node: ASTNode, context: FactorizationContext): ASTNode {
-    // Create a fresh context for recursive factorization to avoid iteration limit issues
-    const recursiveContext: FactorizationContext = {
-      ...context,
-      currentIteration: 0, // Reset iteration counter for recursive calls
-      steps: [], // Use separate steps array to avoid cluttering main output
-    };
+  // /**
+  //  * Attempt factorization on a single expression
+  //  */
+  // private attemptFactorization(node: ASTNode, context: FactorizationContext): ASTNode {
+  //   // Create a fresh context for recursive factorization to avoid iteration limit issues
+  //   const recursiveContext: FactorizationContext = {
+  //     ...context,
+  //     currentIteration: 0, // Reset iteration counter for recursive calls
+  //     steps: [], // Use separate steps array to avoid cluttering main output
+  //   };
 
-    // Try factorization strategies on this subexpression
-    for (const strategy of this.strategies) {
-      if (strategy.canApply(node, recursiveContext)) {
-        const result = strategy.apply(node, recursiveContext);
-        if (result.success && result.changed) {
-          context.steps.push(`  Subfactor: Applied ${strategy.name} to subexpression`);
+  //   // Try factorization strategies on this subexpression
+  //   for (const strategy of this.strategies) {
+  //     if (strategy.canApply(node, recursiveContext)) {
+  //       const result = strategy.apply(node, recursiveContext);
+  //       if (result.success && result.changed) {
+  //         context.steps.push(`  Subfactor: Applied ${strategy.name} to subexpression`);
 
-          // If factorization was successful, recursively factor the result
-          return this.recursivelyFactorSubexpressions(result.ast, context);
-        }
-      }
-    }
+  //         // If factorization was successful, recursively factor the result
+  //         return this.recursivelyFactorSubexpressions(result.ast, context);
+  //       }
+  //     }
+  //   }
 
-    return node;
-  }
+  //   return node;
+  // }
 
   /**
    * Initialize all available strategies

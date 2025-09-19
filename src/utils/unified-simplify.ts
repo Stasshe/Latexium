@@ -57,7 +57,7 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
       node,
       {
         combineLikeTerms: opts.combineLikeTerms,
-        expand: opts.expand,
+        expand: true,
         simplifyFractions: opts.simplifyFractions,
         applyIdentities: opts.applyIdentities,
         convertSqrtToExponential: opts.convertSqrtToExponential,
@@ -69,6 +69,9 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
     if (steps) steps.push('After middle-simplify');
 
     // Step 2: Apply pattern recognition for factorization if enabled
+    // This method is currently placeholder as pattern recognition is not fully implemented
+    // Uncomment and implement when pattern recognition is ready
+    //
     // if (opts.usePatternRecognition) {
     //   if (steps) steps.push('Applying pattern recognition');
     //   const patternResult = patternEngine.applyPattern(result);
@@ -101,7 +104,7 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
       result,
       {
         combineLikeTerms: opts.combineLikeTerms,
-        expand: false,
+        expand: opts.expand,
         simplifyFractions: opts.simplifyFractions,
         applyIdentities: opts.applyIdentities,
         convertSqrtToExponential: opts.convertSqrtToExponential,
