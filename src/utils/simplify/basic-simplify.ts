@@ -346,6 +346,72 @@ function simplifyFractionBasic(node: Fraction): ASTNode {
   const numerator = basicSimplify(node.numerator);
   const denominator = basicSimplify(node.denominator);
 
+  // General factorial fraction simplification: n! / k!
+  if (numerator.type === 'Factorial' && denominator.type === 'Factorial') {
+    const n = numerator.argument;
+    const k = denominator.argument;
+    // n! / n! = 1
+    if (JSON.stringify(n) === JSON.stringify(k)) {
+      return { type: 'NumberLiteral', value: 1 };
+    }
+    // Both are numbers
+    if (n.type === 'NumberLiteral' && k.type === 'NumberLiteral') {
+      if (n.value > k.value) {
+        // n! / k! = n*(n-1)*...*(k+1)
+        let prod: ASTNode | null = null;
+        for (let i = n.value; i > k.value; --i) {
+          const term: ASTNode = { type: 'NumberLiteral', value: i };
+          prod = prod ? { type: 'BinaryExpression', operator: '*', left: prod, right: term } : term;
+        }
+        return prod ? prod : { type: 'NumberLiteral', value: 1 };
+      } else if (n.value < k.value) {
+        // n! / k! = 1 / (k! / n!)
+        let prod: ASTNode | null = null;
+        for (let i = k.value; i > n.value; --i) {
+          const term: ASTNode = { type: 'NumberLiteral', value: i };
+          prod = prod ? { type: 'BinaryExpression', operator: '*', left: prod, right: term } : term;
+        }
+        return {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: 1 },
+          denominator: prod ? prod : { type: 'NumberLiteral', value: 1 },
+        };
+      } else {
+        return { type: 'NumberLiteral', value: 1 };
+      }
+    }
+    // n > k (symbolic): n! / k! = Product_{i=k+1}^n i
+    // k > n: 1/Product_{i=n+1}^k i
+    // n, k: ASTNode
+    // Try to detect n = k+const, k = n+const
+    // Only handle if both are Identifier or BinaryExpression
+    // n! / k! = Product_{i=k+1}^n i
+    return simplifyGeneralFactorialFraction(n, k);
+  }
+  // General symbolic factorial fraction simplification
+  function simplifyGeneralFactorialFraction(n: ASTNode, k: ASTNode): ASTNode {
+    // n! / k! = Product_{i=k+1}^n i
+    // k! / n! = 1/Product_{i=n+1}^k i
+    // n, k: ASTNode
+    // If n == k: 1
+    if (JSON.stringify(n) === JSON.stringify(k)) {
+      return { type: 'NumberLiteral', value: 1 };
+    }
+    // Product_{i=k+1}^n i
+    return {
+      type: 'Product',
+      expression: { type: 'Identifier', name: 'i' },
+      variable: 'i',
+      lowerBound: {
+        type: 'BinaryExpression',
+        operator: '+',
+        left: k,
+        right: { type: 'NumberLiteral', value: 1 },
+      },
+      upperBound: n,
+    };
+  }
+
   // Handle complex fractions: (a/b) / (c/d) = (a*d) / (b*c)
   if (numerator.type === 'Fraction' && denominator.type === 'Fraction') {
     return simplifyFractionBasic({
