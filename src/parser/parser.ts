@@ -501,6 +501,15 @@ export class LaTeXParser {
       };
     }
 
+    // Factorial support: handle postfix '!'
+    while (this.expectToken('FACTORIAL')) {
+      this.advance(); // consume '!'
+      left = {
+        type: 'Factorial',
+        argument: left,
+      };
+    }
+
     return left;
   }
 

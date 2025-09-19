@@ -15,6 +15,7 @@ export type TokenType =
   | 'UNDERSCORE'
   | 'CARET'
   | 'COMMA'
+  | 'FACTORIAL'
   | 'WHITESPACE'
   | 'EOF'
   | 'ERROR';
@@ -174,6 +175,9 @@ export class LaTeXTokenizer {
         case ',':
           this.advance();
           return { type: 'COMMA', value: ',', position };
+        case '!':
+          this.advance();
+          return { type: 'FACTORIAL', value: '!', position };
         case '+':
         case '-':
         case '*':

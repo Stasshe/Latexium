@@ -29,7 +29,13 @@ export type ASTNode =
   | Fraction
   | Integral
   | Sum
-  | Product;
+  | Product
+  | Factorial;
+
+export type Factorial = {
+  type: 'Factorial';
+  argument: ASTNode;
+};
 
 export type NumberLiteral = {
   type: 'NumberLiteral';

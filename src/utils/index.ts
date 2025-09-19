@@ -1,3 +1,4 @@
+export { basicSimplify } from './simplify/basic-simplify';
 /**
  * Utilities Index
  * Exports all utility functions

@@ -4,7 +4,7 @@
  * Used by both unified-simplify.ts and distribution.ts to avoid circular dependencies
  */
 
-import type { ASTNode, BinaryExpression, UnaryExpression, Fraction } from '@/types';
+import type { ASTNode, BinaryExpression, UnaryExpression, Fraction, Factorial } from '@/types';
 
 /**
  * Basic simplification function for use in distribution.ts
@@ -27,9 +27,44 @@ export function basicSimplify(node: ASTNode): ASTNode {
     case 'Fraction':
       return simplifyFractionBasic(node);
 
+    case 'Factorial':
+      return simplifyFactorialBasic(node);
+
     default:
       return node;
   }
+}
+
+function simplifyFactorialBasic(node: Factorial): ASTNode {
+  const arg = basicSimplify(node.argument);
+  // n! for non-negative integer
+  if (arg.type === 'NumberLiteral' && Number.isInteger(arg.value) && arg.value >= 0) {
+    return { type: 'NumberLiteral', value: factorial(arg.value) };
+  }
+  // (x+1)! → (x+1)*x*...*1 展開（整数値でなければシンボリックのまま）
+  // 展開は x! → x*(x-1)*...*1 だが、ここでは (expr)! → Product{expr, k, 1, expr}
+  // ただし、argが単なるIdentifierやBinaryExpression('+', ...)なら展開可能
+  if (
+    arg.type === 'Identifier' ||
+    (arg.type === 'BinaryExpression' && (arg.operator === '+' || arg.operator === '-'))
+  ) {
+    // Productノードで表現
+    return {
+      type: 'Product',
+      expression: { type: 'Identifier', name: 'k' },
+      variable: 'k',
+      lowerBound: { type: 'NumberLiteral', value: 1 },
+      upperBound: arg,
+    };
+  }
+  // それ以外はシンボリックのまま
+  return { type: 'Factorial', argument: arg };
+}
+
+function factorial(n: number): number {
+  let res = 1;
+  for (let i = 2; i <= n; ++i) res *= i;
+  return res;
 }
 
 /**
