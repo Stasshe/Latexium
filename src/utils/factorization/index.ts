@@ -10,6 +10,9 @@ import {
   GroupingStrategy,
   BerlekampZassenhausStrategy,
   LLLFactorizationStrategy,
+  QuarticSubstitutionStrategy,
+  PowerSubstitutionStrategy,
+  PerfectPowerStrategy,
 } from './strategies';
 import { ASTNode } from '../../types';
 
@@ -18,11 +21,14 @@ const factorizationEngine = new FactorizationEngine();
 
 // Register essential strategies only (per factor.md)
 try {
+  factorizationEngine.registerStrategy(new PerfectPowerStrategy());
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
   factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
   factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
+  factorizationEngine.registerStrategy(new QuarticSubstitutionStrategy());
+  factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
   throw new Error(

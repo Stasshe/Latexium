@@ -15,7 +15,7 @@ import { FactorizationStrategy, FactorizationContext, FactorizationResult } from
  */
 export class LLLFactorizationStrategy implements FactorizationStrategy {
   name = 'lll-factorization';
-  priority = 5; // Higher priority than BZ for complex cases
+  priority = 80; // Higher priority for special polynomial patterns
   description = 'Advanced polynomial factorization using LLL lattice basis reduction';
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {

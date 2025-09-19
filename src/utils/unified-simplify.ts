@@ -77,6 +77,17 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
       }
     }
 
+    // Step 4: Final pass with expand: false (middle-simplify)
+    result = middleSimplify(result, {
+      combineLikeTerms: opts.combineLikeTerms,
+      expand: false,
+      simplifyFractions: opts.simplifyFractions,
+      applyIdentities: opts.applyIdentities,
+      convertSqrtToExponential: opts.convertSqrtToExponential,
+      advancedExponentialSimplification: opts.advancedExponentialSimplification,
+      maxDepth: opts.maxDepth,
+    });
+
     return result;
   } catch (error) {
     // Fallback: return original node if simplification fails

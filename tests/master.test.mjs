@@ -39,6 +39,12 @@ console.log('=== LATEXIUM MASTER TEST SUITE (SPECIFICATION v3) ===\n');
 const complexTestCases = [
   // Distribution Tests (10 cases) - Main focus
   {
+    id: 0.8,
+    expression: '(x-1)(x-1)(x-1)+1',
+    task: 'evaluate',
+    expected: '(x-1)^{3}',
+  },
+  {
     id: 1,
     expression: '(x + y)\\cdot(a + b + c)',
     task: 'distribute',
@@ -132,6 +138,13 @@ const complexTestCases = [
     description: 'Fourth power difference factorization'
   },
   {
+    id: 11.5,
+    expression: 'x^{3} - 1',
+    task: 'factor',
+    expected: '(x - 1)(x^2 + x + 1)',
+    description: 'Difference of cubes'
+  },
+  {
     id: 12,
     expression: '6x^3 + 9x^2 - 6x',
     task: 'factor',
@@ -170,7 +183,7 @@ const complexTestCases = [
     id: 17,
     expression: 'x^4 - 13x^2 + 36',
     task: 'factor',
-    expected: '(x^2 - 4)(x^2 - 9)',
+    expected: '(x - 2)(x + 2)(x - 3)(x + 3)',
     description: 'Quartic as quadratic in x^2'
   },
   {

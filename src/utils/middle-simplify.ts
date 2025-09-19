@@ -73,11 +73,12 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}): ASTNode 
       result = enhancedExponentialSimplification(result);
     }
 
-    // Step 3: For complex expressions involving multiplication of sums/differences,
-    // apply expansion to handle cases like -x(1 -(-x-1-3x+x^2)+ x-(-x+1)-x)-1
-    if (needsExpansion(result)) {
-      const expanded = expandExpression(result);
-      return basicSimplify(expanded, opts, 0);
+    // Step 3: Expansion (only if expand: true)
+    if (opts.expand) {
+      if (needsExpansion(result)) {
+        const expanded = expandExpression(result);
+        return basicSimplify(expanded, opts, 0);
+      }
     }
 
     return basicSimplify(result, opts, 0);
