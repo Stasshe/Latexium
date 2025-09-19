@@ -4,29 +4,17 @@
  */
 
 import { FactorizationEngine, FactorizationPreferences } from './framework';
-import {
-  CommonFactorStrategy,
-  DifferenceOfSquaresStrategy,
-  QuadraticFactorizationStrategy,
-  GroupingStrategy,
-  CubicFactorizationStrategy,
-  SubstitutionStrategy,
-  PerfectPowerStrategy,
-} from './strategies';
+import { CommonFactorStrategy, DifferenceOfSquaresStrategy, GroupingStrategy } from './strategies';
 import { ASTNode } from '../../types';
 
 // Create and configure the factorization engine
 const factorizationEngine = new FactorizationEngine();
 
-// Register all strategies with error handling
+// Register essential strategies only (per factor.md)
 try {
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
-  factorizationEngine.registerStrategy(new QuadraticFactorizationStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
-  factorizationEngine.registerStrategy(new CubicFactorizationStrategy());
-  factorizationEngine.registerStrategy(new SubstitutionStrategy());
-  factorizationEngine.registerStrategy(new PerfectPowerStrategy());
 } catch (strategyError) {
   //push.error('Error registering factorization strategies:', strategyError);
   throw new Error(
