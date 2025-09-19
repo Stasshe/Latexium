@@ -18,6 +18,7 @@ import {
   ASTBuilder,
 } from '../framework';
 import { CommonFactorStrategy } from './common-factor';
+import { simplify as middleSimplify } from '../../middle-simplify';
 
 export class GroupingStrategy implements FactorizationStrategy {
   name = 'Factorization by Grouping';
@@ -65,9 +66,9 @@ export class GroupingStrategy implements FactorizationStrategy {
         if (result) {
           return {
             success: true,
-            ast: result,
+            ast: result.ast,
             changed: true,
-            steps,
+            steps: result.steps,
             strategyUsed: this.name,
             canContinue: true,
           };
@@ -174,7 +175,7 @@ export class GroupingStrategy implements FactorizationStrategy {
     pattern: number[][],
     context: FactorizationContext,
     steps: string[]
-  ): ASTNode | null {
+  ): { ast: ASTNode; steps: string[] } | null {
     const groups: ASTNode[] = [];
     const groupFactors: ASTNode[] = [];
 
@@ -234,10 +235,14 @@ export class GroupingStrategy implements FactorizationStrategy {
       coefficientSum = ASTBuilder.add(coefficientSum, groupFactors[i]!);
     }
 
-    const result = ASTBuilder.multiply(coefficientSum, firstGroup);
-    steps.push(`Final result: (${astToLatex(coefficientSum)}) * (${astToLatex(firstGroup)})`);
+    let result: ASTNode = ASTBuilder.multiply(coefficientSum, firstGroup);
+    steps.push(
+      `[Grouping] Final result: (${astToLatex(coefficientSum)}) * (${astToLatex(firstGroup)})`
+    );
 
-    return result;
+    // Ensure no expansion occurs when called from factorization
+    result = middleSimplify(result, { expand: false });
+    return { ast: result, steps: [...steps] };
   }
 
   /**

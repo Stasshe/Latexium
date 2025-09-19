@@ -13,8 +13,32 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
   priority = 100;
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
+    // x以外の変数が含まれていれば適用不可
+    if (this.hasOtherVariables(node, context.variable)) {
+      return false;
+    }
     const result = this.detectPerfectPower(node, context.variable);
     return result !== null;
+  }
+  // nodeにx以外の変数が含まれていればtrue
+  private hasOtherVariables(node: ASTNode, variable: string): boolean {
+    // 再帰的に探索
+    if (node.type === 'Identifier') {
+      return node.name !== variable;
+    }
+    if (node.type === 'BinaryExpression') {
+      return (
+        this.hasOtherVariables(node.left, variable) || this.hasOtherVariables(node.right, variable)
+      );
+    }
+    if (node.type === 'UnaryExpression') {
+      return this.hasOtherVariables(node.operand, variable);
+    }
+    if (node.type === 'FunctionCall') {
+      return node.args.some(arg => this.hasOtherVariables(arg, variable));
+    }
+    // Fraction, Integral, Sum, Productなど他のAST型も必要なら追加
+    return false;
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {

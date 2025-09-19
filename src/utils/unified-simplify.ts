@@ -99,12 +99,14 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
     }
 
     // Step 4: Final pass with expand: false (middle-simplify)
-    if (steps) steps.push('Final pass with expand: false', stepsAstToLatex(result));
+    // factor: true の場合は expand: false を強制
+    const finalExpand = opts.factor ? false : opts.expand;
+    if (steps) steps.push(`Final pass with expand: ${finalExpand}`, stepsAstToLatex(result));
     result = middleSimplify(
       result,
       {
         combineLikeTerms: opts.combineLikeTerms,
-        expand: opts.expand,
+        expand: finalExpand,
         simplifyFractions: opts.simplifyFractions,
         applyIdentities: opts.applyIdentities,
         convertSqrtToExponential: opts.convertSqrtToExponential,
