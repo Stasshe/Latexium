@@ -1,4 +1,5 @@
 .
+├── CODE_OF_CONDUCT.md
 ├── Development
 │   ├── QUICK_REFERENCE.md
 │   └── README.md
@@ -7,7 +8,6 @@
 ├── SPECIFICATION.md
 ├── TODO.md
 ├── eslint.config.js
-├── factor.md
 ├── package-lock.json
 ├── package.json
 ├── rollup.config.js
@@ -60,6 +60,8 @@
 │       │       ├── perfect-power.ts
 │       │       ├── power-substitution.ts
 │       │       └── simple-common-factor.ts
+│       ├── identities
+│       │   └── trigonometric.ts
 │       ├── index.ts
 │       ├── lll-factorization
 │       │   └── index.ts
@@ -89,6 +91,7 @@
 │   ├── main.test.mjs
 │   ├── master.test.mjs
 │   ├── output
+│   │   ├── factorial-fraction-ast.json
 │   │   ├── master-test-log.txt
 │   │   ├── master-test-results.json
 │   │   ├── master-test-summary.txt
@@ -112,13 +115,17 @@
 │   │   ├── debug-exponential-expand-false-parseonly.test.mjs
 │   │   ├── debug-exponential-expand-false-raw.test.mjs
 │   │   ├── debug-exponential-expand-false.test.mjs
+│   │   ├── debug-factorial.test.mjs
 │   │   ├── debug-factorization.test.mjs
 │   │   ├── debug-perfect-power-simplify.test.mjs
 │   │   ├── debug-quadratic.test.mjs
 │   │   ├── debug-quartic-quadratic.test.mjs
+│   │   ├── debug-underscore-parse.test.mjs
+│   │   ├── debug-underscore-sumprod.test.mjs
 │   │   ├── debug-x3-1.test.mjs
 │   │   ├── debug-x4-1.test.mjs
 │   │   ├── debug-x5-x.test.mjs
+│   │   ├── factorial-fraction.test.mjs
 │   │   ├── investigate-ast-structure.test.mjs
 │   │   ├── root-cause-analysis.test.mjs
 │   │   ├── sqrt-exponential.test.mjs
@@ -135,15 +142,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-19 directories, 117 files
+20 directories, 123 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 16991
-Total Characters: 483797
-Total File Size (bytes): 485750
+Total Lines: 17218
+Total Characters: 491322
+Total File Size (bytes): 493413
 
 Development Size
-188M	.
+191M	.
 
 Build Size
-4.8M	dist
+4.9M	dist
