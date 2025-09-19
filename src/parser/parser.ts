@@ -118,7 +118,7 @@ export class LaTeXParser {
     // Expect opening parenthesis
     this.consume('LPAREN');
 
-    const args: ASTNode[] = [];
+    const args: ASTNode[] = []; // 引数
 
     // Parse arguments
     if (!this.expectToken('RPAREN')) {
@@ -156,41 +156,78 @@ export class LaTeXParser {
     if (this.expectToken('IDENTIFIER')) {
       const token = this.currentToken;
       const identifier = this.parseIdentifier();
-
-      // Check if this is a function call vs implicit multiplication
-      // Rules:
-      // 1. If it's a reserved function (sin, cos, etc.), treat as function
-      // 2. If it's a common function name (f, g, h), treat as function
-      // 3. If the first thing in parentheses is negative, treat as multiplication
-      // 4. Otherwise, treat as multiplication for single letter variables
+      // 下付き・上付き対応
+      if (this.expectToken('UNDERSCORE') || this.expectToken('CARET')) {
+        let base: ASTNode | undefined = undefined;
+        let exponent: ASTNode | undefined = undefined;
+        // log_2^k{n}やx_1^2など順不同で両方対応
+        for (let i = 0; i < 2; ++i) {
+          if (this.expectToken('UNDERSCORE')) {
+            this.advance();
+            if (this.expectToken('LBRACE')) {
+              this.consume('LBRACE');
+              base = this.parseExpression();
+              this.consume('RBRACE');
+            } else {
+              base = this.parseUnary();
+            }
+          } else if (this.expectToken('CARET')) {
+            this.advance();
+            if (this.expectToken('LBRACE')) {
+              this.consume('LBRACE');
+              exponent = this.parseExpression();
+              this.consume('RBRACE');
+            } else {
+              exponent = this.parseUnary();
+            }
+          }
+        }
+        // 引数
+        const args: ASTNode[] = [];
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          args.push(this.parseExpression());
+          this.consume('RBRACE');
+        } else if (this.expectToken('LPAREN')) {
+          this.consume('LPAREN');
+          args.push(this.parseExpression());
+          this.consume('RPAREN');
+        }
+        // baseがあれば先頭に
+        if (base) args.unshift(base);
+        let node: ASTNode = {
+          type: 'FunctionCall',
+          name: identifier.name,
+          args,
+        };
+        if (exponent) {
+          node = {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: node,
+            right: exponent,
+          };
+        }
+        return node;
+      }
+      // 通常の関数呼び出しや変数
       if (this.expectToken('LPAREN')) {
         const isReservedFunction = this.isFunction(identifier.name);
         const isCommonFunction = COMMON_FUNCTION_NAMES.has(identifier.name);
-
-        // Look ahead to see if the first thing inside parentheses is negative
         let startsWithNegative = false;
         if (this.currentTokenIndex + 1 < this.tokens.length) {
           const nextToken = this.tokens[this.currentTokenIndex + 1];
           startsWithNegative = nextToken?.type === 'OPERATOR' && nextToken?.value === '-';
         }
-
-        // Treat as function if it's a known function OR common function name
-        // Treat as multiplication if it starts with negative OR is single letter variable
         const shouldTreatAsFunction = isReservedFunction || isCommonFunction;
         const shouldTreatAsMultiplication =
           startsWithNegative || (!shouldTreatAsFunction && identifier.name.length === 1);
-
         if (shouldTreatAsMultiplication) {
-          // Don't consume the parentheses, let implicit multiplication handle it
           return identifier;
         }
-
         const functionCall = this.parseFunctionCall(identifier.name, token.position);
-
-        // Check for function exponentiation like sin^2(x)
         if (this.expectToken('CARET')) {
-          this.advance(); // consume '^'
-
+          this.advance();
           let exponent: ASTNode;
           if (this.expectToken('LBRACE')) {
             this.consume('LBRACE');
@@ -199,7 +236,6 @@ export class LaTeXParser {
           } else {
             exponent = this.parseUnary();
           }
-
           return {
             type: 'BinaryExpression',
             operator: '^',
@@ -207,10 +243,8 @@ export class LaTeXParser {
             right: exponent,
           };
         }
-
         return functionCall;
       }
-
       return identifier;
     }
 
@@ -235,61 +269,145 @@ export class LaTeXParser {
    */
   private parseCommand(): ASTNode {
     const token = this.consume('COMMAND');
-
+    // Handle integral, sum, product with _{}^{}
+    if (token.value === '\\int' || token.value === '\\sum' || token.value === '\\prod') {
+      // Parse _{lower}^{upper} or ^{upper}_{lower} (order flexible)
+      let lowerBound: ASTNode | null = null;
+      let upperBound: ASTNode | null = null;
+      let sawUnderscore = false,
+        sawCaret = false;
+      // Allow flexible order: _ then ^ or ^ then _
+      for (let i = 0; i < 2; ++i) {
+        if (this.expectToken('UNDERSCORE')) {
+          this.advance();
+          this.consume('LBRACE');
+          lowerBound = this.parseExpression();
+          this.consume('RBRACE');
+          sawUnderscore = true;
+        } else if (this.expectToken('CARET')) {
+          this.advance();
+          this.consume('LBRACE');
+          upperBound = this.parseExpression();
+          this.consume('RBRACE');
+          sawCaret = true;
+        }
+      }
+      // Parse integrand/expression
+      let integrand: ASTNode;
+      if (token.value === '\\int') {
+        integrand = this.parseExpression();
+        // Parse differential (e.g. dx)
+        let variable = 'x';
+        if (this.expectToken('IDENTIFIER')) {
+          variable = this.currentToken.value;
+          this.advance();
+        }
+        return {
+          type: 'Integral',
+          integrand,
+          variable,
+          ...(lowerBound ? { lowerBound } : {}),
+          ...(upperBound ? { upperBound } : {}),
+        };
+      } else {
+        // sum/product: _{i=a}^{b} f(i)
+        // After bounds, expect expression, then variable (e.g. di)
+        integrand = this.parseExpression();
+        let variable = 'i';
+        if (this.expectToken('IDENTIFIER')) {
+          variable = this.currentToken.value;
+          this.advance();
+        }
+        if (!lowerBound || !upperBound) {
+          throw new Error('Sum/Product requires both lower and upper bounds');
+        }
+        return {
+          type: token.value === '\\sum' ? 'Sum' : 'Product',
+          expression: integrand,
+          variable,
+          lowerBound,
+          upperBound,
+        };
+      }
+    }
+    // Handle log_2{n} or similar: function with subscript base
+    if (
+      token.value === '\\log' ||
+      token.value === '\\ln' ||
+      token.value === '\\exp' ||
+      token.value === '\\sin' ||
+      token.value === '\\cos' ||
+      token.value === '\\tan'
+    ) {
+      const functionName = token.value.substring(1);
+      let base: ASTNode | undefined = undefined;
+      // log_2{n} → log base 2
+      if (this.expectToken('UNDERSCORE')) {
+        this.advance();
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          base = this.parseExpression();
+          this.consume('RBRACE');
+        } else {
+          // log_2n 形式は未対応
+          throw new Error('Expected { after _ for subscript base');
+        }
+      }
+      // log^k{n} → log(n)^k ではなく、累乗は従来通り
+      // log_2^k{n} もサポート（順序はlog_{base}^{exp}{arg}）
+      let exponent: ASTNode | undefined = undefined;
+      if (this.expectToken('CARET')) {
+        this.advance();
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          exponent = this.parseExpression();
+          this.consume('RBRACE');
+        } else {
+          exponent = this.parseUnary();
+        }
+      }
+      // Parse argument: {n} or (n)
+      const args: ASTNode[] = [];
+      if (this.expectToken('LBRACE')) {
+        this.consume('LBRACE');
+        args.push(this.parseExpression());
+        this.consume('RBRACE');
+      } else if (this.expectToken('LPAREN')) {
+        this.consume('LPAREN');
+        args.push(this.parseExpression());
+        this.consume('RPAREN');
+      } else {
+        throw new Error(`Expected argument for function ${functionName}`);
+      }
+      // If base is present, insert as first arg (log base)
+      if (base) args.unshift(base);
+      let node: ASTNode = {
+        type: 'FunctionCall',
+        name: functionName,
+        args,
+      };
+      if (exponent) {
+        node = {
+          type: 'BinaryExpression',
+          operator: '^',
+          left: node,
+          right: exponent,
+        };
+      }
+      return node;
+    }
+    // sqrt, frac, pi, e, fallback
     switch (token.value) {
       case '\\frac':
         return this.parseFraction();
       case '\\sqrt':
         return this.parseSqrt();
-      case '\\sin':
-      case '\\cos':
-      case '\\tan':
-      case '\\log':
-      case '\\ln':
-      case '\\exp': {
-        const functionName = token.value.substring(1); // Remove backslash
-
-        // Check for function exponentiation before parentheses like \sin^2(x)
-        if (this.expectToken('CARET')) {
-          this.advance(); // consume '^'
-
-          let exponent: ASTNode;
-          if (this.expectToken('LBRACE')) {
-            this.consume('LBRACE');
-            exponent = this.parseAddition();
-            this.consume('RBRACE');
-          } else {
-            exponent = this.parseUnary();
-          }
-
-          // Now expect and parse the function call
-          if (!this.expectToken('LPAREN')) {
-            throw new Error(
-              `Expected function arguments after exponent at position ${this.currentToken.position}`
-            );
-          }
-
-          const functionCall = this.parseFunctionCall(functionName, token.position);
-
-          return {
-            type: 'BinaryExpression',
-            operator: '^',
-            left: functionCall,
-            right: exponent,
-          };
-        }
-
-        // Normal function call
-        return this.parseFunctionCall(functionName, token.position);
-      }
       case '\\pi':
-        // Return π as an identifier (mathematical constant)
         return {
           type: 'Identifier',
           name: 'π',
         };
       case '\\e':
-        // Return e as an identifier (mathematical constant)
         return {
           type: 'Identifier',
           name: 'e',
