@@ -66,20 +66,7 @@ function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: StepTree
     );
     if (Array.isArray(steps) && msSteps.length > 0) steps.push(['After middle-simplify', msSteps]);
 
-    // Step 2: Apply pattern recognition for factorization if enabled
-    // This method is currently placeholder as pattern recognition is not fully implemented
-    // Uncomment and implement when pattern recognition is ready
-    //
-    // if (opts.usePatternRecognition) {
-    //   if (steps) steps.push('Applying pattern recognition');
-    //   const patternResult = patternEngine.applyPattern(result);
-    //   if (patternResult) {
-    //     result = patternResult;
-    //     if (steps) steps.push('Pattern recognition applied');
-    //   }
-    // }
-
-    // Step 3: Apply advanced factorization if requested
+    // Step 2: Apply advanced factorization if requested
     if (opts.factor) {
       const factorSteps: StepTree[] = [];
       if (Array.isArray(steps)) steps.push('Applying advanced factorization');
@@ -99,7 +86,7 @@ function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: StepTree
       }
     }
 
-    // Step 4: Final pass with expand: false (middle-simplify)
+    // Step 3: Final pass with expand: false (middle-simplify)
     // factor: true の場合は expand: false を強制
     const finalExpand = opts.factor ? false : opts.expand;
     const finalSteps: StepTree[] = [];
