@@ -90,7 +90,7 @@ export function simplify(
     // Step 2.5: Simplify fractions TopLevel
     if (result.type === 'Fraction') {
       const before = result;
-      result = simplifyPolynomialFraction(result.numerator, result.denominator);
+      result = simplifyPolynomialFraction(result.numerator, result.denominator, steps);
       if (Array.isArray(steps) && before !== result)
         steps.push(`Simplified fraction: ${stepsAstToLatex(result)}`);
     }
