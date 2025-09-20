@@ -1,14 +1,35 @@
+
 # Latexium
 
-A powerful TypeScript library for parsing and analyzing LaTeX mathematical expressions.
+<p align="center">
+  <img src="./readme-assets/card.jpeg" alt="Latexium Logo" width="320"/>
+</p>
+Latexium is a TypeScript library for parsing and analyzing LaTeX mathematical expressions.
+
+---
+
+**Note:**
+
+- Features such as factorial simplification (e.g. `!` reduction), advanced integration, definite integrals, `\lim` (limit), and advanced differentiation are **not supported** yet and are under development.
+- The main features currently implemented and tested are:
+  - **Distribution** (`distribute` task)
+  - **Factorization** (`factor` task, using LLL and Berlekamp-Zassenhaus algorithms)
+  - **Evaluation** (`evaluate` task)
+  - **Step-by-step process output** (`steps` field in results, useful for debugging and understanding the calculation process)
+- For details and actual supported cases, see the test cases in `tests/master.test.mjs`.
+
+---
+
+
 
 ## Features
 
-- **LaTeX Parsing**: Convert LaTeX math expressions into Abstract Syntax Trees (AST)
-- **Mathematical Analysis**: Evaluate, differentiate, integrate, and solve equations
-- **Scope Resolution**: Proper handling of bound variables in integrals and summations
-- **High Precision**: Support for exact symbolic computation and high-precision numerical results
-- **Type Safety**: Full TypeScript support with comprehensive type definitions
+- LaTeX parsing: Convert LaTeX math expressions into Abstract Syntax Trees (AST)
+- Mathematical analysis: **Distribute**, **factor**, and **evaluate** expressions (other tasks are under development)
+- Step-by-step output: Each analysis result includes a `steps` array showing the calculation process
+- Type safety: Full TypeScript support with comprehensive type definitions
+
+
 
 ## Installation
 
@@ -16,79 +37,125 @@ A powerful TypeScript library for parsing and analyzing LaTeX mathematical expre
 npm install latexium
 ```
 
+
+
+
 ## Quick Start
 
 ```typescript
 import { parseLatex, analyze } from 'latexium';
 
-// Parse a LaTeX expression
-const parseResult = parseLatex("x^2 + \\sin(x)");
-if (parseResult.error) {
-  console.error(parseResult.error);
-  return;
-}
+const parseResult = parseLatex("(x+1)(x+2)");
+const distributed = analyze(parseResult.ast, { task: "distribute" });
+console.log(distributed.value); // "x^2 + 3x + 2"
+console.log(distributed.steps);
+// [
+//   "Expand: (x+1)(x+2)",
+//   "Step 1: x*(x+2) = x^2 + 2x",
+//   "Step 2: 1*(x+2) = x + 2",
+//   "Combine: x^2 + 2x + x + 2 = x^2 + 3x + 2"
+// ]
 
-// Evaluate with a specific value
-const result = analyze(parseResult.ast, {
-  task: "evaluate",
-  values: { x: Math.PI / 2 }
-});
-
-console.log(result.value); // "3.141592653589793"
+const factored = analyze(parseResult.ast, { task: "factor" });
+console.log(factored.value); // "(x+1)(x+2)"
+console.log(factored.steps);
+// [
+//   "Factor: x^2 + 3x + 2",
+//   "Find roots: x^2 + 3x + 2 = 0 → x = -1, -2",
+//   "Write as (x+1)(x+2)"
+// ]
 ```
+
+
+
 
 ## API Reference
 
 ### `parseLatex(expression: string): ParseResult`
-
 Parses a LaTeX mathematical expression into an AST.
 
 ### `analyze(ast: ASTNode, options: AnalyzeOptions): AnalyzeResult`
+Performs mathematical analysis on an AST. Currently supported tasks:
 
-Performs mathematical analysis on an AST with various tasks:
+- `distribute`: Expand products and powers
+- `factor`: Factor polynomials (LLL, Berlekamp-Zassenhaus, etc.)
+- `evaluate`: Calculate numerical value (basic support)
 
-- `evaluate`: Calculate numerical value
-- `differentiate`: Compute derivative
-- `integrate`: Compute integral
-- `solve`: Solve equations
-- `min`/`max`: Find extrema
+Other tasks (differentiate, integrate, solve, min/max, etc.) are not yet fully supported.
+
+
+
 
 ## Examples
 
-### Differentiation
+See `tests/master.test.mjs` for comprehensive and up-to-date test cases, including many edge cases for `distribute`, `factor`, and `evaluate`.
+
+### Distribution
 
 ```typescript
-const parseResult = parseLatex("x^3 + 2x^2 + x");
-const derivative = analyze(parseResult.ast, { 
-  task: "differentiate", 
-  variable: "x" 
-});
-console.log(derivative.value); // "3x^2 + 4x + 1"
+const parseResult = parseLatex("(x+1)(x+2)");
+const result = analyze(parseResult.ast, { task: "distribute" });
+console.log(result.value); // "x^2 + 3x + 2"
+console.log(result.steps);
+// [
+//   "Expand: (x+1)(x+2)",
+//   "Step 1: x*(x+2) = x^2 + 2x",
+//   "Step 2: 1*(x+2) = x + 2",
+//   "Combine: x^2 + 2x + x + 2 = x^2 + 3x + 2"
+// ]
 ```
 
-### Integration
+### Factorization
 
 ```typescript
-const parseResult = parseLatex("\\int_0^1 x^2 \\, dx");
-const integral = analyze(parseResult.ast, { task: "evaluate" });
-console.log(integral.value); // "\\frac{1}{3}"
+// Simple factorization
+const parseResult1 = parseLatex("x^2 + 3x + 2");
+const result1 = analyze(parseResult1.ast, { task: "factor" });
+console.log(result1.value); // "(x+1)(x+2)"
+console.log(result1.steps);
+// [
+//   "Factor: x^2 + 3x + 2",
+//   "Find roots: x^2 + 3x + 2 = 0 → x = -1, -2",
+//   "Write as (x+1)(x+2)"
+// ]
+
+// More difficult factorization
+const parseResult2 = parseLatex("x^4 - 16");
+const result2 = analyze(parseResult2.ast, { task: "factor" });
+console.log(result2.value); // "(x^2 + 4)(x + 2)(x - 2)"
+console.log(result2.steps);
+// [
+//   "Factor: x^4 - 16",
+//   "Step 1: x^4 - 16 = (x^2 - 4)(x^2 + 4)",
+//   "Step 2: x^2 - 4 = (x - 2)(x + 2)",
+//   "Combine: (x^2 + 4)(x + 2)(x - 2)"
+// ]
+```
 ```
 
-### Solving Equations
+### Evaluation
 
 ```typescript
-const parseResult = parseLatex("x^2 - 4 = 0");
-const solution = analyze(parseResult.ast, { 
-  task: "solve", 
-  solveFor: "x" 
-});
-console.log(solution.value); // "x \\in \\{-2, 2\\}"
+const parseResult = parseLatex("2^3 + 1");
+const result = analyze(parseResult.ast, { task: "evaluate" });
+console.log(result.value); // "9"
+console.log(result.steps);
+// [
+//   "Evaluate: 2^3 = 8",
+//   "Add: 8 + 1 = 9"
+// ]
 ```
+
+
+
 
 ## License
 
 MIT
 
+
+
+
 ## Contributing
 
-Please read our [SPECIFICATION.md](./SPECIFICATION.md) for detailed API specifications and development guidelines.
+Please read [SPECIFICATION.md](./SPECIFICATION.md) for detailed API specifications and development guidelines.

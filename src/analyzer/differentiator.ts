@@ -72,12 +72,15 @@ function differentiateBinaryExpression(
     case '+':
     case '-':
       // (u ± v)' = u' ± v'
-      return simplifyAST({
-        type: 'BinaryExpression',
-        operator: node.operator as '+' | '-',
-        left: differentiateAST(left, variable),
-        right: differentiateAST(right, variable),
-      });
+      return simplifyAST(
+        {
+          type: 'BinaryExpression',
+          operator: node.operator as '+' | '-',
+          left: differentiateAST(left, variable),
+          right: differentiateAST(right, variable),
+        },
+        { factor: false }
+      );
 
     case '*': {
       // Product rule: (uv)' = u'v + uv'
@@ -87,18 +90,24 @@ function differentiateBinaryExpression(
       return simplifyAST({
         type: 'BinaryExpression',
         operator: '+',
-        left: simplifyAST({
-          type: 'BinaryExpression',
-          operator: '*',
-          left: leftDerivative,
-          right: right,
-        }),
-        right: simplifyAST({
-          type: 'BinaryExpression',
-          operator: '*',
-          left: left,
-          right: rightDerivative,
-        }),
+        left: simplifyAST(
+          {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: leftDerivative,
+            right: right,
+          },
+          { factor: false }
+        ),
+        right: simplifyAST(
+          {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: left,
+            right: rightDerivative,
+          },
+          { factor: false }
+        ),
       });
     }
 
@@ -112,28 +121,37 @@ function differentiateBinaryExpression(
         numerator: simplifyAST({
           type: 'BinaryExpression',
           operator: '-',
-          left: simplifyAST({
-            type: 'BinaryExpression',
-            operator: '*',
-            left: uPrime,
-            right: right,
-          }),
-          right: simplifyAST({
-            type: 'BinaryExpression',
-            operator: '*',
-            left: left,
-            right: vPrime,
-          }),
+          left: simplifyAST(
+            {
+              type: 'BinaryExpression',
+              operator: '*',
+              left: uPrime,
+              right: right,
+            },
+            { factor: false }
+          ),
+          right: simplifyAST(
+            {
+              type: 'BinaryExpression',
+              operator: '*',
+              left: left,
+              right: vPrime,
+            },
+            { factor: false }
+          ),
         }),
-        denominator: simplifyAST({
-          type: 'BinaryExpression',
-          operator: '^',
-          left: right,
-          right: {
-            type: 'NumberLiteral',
-            value: 2,
+        denominator: simplifyAST(
+          {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: right,
+            right: {
+              type: 'NumberLiteral',
+              value: 2,
+            },
           },
-        }),
+          { factor: false }
+        ),
       });
     }
 

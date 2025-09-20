@@ -10,6 +10,8 @@
 ├── eslint.config.js
 ├── package-lock.json
 ├── package.json
+├── readme-assets
+│   └── card.jpeg
 ├── rollup.config.js
 ├── src
 │   ├── analyzer
@@ -143,15 +145,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-21 directories, 123 files
+22 directories, 124 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17262
-Total Characters: 493466
-Total File Size (bytes): 496100
+Total Lines: 17255
+Total Characters: 493518
+Total File Size (bytes): 496152
 
 Development Size
-195M	.
+196M	.
 
 Build Size
 5.0M	dist

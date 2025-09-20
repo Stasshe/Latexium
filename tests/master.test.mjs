@@ -704,13 +704,17 @@ function checkExpectedValue(actualValue, expectedValue) {
     return terms.join('+').replace(/\+\\-/g, '-');
   }
 
-  // Direct match (after normalization)
-  const normalizedActual = normalizeExpression(actualValue);
-  const normalizedExpected = normalizeExpression(expectedValue);
+  // Direct match (after normalization, ignore all whitespace)
+  const normalizedActual = normalizeExpression(actualValue).replace(/\s+/g, '');
+  const normalizedExpected = normalizeExpression(expectedValue).replace(/\s+/g, '');
   if (normalizedActual === normalizedExpected) return true;
 
-  // Canonicalize and compare as sum of monomials
-  if (canonicalize(actualValue) === canonicalize(expectedValue)) return true;
+  // Canonicalize and compare as sum of monomials (ignore whitespace)
+  if (
+    canonicalize(actualValue).replace(/\s+/g, '') ===
+    canonicalize(expectedValue).replace(/\s+/g, '')
+  )
+    return true;
 
   // Numerical tolerance check
   const actualNum = parseFloat(actualValue);
@@ -886,22 +890,22 @@ async function runTestSuite() {
   console.log('Focus: distribute, factor with selective other operations\n');
 
   const results = {
-    success: 0,
+    parse_success: 0, // パース成功数
     parse_error: 0,
     analyze_error: 0,
     structure_error: 0,
     runtime_error: 0,
-    expected_mismatch: 0,
+    expected_match: 0, // 正解数
   };
 
   const detailedResults = [];
   const taskBreakdown = {
-    distribute: { total: 0, success: 0 },
-    factor: { total: 0, success: 0 },
-    differentiate: { total: 0, success: 0 },
-    integrate: { total: 0, success: 0 },
-    solve: { total: 0, success: 0 },
-    evaluate: { total: 0, success: 0 },
+    distribute: { total: 0, parse_success: 0, expected_match: 0 },
+    factor: { total: 0, parse_success: 0, expected_match: 0 },
+    differentiate: { total: 0, parse_success: 0, expected_match: 0 },
+    integrate: { total: 0, parse_success: 0, expected_match: 0 },
+    solve: { total: 0, parse_success: 0, expected_match: 0 },
+    evaluate: { total: 0, parse_success: 0, expected_match: 0 },
   };
 
   for (let i = 0; i < complexTestCases.length; i++) {
@@ -913,15 +917,21 @@ async function runTestSuite() {
     if (taskBreakdown[testCase.task]) {
       taskBreakdown[testCase.task].total++;
       if (result.status === 'success') {
-        taskBreakdown[testCase.task].success++;
+        taskBreakdown[testCase.task].parse_success++;
+        results.parse_success++;
+        if (result.expectedMatch !== false) {
+          taskBreakdown[testCase.task].expected_match++;
+          results.expected_match++;
+        }
+      } else if (result.status === 'parse_error') {
+        results.parse_error++;
+      } else if (result.status === 'analyze_error') {
+        results.analyze_error++;
+      } else if (result.status === 'structure_error') {
+        results.structure_error++;
+      } else if (result.status === 'runtime_error') {
+        results.runtime_error++;
       }
-    }
-
-    results[result.status]++;
-
-    // Track expected value mismatches
-    if (result.status === 'success' && result.expectedMatch === false) {
-      results.expected_mismatch++;
     }
 
     console.log('');
@@ -929,19 +939,24 @@ async function runTestSuite() {
 
   console.log('\n=== MASTER TEST SUITE RESULTS ===');
   console.log(
-    `✅ Success: ${results.success}/${complexTestCases.length} (${((results.success / complexTestCases.length) * 100).toFixed(1)}%)`
+    `✅ Parse Success: ${results.parse_success}/${complexTestCases.length} (${((results.parse_success / complexTestCases.length) * 100).toFixed(1)}%)`
+  );
+  console.log(
+    `🎯 Expected Match: ${results.expected_match}/${complexTestCases.length} (${((results.expected_match / complexTestCases.length) * 100).toFixed(1)}%)`
   );
   console.log(`❌ Parse Errors: ${results.parse_error}`);
   console.log(`⚠️  Analyze Errors: ${results.analyze_error}`);
   console.log(`🔧 Structure Errors: ${results.structure_error}`);
   console.log(`💥 Runtime Errors: ${results.runtime_error}`);
-  console.log(`📊 Expected Mismatches: ${results.expected_mismatch}`);
 
   console.log('\n=== TASK BREAKDOWN ===');
   Object.entries(taskBreakdown).forEach(([task, stats]) => {
     if (stats.total > 0) {
-      const successRate = ((stats.success / stats.total) * 100).toFixed(1);
-      console.log(`${task}: ${stats.success}/${stats.total} (${successRate}%)`);
+      const parseSuccessRate = ((stats.parse_success / stats.total) * 100).toFixed(1);
+      const expectedMatchRate = ((stats.expected_match / stats.total) * 100).toFixed(1);
+      console.log(
+        `${task}: Parse Success ${stats.parse_success}/${stats.total} (${parseSuccessRate}%), Expected Match ${stats.expected_match}/${stats.total} (${expectedMatchRate}%)`
+      );
     }
   });
 
@@ -950,7 +965,8 @@ async function runTestSuite() {
     detailedResults: detailedResults,
     taskBreakdown: taskBreakdown,
     testCount: complexTestCases.length,
-    successRate: ((results.success / complexTestCases.length) * 100).toFixed(1),
+    parseSuccessRate: ((results.parse_success / complexTestCases.length) * 100).toFixed(1),
+    expectedMatchRate: ((results.expected_match / complexTestCases.length) * 100).toFixed(1),
   };
 }
 
@@ -998,19 +1014,19 @@ Specification: ${testRunData.specification}
 
 OVERALL RESULTS:
 Total Tests: ${results.testCount}
-✅ Successful: ${results.summary.success} (${results.successRate}%)
+✅ Parse Success: ${results.summary.parse_success} (${results.parseSuccessRate}%)
+🎯 Expected Match: ${results.summary.expected_match} (${results.expectedMatchRate}%)
 ❌ Parse Errors: ${results.summary.parse_error}
 ⚠️  Analyze Errors: ${results.summary.analyze_error}
 🔧 Structure Errors: ${results.summary.structure_error}
 💥 Runtime Errors: ${results.summary.runtime_error}
-📊 Expected Mismatches: ${results.summary.expected_mismatch}
 
 TASK PERFORMANCE:
 ${Object.entries(results.taskBreakdown)
   .filter(([, stats]) => stats.total > 0)
   .map(
     ([task, stats]) =>
-      `${task}: ${stats.success}/${stats.total} (${((stats.success / stats.total) * 100).toFixed(1)}%)`
+      `${task}: Parse Success ${stats.parse_success}/${stats.total} (${((stats.parse_success / stats.total) * 100).toFixed(1)}%), Expected Match ${stats.expected_match}/${stats.total} (${((stats.expected_match / stats.total) * 100).toFixed(1)}%)`
   )
   .join('\n')}
 
@@ -1019,7 +1035,14 @@ FOCUS AREAS:
 - Factorization: Primary test focus  
 - Other operations: Limited testing
 
-QUALITY RATING: ${results.successRate > 80 ? 'EXCELLENT' : results.successRate > 60 ? 'GOOD' : 'NEEDS WORK'}
+
+QUALITY RATING: ${
+  results.parseSuccessRate > 80 && results.expectedMatchRate > 80
+    ? 'EXCELLENT'
+    : results.parseSuccessRate > 60 || results.expectedMatchRate > 60
+      ? 'GOOD'
+      : 'NEEDS WORK'
+}
 
 This test suite validates complex mathematical operations according to SPECIFICATION.md v3.
 Primary focus on distribute and factor operations with selective testing of other features.
