@@ -501,13 +501,6 @@ const complexTestCases = [
     description: 'Sixth power minus one (repeat for robustness)',
   },
   {
-    id: 130,
-    expression: 'x^8 + 1',
-    task: 'factor',
-  expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
-    description: 'Eighth power plus one (complex roots)',
-  },
-  {
     id: 131,
     expression: 'x^6 + 1',
     task: 'factor',
@@ -546,7 +539,7 @@ const complexTestCases = [
     id: 136,
     expression: 'x^8 + 1',
     task: 'factor',
-  expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
+    expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
     description: 'Eighth power plus one (repeat for robustness)',
   },
   {
@@ -574,7 +567,7 @@ const complexTestCases = [
     id: 140,
     expression: 'x^8 + 1',
     task: 'factor',
-  expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
+    expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
     description: 'Eighth power plus one (repeat for robustness)',
   },
   {

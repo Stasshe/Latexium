@@ -3,12 +3,12 @@
  * Concrete implementations of factorization patterns using middle-simplify functions
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../../types';
+import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '@/types';
 
 /**
  * Common factorization patterns interface
  */
-interface FactorizationPattern {
+export interface FactorizationPattern {
   name: string;
   description: string;
   matches(node: ASTNode): boolean;
@@ -345,17 +345,12 @@ class QuadraticPattern implements FactorizationPattern {
 
     if (constant === 0) {
       return coeffTerm;
-    } else if (constant > 0) {
-      return PatternUtils.createBinaryExpression(
-        coeffTerm,
-        '+',
-        PatternUtils.createNumber(constant)
-      );
     } else {
+      // (x - - q) 形式に統一
       return PatternUtils.createBinaryExpression(
         coeffTerm,
         '-',
-        PatternUtils.createNumber(-constant)
+        PatternUtils.createNumber(constant)
       );
     }
   }
@@ -420,16 +415,19 @@ class QuadraticPattern implements FactorizationPattern {
     r: number;
     s: number;
   } | null {
-    // For simple case a = 1: x² + bx + c = (x + p)(x + q) where p*q = c and p+q = b
+    // For a = 1: x^2 + bx + c = (x + p)(x + q), p*q = c, p+q = b
     if (a === 1) {
       for (let p = -20; p <= 20; p++) {
-        const q = c / p;
-        if (Number.isInteger(q) && p + q === b) {
-          return { p: 1, q: p, r: 1, s: q };
+        for (let q = p; q <= 20; q++) {
+          if (p * q === c && p + q === b) {
+            return { p: 1, q: p, r: 1, s: q };
+          }
+          if (p !== q && q * p === c && q + p === b) {
+            return { p: 1, q: q, r: 1, s: p };
+          }
         }
       }
     }
-
     return null;
   }
 }

@@ -10,7 +10,7 @@ import { PolynomialAnalyzer, ASTBuilder } from '../framework';
 export class CommonFactorStrategy implements FactorizationStrategy {
   name = 'Common Factor';
   description = 'Extract greatest common factors from polynomial terms';
-  priority = 100; // High priority - should be tried first
+  priority = 150; // High priority - should be tried first
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
     const terms = PolynomialAnalyzer.extractTerms(node);

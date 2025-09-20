@@ -11,8 +11,6 @@ import {
   simplify as middleSimplify,
   SimplifyOptions as MiddleSimplifyOptions,
 } from './middle-simplify';
-import { PatternRecognitionEngine } from './pattern-recognition';
-
 /**
  * Unified simplification options - extends middle-simplify with factorization
  */
@@ -37,9 +35,6 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
   usePatternRecognition: true,
   factor: true,
 };
-
-// Initialize pattern recognition engine
-const patternEngine = new PatternRecognitionEngine();
 
 /**
  * Unified simplification function
@@ -354,11 +349,6 @@ export type { SimplifyOptions as MiddleSimplifyOptions } from './middle-simplify
  */
 export { simplify as middleSimplify } from './middle-simplify';
 export { overlapSimplify as simplify };
-
-/**
- * Direct access to pattern recognition engine
- */
-export { PatternRecognitionEngine } from './pattern-recognition';
 
 /**
  * Direct access to advanced factorization

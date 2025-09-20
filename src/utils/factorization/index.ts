@@ -4,6 +4,7 @@
  */
 
 import { FactorizationEngine, FactorizationPreferences } from './framework';
+import { PatternRecognitionStrategy } from './pattern-recognition/strategy';
 import {
   CommonFactorStrategy,
   DifferenceOfSquaresStrategy,
@@ -20,6 +21,7 @@ const factorizationEngine = new FactorizationEngine();
 
 // Register essential strategies only (per factor.md)
 try {
+  factorizationEngine.registerStrategy(new PatternRecognitionStrategy());
   factorizationEngine.registerStrategy(new PerfectPowerStrategy());
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
@@ -28,7 +30,6 @@ try {
   factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
   factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
 } catch (strategyError) {
-  //push.error('Error registering factorization strategies:', strategyError);
   throw new Error(
     `Strategy registration failed: ${strategyError instanceof Error ? strategyError.message : 'Unknown error'}`
   );
