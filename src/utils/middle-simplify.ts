@@ -6,6 +6,7 @@
 
 import { ASTNode, BinaryExpression, UnaryExpression, Fraction, Integral } from '../types';
 import { stepsAstToLatex } from './ast';
+import type { StepTree } from '../types';
 import { expandExpression } from './distribution';
 // Import the legacy factorExpression function
 import { applyTrigonometricIdentities } from './identities/trigonometric';
@@ -19,6 +20,7 @@ import {
   reduceFraction,
   areEquivalentExpressions,
 } from './simplify/simplification';
+import { simplifyPolynomialFraction } from './simplify-polynomial-fraction';
 
 /**
  * Polynomial simplification options (no factorization)
@@ -57,7 +59,11 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
  * Enhanced simplification function
  * Converts sqrt to exponential form, applies distribution and advanced simplification
  */
-export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: string[]): ASTNode {
+export function simplify(
+  node: ASTNode,
+  options: SimplifyOptions = {},
+  steps?: StepTree[]
+): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
 
   if (!node) return node;
@@ -69,7 +75,7 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
     if (opts.convertSqrtToExponential) {
       const before = result;
       result = convertSqrtToExponential(result);
-      if (steps && before !== result)
+      if (Array.isArray(steps) && before !== result)
         steps.push(`Converted sqrt to exponential form: ${stepsAstToLatex(result)}`);
     }
 
@@ -77,35 +83,44 @@ export function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: s
     if (opts.advancedExponentialSimplification) {
       const before = result;
       result = enhancedExponentialSimplification(result);
-      if (steps && before !== result)
+      if (Array.isArray(steps) && before !== result)
         steps.push(`Applied advanced exponential simplification: ${stepsAstToLatex(result)}`);
+    }
+
+    // Step 2.5: Simplify fractions TopLevel
+    if (result.type === 'Fraction') {
+      const before = result;
+      result = simplifyPolynomialFraction(result.numerator, result.denominator);
+      if (Array.isArray(steps) && before !== result)
+        steps.push(`Simplified fraction: ${stepsAstToLatex(result)}`);
     }
 
     // Step 3: Expansion (only if expand: true)
     if (opts.expand) {
       if (needsExpansion(result)) {
-        if (steps) steps.push('Detected need for expansion');
+        if (Array.isArray(steps)) steps.push('Detected need for expansion');
         const before = result;
         const expanded = expandExpression(result);
-        if (steps && before !== expanded)
+        if (Array.isArray(steps) && before !== expanded)
           steps.push(`Expanded expression: ${stepsAstToLatex(expanded)}`);
-        if (steps) steps.push('Applying basic simplification after expansion');
+        if (Array.isArray(steps)) steps.push('Applying basic simplification after expansion');
         const simplified = basicSimplify(expanded, opts, 0);
-        if (steps)
+        if (Array.isArray(steps))
           steps.push(
-            `Finished basic simplification after expansion: ${stepsAstToLatex(simplified)}`
+            `Finished basic simplification after expansion: ${stepsAstToLatex(simplified)}, ${stepsAstToLatex(expanded)}`
           );
         return simplified;
       }
     }
 
-    if (steps) steps.push('Applying basic simplification');
+    if (Array.isArray(steps)) steps.push('Applying basic simplification', stepsAstToLatex(result));
     const simplified = basicSimplify(result, opts, 0);
-    if (steps) steps.push(`Finished basic simplification: ${stepsAstToLatex(simplified)}`);
+    if (Array.isArray(steps))
+      steps.push(`Finished basic simplification: ${stepsAstToLatex(simplified)}`);
     return simplified;
   } catch (error) {
     // Fallback: return original node if simplification fails
-    if (steps) steps.push('Simplification failed, returning original node');
+    if (Array.isArray(steps)) steps.push('Simplification failed, returning original node');
     return node;
   }
 }
@@ -907,7 +922,7 @@ function simplifyFraction(
 
   // For polynomial fractions, apply basic polynomial simplification only
   if (options.simplifyFractions) {
-    const simplified = simplifyPolynomialFraction(numerator, denominator);
+    const simplified = draftSimplifyPolynomialFraction(numerator, denominator);
     if (simplified) {
       return simplified;
     }
@@ -919,7 +934,7 @@ function simplifyFraction(
 /**
  * Simplify polynomial fractions by finding common factors
  */
-function simplifyPolynomialFraction(numerator: ASTNode, denominator: ASTNode): ASTNode | null {
+function draftSimplifyPolynomialFraction(numerator: ASTNode, denominator: ASTNode): ASTNode | null {
   // For now, handle simple cases
   // This could be expanded to handle more complex polynomial GCD
 

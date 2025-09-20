@@ -131,7 +131,6 @@ console.log(result2.steps);
 //   "Combine: (x^2 + 4)(x + 2)(x - 2)"
 // ]
 ```
-```
 
 ### Evaluation
 

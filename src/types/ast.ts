@@ -9,9 +9,12 @@ export type ParseResult = {
   error: string | null;
 };
 
+// 計算過程の再帰的なステップツリー型
+export type StepTree = string | StepTree[];
+
 // Analyze結果型
 export type AnalyzeResult = {
-  steps: string[]; // 計算過程（デバッグ・教育用）
+  steps: StepTree; // 計算過程（デバッグ・教育用、再帰的構造）
   value: string | null; // 高精度数値の文字列表現（LaTeX形式）
   valueType: 'exact' | 'approximate' | 'symbolic'; // 値の種類
   precision?: number; // 実際の精度情報
