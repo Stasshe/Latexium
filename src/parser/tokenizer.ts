@@ -175,6 +175,11 @@ export class LaTeXTokenizer {
         case ',':
           this.advance();
           return { type: 'COMMA', value: ',', position };
+        case '[':
+        case ']':
+          // Ignore [ and ] as whitespace (skip them)
+          this.advance();
+          continue;
         case '!':
           this.advance();
           // Instead of FACTORIAL, return as COMMAND for unified handling

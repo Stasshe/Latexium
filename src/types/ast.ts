@@ -33,7 +33,18 @@ export type ASTNode =
   | Integral
   | Sum
   | Product
-  | Factorial;
+  | Factorial
+  | Derivative;
+
+/**
+ * Derivative AST node type
+ * Represents d/dx(expr)
+ */
+export type Derivative = {
+  type: 'Derivative';
+  variable: string;
+  expression: ASTNode;
+};
 
 /**
  * Factorial AST node type
@@ -152,6 +163,7 @@ export const RESERVED_FUNCTIONS = new Set([
   'cosh',
   'tanh',
   'abs',
+  'd', // dは予約語（変数名不可）
 ]);
 
 export const RESERVED_SYMBOLS = new Set(['∞', 'infinity', '∅']);

@@ -79,7 +79,7 @@ function differentiateBinaryExpression(
           left: differentiateAST(left, variable),
           right: differentiateAST(right, variable),
         },
-        { factor: false }
+        { factor: false, expand: false }
       );
 
     case '*': {
@@ -87,77 +87,89 @@ function differentiateBinaryExpression(
       const leftDerivative = differentiateAST(left, variable);
       const rightDerivative = differentiateAST(right, variable);
 
-      return simplifyAST({
-        type: 'BinaryExpression',
-        operator: '+',
-        left: simplifyAST(
-          {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: leftDerivative,
-            right: right,
-          },
-          { factor: false }
-        ),
-        right: simplifyAST(
-          {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: left,
-            right: rightDerivative,
-          },
-          { factor: false }
-        ),
-      });
-    }
-
-    case '/': {
-      // Quotient rule: (u/v)' = (u'v - uv')/v²
-      const uPrime = differentiateAST(left, variable);
-      const vPrime = differentiateAST(right, variable);
-
-      return simplifyAST({
-        type: 'Fraction',
-        numerator: simplifyAST({
+      return simplifyAST(
+        {
           type: 'BinaryExpression',
-          operator: '-',
+          operator: '+',
           left: simplifyAST(
             {
               type: 'BinaryExpression',
               operator: '*',
-              left: uPrime,
+              left: leftDerivative,
               right: right,
             },
-            { factor: false }
+            { factor: false, expand: false }
           ),
           right: simplifyAST(
             {
               type: 'BinaryExpression',
               operator: '*',
               left: left,
-              right: vPrime,
+              right: rightDerivative,
             },
-            { factor: false }
+            { factor: false, expand: false }
           ),
-        }),
-        denominator: simplifyAST(
-          {
-            type: 'BinaryExpression',
-            operator: '^',
-            left: right,
-            right: {
-              type: 'NumberLiteral',
-              value: 2,
+        },
+        { factor: false, expand: false }
+      );
+    }
+
+    case '/': {
+      // /は必ずFractionノードになるので、ここはFractionノードに任せる
+      // ただし、念のためFractionノードを返す
+      const uPrime = differentiateAST(left, variable);
+      const vPrime = differentiateAST(right, variable);
+      return simplifyAST(
+        {
+          type: 'Fraction',
+          numerator: simplifyAST(
+            {
+              type: 'BinaryExpression',
+              operator: '-',
+              left: simplifyAST(
+                {
+                  type: 'BinaryExpression',
+                  operator: '*',
+                  left: uPrime,
+                  right: right,
+                },
+                { factor: false, expand: false }
+              ),
+              right: simplifyAST(
+                {
+                  type: 'BinaryExpression',
+                  operator: '*',
+                  left: left,
+                  right: vPrime,
+                },
+                { factor: false, expand: false }
+              ),
             },
-          },
-          { factor: false }
-        ),
-      });
+            { factor: false, expand: false }
+          ),
+          denominator: simplifyAST(
+            {
+              type: 'BinaryExpression',
+              operator: '^',
+              left: right,
+              right: {
+                type: 'NumberLiteral',
+                value: 2,
+              },
+            },
+            { factor: false, expand: false }
+          ),
+        },
+        { factor: false, expand: false }
+      );
     }
 
     case '^':
       // Power rule and exponential rule
-      return simplifyAST(differentiatePower(left, right, variable));
+      return simplifyAST(differentiatePower(left, right, variable), {
+        factor: false,
+        expand: false,
+      });
 
     default:
       throw new Error(`Differentiation of operator ${node.operator} not supported`);
@@ -177,11 +189,14 @@ function differentiateUnaryExpression(
     case '+':
       return derivative;
     case '-':
-      return {
-        type: 'UnaryExpression',
-        operator: '-',
-        operand: derivative,
-      };
+      return simplifyAST(
+        {
+          type: 'UnaryExpression',
+          operator: '-',
+          operand: derivative,
+        },
+        { factor: false, expand: false }
+      );
     default:
       throw new Error(`Unsupported unary operator for differentiation: ${node.operator}`);
   }
@@ -299,24 +314,24 @@ function differentiateFunctionCall(
       break;
 
     case 'sqrt':
-      // d/dx(sqrt(u)) = (1/(2*sqrt(u))) * u'
+      // sqrt(u)は指数ノードに変換されている前提で、d/dx(u^{1/2}) = (1/2)u^{-1/2} * u'
       innerDerivative = {
-        type: 'Fraction',
-        numerator: {
-          type: 'NumberLiteral',
-          value: 1,
+        type: 'BinaryExpression',
+        operator: '*',
+        left: {
+          type: 'Fraction',
+          numerator: { type: 'NumberLiteral', value: 1 },
+          denominator: { type: 'NumberLiteral', value: 2 },
         },
-        denominator: {
+        right: {
           type: 'BinaryExpression',
-          operator: '*',
-          left: {
-            type: 'NumberLiteral',
-            value: 2,
-          },
+          operator: '^',
+          left: argument,
           right: {
-            type: 'FunctionCall',
-            name: 'sqrt',
-            args: [argument],
+            type: 'BinaryExpression',
+            operator: '-',
+            left: { type: 'NumberLiteral', value: 1 / 2 },
+            right: { type: 'NumberLiteral', value: 1 },
           },
         },
       };
@@ -335,12 +350,15 @@ function differentiateFunctionCall(
     return innerDerivative;
   }
 
-  return simplifyAST({
-    type: 'BinaryExpression',
-    operator: '*',
-    left: innerDerivative,
-    right: argumentDerivative,
-  });
+  return simplifyAST(
+    {
+      type: 'BinaryExpression',
+      operator: '*',
+      left: innerDerivative,
+      right: argumentDerivative,
+    },
+    { factor: false, expand: false }
+  );
 }
 
 /**
@@ -362,21 +380,59 @@ function differentiateFraction(
 
   // If v is constant (v' = 0), then (u/c)' = u'/c
   if (vPrimeIsZero) {
-    return {
-      type: 'Fraction',
-      numerator: uPrime,
-      denominator: v,
-    };
+    return simplifyAST(
+      {
+        type: 'Fraction',
+        numerator: uPrime,
+        denominator: v,
+      },
+      { factor: false, expand: false }
+    );
   }
 
   // If u is constant (u' = 0), then (c/v)' = -c*v'/v²
   if (uPrimeIsZero) {
-    return {
+    return simplifyAST(
+      {
+        type: 'Fraction',
+        numerator: {
+          type: 'UnaryExpression',
+          operator: '-',
+          operand: {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: u,
+            right: vPrime,
+          },
+        },
+        denominator: {
+          type: 'BinaryExpression',
+          operator: '^',
+          left: v,
+          right: {
+            type: 'NumberLiteral',
+            value: 2,
+          },
+        },
+      },
+      { factor: false, expand: false }
+    );
+  }
+
+  // General case: (u/v)' = (u'v - uv')/v²
+  return simplifyAST(
+    {
       type: 'Fraction',
       numerator: {
-        type: 'UnaryExpression',
+        type: 'BinaryExpression',
         operator: '-',
-        operand: {
+        left: {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: uPrime,
+          right: v,
+        },
+        right: {
           type: 'BinaryExpression',
           operator: '*',
           left: u,
@@ -392,38 +448,9 @@ function differentiateFraction(
           value: 2,
         },
       },
-    };
-  }
-
-  // General case: (u/v)' = (u'v - uv')/v²
-  return {
-    type: 'Fraction',
-    numerator: {
-      type: 'BinaryExpression',
-      operator: '-',
-      left: {
-        type: 'BinaryExpression',
-        operator: '*',
-        left: uPrime,
-        right: v,
-      },
-      right: {
-        type: 'BinaryExpression',
-        operator: '*',
-        left: u,
-        right: vPrime,
-      },
     },
-    denominator: {
-      type: 'BinaryExpression',
-      operator: '^',
-      left: v,
-      right: {
-        type: 'NumberLiteral',
-        value: 2,
-      },
-    },
-  };
+    { factor: false, expand: false }
+  );
 }
 
 /**
@@ -443,91 +470,100 @@ function differentiatePower(base: ASTNode, exponent: ASTNode, variable: string):
 
   // If exponent is constant: d/dx(u^n) = n * u^(n-1) * u'
   if (isConstant(exponent, variable)) {
-    return {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: {
-        type: 'BinaryExpression',
-        operator: '*',
-        left: exponent,
-        right: {
-          type: 'BinaryExpression',
-          operator: '^',
-          left: base,
-          right: {
-            type: 'BinaryExpression',
-            operator: '-',
-            left: exponent,
-            right: {
-              type: 'NumberLiteral',
-              value: 1,
-            },
-          },
-        },
-      },
-      right: baseDerivative,
-    };
-  }
-
-  // If base is constant: d/dx(a^u) = a^u * ln(a) * u'
-  if (isConstant(base, variable)) {
-    return {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: {
+    return simplifyAST(
+      {
         type: 'BinaryExpression',
         operator: '*',
         left: {
           type: 'BinaryExpression',
-          operator: '^',
-          left: base,
-          right: exponent,
+          operator: '*',
+          left: exponent,
+          right: {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: base,
+            right: {
+              type: 'BinaryExpression',
+              operator: '-',
+              left: exponent,
+              right: {
+                type: 'NumberLiteral',
+                value: 1,
+              },
+            },
+          },
         },
-        right: {
-          type: 'FunctionCall',
-          name: 'ln',
-          args: [base],
-        },
+        right: baseDerivative,
       },
-      right: exponentDerivative,
-    };
+      { factor: false, expand: false }
+    );
+  }
+
+  // If base is constant: d/dx(a^u) = a^u * ln(a) * u'
+  if (isConstant(base, variable)) {
+    return simplifyAST(
+      {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: base,
+            right: exponent,
+          },
+          right: {
+            type: 'FunctionCall',
+            name: 'ln',
+            args: [base],
+          },
+        },
+        right: exponentDerivative,
+      },
+      { factor: false, expand: false }
+    );
   }
 
   // General case: d/dx(u^v) = u^v * (v' * ln(u) + v * u'/u)
-  return {
-    type: 'BinaryExpression',
-    operator: '*',
-    left: {
+  return simplifyAST(
+    {
       type: 'BinaryExpression',
-      operator: '^',
-      left: base,
-      right: exponent,
-    },
-    right: {
-      type: 'BinaryExpression',
-      operator: '+',
+      operator: '*',
       left: {
         type: 'BinaryExpression',
-        operator: '*',
-        left: exponentDerivative,
-        right: {
-          type: 'FunctionCall',
-          name: 'ln',
-          args: [base],
-        },
+        operator: '^',
+        left: base,
+        right: exponent,
       },
       right: {
         type: 'BinaryExpression',
-        operator: '*',
-        left: exponent,
+        operator: '+',
+        left: {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: exponentDerivative,
+          right: {
+            type: 'FunctionCall',
+            name: 'ln',
+            args: [base],
+          },
+        },
         right: {
-          type: 'Fraction',
-          numerator: baseDerivative,
-          denominator: base,
+          type: 'BinaryExpression',
+          operator: '*',
+          left: exponent,
+          right: {
+            type: 'Fraction',
+            numerator: baseDerivative,
+            denominator: base,
+          },
         },
       },
     },
-  };
+    { factor: false, expand: false }
+  );
 }
 
 /**
@@ -573,6 +609,34 @@ export function analyzeDifferentiate(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'differentiate' }
 ): AnalyzeResult {
+  // If ast is Derivative node, extract variable and expression
+  if (ast.type === 'Derivative') {
+    const steps: string[] = [];
+    try {
+      const variable = ast.variable;
+      steps.push(`Differentiating with respect to ${variable}`);
+      steps.push(`Expression: ${astToLatex(ast.expression)}`);
+      const derivative = differentiateAST(ast.expression, variable);
+      const simplifiedDerivative = simplifyAST(derivative, { factor: false, expand: false });
+      const derivativeLatex = astToLatex(simplifiedDerivative);
+      steps.push(`Derivative: ${derivativeLatex}`);
+      return {
+        steps,
+        value: derivativeLatex,
+        valueType: 'symbolic',
+        ast: simplifiedDerivative,
+        error: null,
+      };
+    } catch (error) {
+      return {
+        steps,
+        value: null,
+        valueType: 'symbolic',
+        ast: null,
+        error: error instanceof Error ? error.message : 'Differentiation error',
+      };
+    }
+  }
   const steps: string[] = [];
 
   try {
@@ -596,7 +660,7 @@ export function analyzeDifferentiate(
     const derivative = differentiateAST(ast, variable);
 
     // Apply simplification to the derivative
-    const simplifiedDerivative = simplifyAST(derivative);
+    const simplifiedDerivative = simplifyAST(derivative, { factor: false, expand: false });
     const derivativeLatex = astToLatex(simplifiedDerivative);
 
     steps.push(`Derivative: ${derivativeLatex}`);

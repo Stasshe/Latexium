@@ -1,5 +1,6 @@
 必要なライブラリがあれば、インストールすること。
 コードは全て英語で、コメントも英語で書くこと。
+tsなので、コードを変更した場合はビルドすること。
 
 !important
 testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
