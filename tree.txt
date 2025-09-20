@@ -3,10 +3,13 @@
 ├── Development
 │   ├── QUICK_REFERENCE.md
 │   └── README.md
+├── I_HAVE_QUESTIONS.md
 ├── LICENSE
 ├── README.md
 ├── SPECIFICATION.md
 ├── TODO.md
+├── docs
+│   └── FLOW.md
 ├── eslint.config.js
 ├── package-lock.json
 ├── package.json
@@ -78,6 +81,7 @@
 │       │   ├── commutative.ts
 │       │   ├── exponential.ts
 │       │   └── simplification.ts
+│       ├── simplify-polynomial-fraction.ts
 │       ├── unified-simplify.ts
 │       ├── validation.ts
 │       └── variables.ts
@@ -145,15 +149,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-22 directories, 124 files
+23 directories, 127 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17255
-Total Characters: 493518
-Total File Size (bytes): 496152
+Total Lines: 17306
+Total Characters: 495675
+Total File Size (bytes): 498285
 
 Development Size
-196M	.
+198M	.
 
 Build Size
-5.0M	dist
+5.1M	dist
