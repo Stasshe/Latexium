@@ -5,7 +5,8 @@
 
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../../types';
 import { astToLatex, stepsAstToLatex } from '../ast';
-import { simplify } from '../middle-simplify';
+
+import { FACTORIZATION } from '@/config';
 
 /**
  * Base interface for all factorization strategies
@@ -203,17 +204,34 @@ export class FactorizationEngine {
    * Recursively factor subexpressions in the result
    */
   private recursivelyFactorSubexpressions(node: ASTNode, context: FactorizationContext): ASTNode {
-    // middle-simplifyを利用してサブ式の再帰的因数分解の代わりに簡約を行う
-    try {
-      context.steps.push('[middle-simplify] called for subexpression', stepsAstToLatex(node));
-      const simplified = simplify(node, { expand: false }, context.steps);
-      context.steps.push(`[middle-simplify] result: ${stepsAstToLatex(simplified)}`);
-      return simplified;
-    } catch (e) {
-      const msg = typeof e === 'object' && e && 'message' in e ? e.message : String(e);
-      context.steps.push(`[middle-simplify] failed: ${msg}`);
-      return node;
+    // Recursively factor subexpressions (true factorization)
+    // Only apply to subnodes, not the root node itself
+    if (node.type === 'BinaryExpression') {
+      const left = this.recursivelyFactorSubexpressions(node.left, context);
+      const right = this.recursivelyFactorSubexpressions(node.right, context);
+      let newNode = { ...node, left, right };
+      // さらに、各サブノードにfactorを適用
+      if (
+        node.operator === '*' ||
+        (node.operator === '+' && FACTORIZATION.applyFactorPlusOperate)
+      ) {
+        // それぞれの因子/項にfactorを適用
+        const leftFactored = this.factor(left, context.variable, context.preferences).ast;
+        const rightFactored = this.factor(right, context.variable, context.preferences).ast;
+        newNode = { ...node, left: leftFactored, right: rightFactored };
+        context.steps.push(`[recursive-factor] factored left: ${stepsAstToLatex(leftFactored)}`);
+        context.steps.push(`[recursive-factor] factored right: ${stepsAstToLatex(rightFactored)}`);
+      }
+      return newNode;
+    } else if (node.type === 'UnaryExpression') {
+      const operand = this.recursivelyFactorSubexpressions(node.operand, context);
+      return { ...node, operand };
+    } else if (node.type === 'FunctionCall') {
+      const args = node.args.map(arg => this.recursivelyFactorSubexpressions(arg, context));
+      return { ...node, args };
     }
+    // 他の型はそのまま返す
+    return node;
   }
 
   /**

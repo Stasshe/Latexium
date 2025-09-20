@@ -34,17 +34,17 @@ try {
   );
 }
 
-/**
- * Main factorization function - replaces the old factorExpression function
- */
-export function advancedFactor(
-  node: ASTNode,
-  variable: string = 'x',
-  preferences: Partial<FactorizationPreferences> = {}
-): ASTNode {
-  const result = factorizationEngine.factor(node, variable, preferences);
-  return result.ast;
-}
+// /**
+//  * Main factorization function - replaces the old factorExpression function
+//  */
+// export function advancedFactor(
+//   node: ASTNode,
+//   variable: string = 'x',
+//   preferences: Partial<FactorizationPreferences> = {}
+// ): ASTNode {
+//   const result = factorizationEngine.factor(node, variable, preferences);
+//   return result.ast;
+// }
 
 /**
  * Factorization with detailed steps
@@ -55,11 +55,38 @@ export function factorWithSteps(
   preferences: Partial<FactorizationPreferences> = {}
 ): { ast: ASTNode; steps: string[]; changed: boolean } {
   try {
-    const result = factorizationEngine.factor(node, variable, preferences);
+    let currentAst = node;
+    let changed = false;
+    const steps: string[] = [];
+    let prevAstStr = JSON.stringify(currentAst);
+    let count = 1;
+    // Recursively apply factorization until no further changes
+    // frameworkのrecursivelyFactorSubexpressions->subexpressions
+    // これ -> ルートレベルでの最終チェク因数分解ループ
+    while (true) {
+      const attemptSteps: string[] = [];
+      attemptSteps.push(`Factorization attempt #${count}`);
+      const result = factorizationEngine.factor(currentAst, variable, preferences);
+      attemptSteps.push(...result.steps);
+      const nextAstStr = JSON.stringify(result.ast);
+      if (nextAstStr === prevAstStr) {
+        // No further change, do not push this attempt's steps
+        changed = changed || result.changed;
+        currentAst = result.ast;
+        break;
+      } else {
+        // Only push steps if there was a change
+        steps.push(...attemptSteps);
+        changed = true;
+        currentAst = result.ast;
+        prevAstStr = nextAstStr;
+        count++;
+      }
+    }
     return {
-      ast: result.ast,
-      steps: result.steps,
-      changed: result.changed,
+      ast: currentAst,
+      steps,
+      changed,
     };
   } catch (error) {
     throw new Error(

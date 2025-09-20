@@ -7,6 +7,10 @@ export const MAX_EXPANSION_POWER = 6;
 
 export const IS_STEPS_INCLUDE_LATEX = true;
 
+export const FACTORIZATION = {
+  applyFactorPlusOperate: false,
+};
+
 // Default simplification settings
 export const DEFAULT_SIMPLIFY_OPTIONS = {
   expandPowers: false,
