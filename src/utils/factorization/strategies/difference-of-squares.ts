@@ -3,13 +3,6 @@
  * Factors expressions of the form a² - b² into (a + b)(a - b)
  */
 
-import {
-  ASTNode,
-  BinaryExpression,
-  NumberLiteral,
-  Identifier,
-  UnaryExpression,
-} from '../../../types';
 import { astToLatex } from '../../ast';
 import {
   FactorizationStrategy,
@@ -17,6 +10,15 @@ import {
   FactorizationResult,
   ASTBuilder,
 } from '../framework';
+
+import {
+  ASTNode,
+  BinaryExpression,
+  NumberLiteral,
+  Identifier,
+  UnaryExpression,
+  StepTree,
+} from '@/types';
 
 export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
   name = 'Difference of Squares';
@@ -28,7 +30,7 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       if (!this.isDifferenceOfSquares(node)) {

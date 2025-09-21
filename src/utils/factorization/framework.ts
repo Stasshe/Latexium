@@ -3,7 +3,7 @@
  * A comprehensive strategy-based factorization system for polynomial expressions
  */
 
-import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '../../types';
+import { ASTNode, BinaryExpression, NumberLiteral, Identifier, StepTree } from '../../types';
 import { astToLatex, stepsAstToLatex } from '../ast';
 
 import { FACTORIZATION } from '@/config';
@@ -26,7 +26,7 @@ export interface FactorizationContext {
   variable: string;
   maxIterations: number;
   currentIteration: number;
-  steps: string[];
+  steps: StepTree[];
   preferences: FactorizationPreferences;
 }
 
@@ -48,7 +48,7 @@ export interface FactorizationResult {
   success: boolean;
   ast: ASTNode;
   changed: boolean;
-  steps: string[];
+  steps: StepTree[];
   strategyUsed: string;
   canContinue: boolean; // Whether further factorization might be possible
 }
@@ -125,7 +125,7 @@ export class FactorizationEngine {
     }
 
     let hasChanged = false;
-    const totalSteps: string[] = [...context.steps];
+    const totalSteps: StepTree = [...context.steps];
 
     while (context.currentIteration < context.maxIterations) {
       context.currentIteration++;
@@ -142,7 +142,11 @@ export class FactorizationEngine {
             currentNode = result.ast;
             hasChanged = true;
             iterationChanged = true;
-            totalSteps.push(...result.steps);
+            if (Array.isArray(result.steps)) {
+              totalSteps.push(...result.steps);
+            } else {
+              totalSteps.push(result.steps);
+            }
 
             // Safe LaTeX conversion with error handling
             try {
@@ -155,17 +159,12 @@ export class FactorizationEngine {
               );
             }
 
-            // Check if this strategy wants to stop further processing
-            // Note: For multi-step factorization, we should allow other strategies
-            // to try factoring the result, even if this strategy can't continue
-            // if (!result.canContinue) {
-            //   shouldContinue = false;
-            // }
-
             // Continue to next iteration to try other strategies on the new result
             break;
           } else if (!result.success) {
-            context.steps.push(`✗ ${strategy.name} failed: ${result.steps.join(', ')}`);
+            context.steps.push(
+              `✗ ${strategy.name} failed: ${Array.isArray(result.steps) ? result.steps.join(', ') : result.steps}`
+            );
           }
         }
       }
@@ -188,7 +187,9 @@ export class FactorizationEngine {
     context.steps.push('Attempting recursive factorization of subexpressions...');
     currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
     // Ensure all context steps are included in totalSteps
-    totalSteps.push(...context.steps.slice(totalSteps.length));
+    if (Array.isArray(context.steps)) {
+      totalSteps.push(...context.steps.slice(totalSteps.length));
+    }
 
     return {
       success: true,

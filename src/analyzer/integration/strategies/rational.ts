@@ -16,7 +16,7 @@ import {
   createFractionNode,
 } from './index';
 
-import { ASTNode } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 export class RationalFunctionStrategy implements IntegrationStrategy {
   readonly name = 'Rational Functions';
@@ -27,7 +27,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
   }
 
   integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       const result = this.integrateRational(node, context.variable, steps);
@@ -103,7 +103,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     }
   }
 
-  private integrateRational(node: ASTNode, variable: string, steps: string[]): ASTNode {
+  private integrateRational(node: ASTNode, variable: string, steps: StepTree[]): ASTNode {
     if (node.type === 'Fraction') {
       return this.integrateFraction(node, variable, steps);
     }
@@ -125,7 +125,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
   private integrateFraction(
     node: { numerator: ASTNode; denominator: ASTNode },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const numerator = node.numerator;
     const denominator = node.denominator;
@@ -211,7 +211,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // (x+1)/(x²-1) = (x+1)/((x-1)(x+1)) = 1/(x-1)
     steps.push(`Simplifying: (x+1)/(x²-1) = (x+1)/((x-1)(x+1)) = 1/(x-1)`);
@@ -250,7 +250,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // ∫1/(x²+a²) dx = (1/a)arctan(x/a)
     if (numerator.type === 'NumberLiteral' && numerator.value === 1) {
@@ -305,7 +305,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // ∫1/(x²-a²) dx = (1/2a)ln|(x-a)/(x+a)|
     if (numerator.type === 'NumberLiteral' && numerator.value === 1) {
@@ -391,7 +391,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // Handle (ax+b)/(x²+c) by splitting into logarithmic and arctangent parts
     // ∫(2x+3)/(x²+4) dx = ∫2x/(x²+4) dx + ∫3/(x²+4) dx
@@ -451,7 +451,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     term: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // Handle constant over (x²+a²): ∫c/(x²+a²) dx = (c/√a)arctan(x/√a)
     if (isConstant(term, variable)) {
@@ -562,7 +562,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // ∫1/√(a²-x²) dx = arcsin(x/a)
     if (numerator.type === 'NumberLiteral' && numerator.value === 1) {
@@ -590,7 +590,7 @@ export class RationalFunctionStrategy implements IntegrationStrategy {
     numerator: ASTNode,
     denominator: ASTNode,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // Simplified partial fractions - just handle basic cases
     steps.push(`Partial fraction decomposition not fully implemented`);

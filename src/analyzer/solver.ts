@@ -3,7 +3,7 @@
  * Implements solving for linear and quadratic equations
  */
 
-import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
+import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '../types';
 import { astToLatex } from '../utils/ast';
 import { simplify as simplifyAST } from '../utils/unified-simplify';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
@@ -628,7 +628,7 @@ export function analyzeSolve(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'solve' }
 ): AnalyzeResult {
-  const steps: string[] = [];
+  const steps: StepTree[] = [];
 
   try {
     // Automatic variable inference for solving

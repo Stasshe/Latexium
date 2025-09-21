@@ -3,7 +3,7 @@
  * Implements symbolic integration for mathematical expressions
  */
 
-import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../types';
+import { ASTNode, AnalyzeResult, AnalyzeOptions, StepTree } from '../types';
 import { IntegrationEngine } from './integration';
 import { astToLatex } from '../utils/ast';
 import { simplify as simplifyAST } from '../utils/unified-simplify';
@@ -944,7 +944,7 @@ export function analyzeIntegrate(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'integrate' }
 ): AnalyzeResult {
-  const steps: string[] = [];
+  const steps: StepTree[] = [];
 
   try {
     // Automatic variable inference

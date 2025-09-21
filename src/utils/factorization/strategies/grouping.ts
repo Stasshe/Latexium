@@ -3,13 +3,6 @@
  * Factors polynomials by grouping terms with common factors
  */
 
-import {
-  ASTNode,
-  BinaryExpression,
-  NumberLiteral,
-  Identifier,
-  UnaryExpression,
-} from '../../../types';
 import { astToLatex } from '../../ast';
 import {
   FactorizationStrategy,
@@ -19,6 +12,15 @@ import {
 } from '../framework';
 import { CommonFactorStrategy } from './common-factor';
 import { simplify as middleSimplify } from '../../middle-simplify';
+
+import {
+  ASTNode,
+  BinaryExpression,
+  NumberLiteral,
+  Identifier,
+  UnaryExpression,
+  StepTree,
+} from '@/types';
 
 export class GroupingStrategy implements FactorizationStrategy {
   name = 'Factorization by Grouping';
@@ -33,7 +35,7 @@ export class GroupingStrategy implements FactorizationStrategy {
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       const terms = this.extractTerms(node);
@@ -174,8 +176,8 @@ export class GroupingStrategy implements FactorizationStrategy {
     terms: Array<{ term: ASTNode; sign: number }>,
     pattern: number[][],
     context: FactorizationContext,
-    steps: string[]
-  ): { ast: ASTNode; steps: string[] } | null {
+    steps: StepTree[]
+  ): { ast: ASTNode; steps: StepTree[] } | null {
     const groups: ASTNode[] = [];
     const groupFactors: ASTNode[] = [];
 

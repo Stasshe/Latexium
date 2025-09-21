@@ -17,7 +17,7 @@ import {
   createFractionNode,
 } from './index';
 
-import { ASTNode } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 interface SubstitutionCandidate {
   u: ASTNode;
@@ -36,7 +36,7 @@ export class SubstitutionStrategy implements IntegrationStrategy {
   }
 
   integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       const result = this.integrateBySubstitution(node, context, steps);
@@ -339,7 +339,7 @@ export class SubstitutionStrategy implements IntegrationStrategy {
   private integrateBySubstitution(
     node: ASTNode,
     context: IntegrationContext,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const candidates = this.identifySubstitutionCandidates(node, context.variable);
 
@@ -364,7 +364,7 @@ export class SubstitutionStrategy implements IntegrationStrategy {
     node: ASTNode,
     candidate: SubstitutionCandidate,
     context: IntegrationContext,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // Handle specific substitution patterns
 

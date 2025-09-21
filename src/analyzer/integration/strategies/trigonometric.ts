@@ -15,7 +15,7 @@ import {
   createFractionNode,
 } from './index';
 
-import { ASTNode, BinaryExpression } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 export class TrigonometricStrategy implements IntegrationStrategy {
   readonly name = 'Trigonometric';
@@ -26,7 +26,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
   }
 
   integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       const result = this.integrateTrigonometric(node, context.variable, steps);
@@ -70,7 +70,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
     }
   }
 
-  private integrateTrigonometric(node: ASTNode, variable: string, steps: string[]): ASTNode {
+  private integrateTrigonometric(node: ASTNode, variable: string, steps: StepTree[]): ASTNode {
     // Handle sin²(x), cos²(x), tan²(x)
     if (this.isTrigonometricSquare(node)) {
       const powerNode = node as {
@@ -121,7 +121,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
   private integrateTrigSquare(
     node: { operator: '^'; left: { name: string; args: ASTNode[] }; right: { value: number } },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const funcName = node.left.name;
     const arg = node.left.args[0];
@@ -187,7 +187,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
   private integrateSinCosProduct(
     node: { operator: '*'; left: ASTNode; right: ASTNode },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     steps.push(`∫sin(x)cos(x) dx = -cos²(x)/2 (Using substitution u = cos(x))`);
 
@@ -213,7 +213,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
   private integrateTrigPower(
     node: { operator: '^'; left: { name: string; args: ASTNode[] }; right: { value: number } },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const funcName = node.left.name;
     const power = node.right.value;
@@ -240,7 +240,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
     funcName: string,
     power: number,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // For odd powers, factor out one term and use substitution
     const x = createVariableNode(variable);
@@ -276,7 +276,7 @@ export class TrigonometricStrategy implements IntegrationStrategy {
     funcName: string,
     power: number,
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     // For even powers, use reduction formulas repeatedly
     steps.push(`Use reduction formula repeatedly`);

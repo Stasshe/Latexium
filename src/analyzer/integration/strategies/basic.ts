@@ -16,7 +16,7 @@ import {
   createFractionNode,
 } from './index';
 
-import { ASTNode } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 export class BasicIntegrationStrategy implements IntegrationStrategy {
   readonly name = 'Basic Integration';
@@ -34,7 +34,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
   }
 
   integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       const result = this.integrateNode(node, context.variable, steps);
@@ -57,7 +57,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
     }
   }
 
-  private integrateNode(node: ASTNode, variable: string, steps: string[]): ASTNode {
+  private integrateNode(node: ASTNode, variable: string, steps: StepTree[]): ASTNode {
     switch (node.type) {
       case 'NumberLiteral':
         steps.push(`∫${node.value} dx = ${node.value}x`);
@@ -92,7 +92,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
   private integrateBinaryExpression(
     node: { operator: string; left: ASTNode; right: ASTNode },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     switch (node.operator) {
       case '+':
@@ -134,7 +134,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
   private integratePower(
     node: { left: ASTNode; right: ASTNode },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     if (
       node.left.type === 'Identifier' &&
@@ -167,7 +167,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
   private integrateUnaryExpression(
     node: { operator: string; operand: ASTNode },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const integral = this.integrateNode(node.operand, variable, steps);
 
@@ -189,7 +189,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
   private integrateFunctionCall(
     node: { name: string; args: ASTNode[] },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     if (node.args.length !== 1) {
       throw new Error(`Function ${node.name} requires exactly 1 argument for basic integration`);
@@ -205,7 +205,7 @@ export class BasicIntegrationStrategy implements IntegrationStrategy {
     throw new Error(`Complex function arguments require substitution strategy`);
   }
 
-  private integrateBasicFunction(functionName: string, arg: ASTNode, steps: string[]): ASTNode {
+  private integrateBasicFunction(functionName: string, arg: ASTNode, steps: StepTree[]): ASTNode {
     switch (functionName) {
       case 'sin':
         steps.push(`∫sin(x) dx = -cos(x)`);

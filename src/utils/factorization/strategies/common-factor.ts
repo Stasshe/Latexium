@@ -1,7 +1,8 @@
-import { ASTNode } from '../../../types/ast';
 import { simplify as middleSimplify } from '../../middle-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 import { PolynomialAnalyzer, ASTBuilder } from '../framework';
+
+import { ASTNode, StepTree } from '@/types/ast';
 
 /**
  * Strategy for factoring out common factors
@@ -18,7 +19,7 @@ export class CommonFactorStrategy implements FactorizationStrategy {
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
     const terms = PolynomialAnalyzer.extractTerms(node);
 
     steps.push(`Analyzing ${terms.length} terms for common factors`);

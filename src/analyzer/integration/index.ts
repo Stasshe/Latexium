@@ -4,7 +4,6 @@
  */
 
 import { IntegrationStrategy } from './strategies';
-import { ASTNode, AnalyzeResult, AnalyzeOptions } from '../../types';
 import { BasicIntegrationStrategy } from './strategies/basic';
 import { IntegrationByPartsStrategy } from './strategies/integration-by-parts';
 import { RationalFunctionStrategy } from './strategies/rational';
@@ -12,6 +11,8 @@ import { SubstitutionStrategy } from './strategies/substitution';
 import { TrigonometricStrategy } from './strategies/trigonometric';
 import { astToLatex } from '../../utils/ast';
 import { getAnalysisVariable, extractFreeVariables } from '../../utils/variables';
+
+import { ASTNode, AnalyzeResult, AnalyzeOptions, StepTree } from '@/types';
 
 /**
  * Integration context for passing state between strategies
@@ -31,7 +32,7 @@ export interface IntegrationResult {
   result: ASTNode | null;
   success: boolean;
   strategy?: string;
-  steps: string[];
+  steps: StepTree[];
   complexity: number;
 }
 
@@ -56,7 +57,7 @@ export class IntegrationEngine {
    * Integrate an AST node using multiple strategies
    */
   public integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
     let bestResult: IntegrationResult | null = null;
     let minComplexity = Infinity;
 
@@ -161,7 +162,7 @@ export function analyzeIntegrate(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'integrate' }
 ): AnalyzeResult {
-  const steps: string[] = [];
+  const steps: StepTree[] = [];
 
   try {
     // Automatic variable inference

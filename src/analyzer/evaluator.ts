@@ -3,10 +3,11 @@
  * Evaluates AST nodes with variable substitution and mathematical operations
  */
 
-import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS } from '../types';
 import { astToLatex } from '../utils/ast';
 import { simplify } from '../utils/unified-simplify';
 import { extractFreeVariables } from '../utils/variables';
+
+import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS, StepTree } from '@/types';
 
 /**
  * Evaluate an AST node with given variable values
@@ -387,16 +388,20 @@ export function analyzeEvaluate(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'evaluate' }
 ): AnalyzeResult {
-  const steps: string[] = [];
+  let steps: StepTree = [];
   const values = options.values || {};
   const precision = options.precision || 6;
 
   try {
-    // 1. Add original expression
-    steps.push(`Original expression: ${astToLatex(ast)}`);
-    // For evaluate task, keep mathematical constants symbolic
+    // 1. Add original expression (ネストのルート)
+    steps = [
+      `Original expression: ${astToLatex(ast)}`,
+      [
+        // サブステップとして定数置換
+        'Substituted mathematical constants (symbolic)',
+      ],
+    ];
     const astWithConstants = substituteMathConstants(ast, false);
-    steps.push('Substituted mathematical constants (symbolic)');
 
     // Extract free variables after constant substitution
     const freeVars = extractFreeVariables(astWithConstants);
@@ -418,13 +423,18 @@ export function analyzeEvaluate(
       });
       const symbolicResult = astToLatex(simplifiedAST);
 
+      // ネストしたサブステップを作成
+      const substeps: StepTree = [];
       if (unassignedVars.length > 0) {
-        steps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
+        substeps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
       }
       if (containsImaginary) {
-        steps.push(`Expression contains imaginary unit: cannot evaluate numerically`);
+        substeps.push('Expression contains imaginary unit: cannot evaluate numerically');
       }
-      steps.push(`Simplified result: ${symbolicResult}`);
+      substeps.push(`Simplified result: ${symbolicResult}`);
+
+      // stepsの2番目の要素（サブステップ）に追加
+      (steps[1] as StepTree[]).push(...substeps);
 
       return {
         steps,
@@ -443,8 +453,9 @@ export function analyzeEvaluate(
     });
     const symbolicResult = astToLatex(simplifiedAST);
 
-    steps.push('Final symbolic result');
-    steps.push(`Result: ${symbolicResult}`);
+    // ネストしたサブステップ
+    (steps[1] as StepTree[]).push('Final symbolic result');
+    (steps[1] as StepTree[]).push(`Result: ${symbolicResult}`);
 
     return {
       steps,
@@ -471,12 +482,16 @@ export function analyzeApprox(
   ast: ASTNode,
   options: AnalyzeOptions & { task: 'approx' }
 ): AnalyzeResult {
-  const steps: string[] = [];
+  let steps: StepTree = [];
   const values = options.values || {};
   const precision = options.precision || 6;
 
   try {
-    // For approx task, convert mathematical constants to decimal values
+    // 1. Add original expression (ネストのルート)
+    steps = [
+      `Original expression: ${astToLatex(ast)}`,
+      ['Substituted mathematical constants (decimal)'],
+    ];
     const astWithConstants = substituteMathConstants(ast, true);
 
     // Extract free variables after constant substitution
@@ -497,13 +512,17 @@ export function analyzeApprox(
       });
       const symbolicResult = astToLatex(simplifiedAST);
 
+      // ネストしたサブステップを作成
+      const substeps: StepTree = [];
       if (unassignedVars.length > 0) {
-        steps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
+        substeps.push(`Expression contains undefined variables: ${unassignedVars.join(', ')}`);
       }
       if (containsImaginary) {
-        steps.push(`Expression contains imaginary unit: cannot evaluate numerically`);
+        substeps.push('Expression contains imaginary unit: cannot evaluate numerically');
       }
-      steps.push(`Simplified result with decimal constants: ${symbolicResult}`);
+      substeps.push(`Simplified result with decimal constants: ${symbolicResult}`);
+
+      (steps[1] as StepTree[]).push(...substeps);
 
       return {
         steps,
@@ -530,8 +549,8 @@ export function analyzeApprox(
       });
       const symbolicResult = astToLatex(simplifiedAST);
 
-      steps.push(`Exact simplification applied with decimal constants`);
-      steps.push(`Result: ${symbolicResult}`);
+      (steps[1] as StepTree[]).push('Exact simplification applied with decimal constants');
+      (steps[1] as StepTree[]).push(`Result: ${symbolicResult}`);
 
       return {
         steps,
@@ -542,17 +561,21 @@ export function analyzeApprox(
       };
     }
 
-    // Add substitution steps
+    // Add substitution steps (サブステップとしてまとめる)
+    const substSteps: StepTree = [];
     Object.entries(values).forEach(([varName, varValue]) => {
-      steps.push(`Substitution: ${varName} = ${formatNumber(varValue, precision)}`);
+      substSteps.push(`Substitution: ${varName} = ${formatNumber(varValue, precision)}`);
     });
+    if (substSteps.length > 0) {
+      (steps[1] as StepTree[]).push(substSteps);
+    }
 
     // Evaluate the expression
     const result = evaluateAST(astWithConstants, values);
 
     // Format the result
     const formattedResult = formatNumber(result, precision);
-    steps.push(`Approximate result: ${formattedResult}`);
+    (steps[1] as StepTree[]).push(`Approximate result: ${formattedResult}`);
 
     const analyzeResult: AnalyzeResult = {
       steps,

@@ -1,6 +1,7 @@
-import { ASTNode } from '../../../types/ast';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 import { ASTBuilder } from '../framework';
+
+import { ASTNode, StepTree } from '@/types/ast';
 
 /**
  * Simple Common Factor Strategy for debugging
@@ -15,7 +16,7 @@ export class SimpleCommonFactorStrategy implements FactorizationStrategy {
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     if (node.type !== 'BinaryExpression' || node.operator !== '+') {
       return {

@@ -29,7 +29,7 @@ type ParseResult = {
 ### 2.2 Analyze結果型
 ```ts
 type AnalyzeResult = {
-  steps: string[];                // 計算過程（デバッグ・教育用）
+  steps: StepTree[];                // 計算過程（デバッグ・教育用）
   value: string | null;           // 高精度数値の文字列表現（LaTeX形式）
   valueType: "exact" | "approximate" | "symbolic";  // 値の種類
   precision?: number;             // 実際の精度情報

@@ -8,7 +8,6 @@ import { IntegrationContext, IntegrationResult } from '../index';
 import {
   IntegrationStrategy,
   calculateComplexity,
-  isConstant,
   containsVariable,
   createVariableNode,
   createNumberNode,
@@ -16,7 +15,7 @@ import {
   createFunctionNode,
 } from './index';
 
-import { ASTNode } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 interface PartsDivision {
   u: ASTNode;
@@ -48,7 +47,7 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
   }
 
   integrate(node: ASTNode, context: IntegrationContext): IntegrationResult {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
 
     try {
       // Prevent infinite recursion
@@ -154,7 +153,7 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
     return false;
   }
 
-  private integrateByParts(node: ASTNode, context: IntegrationContext, steps: string[]): ASTNode {
+  private integrateByParts(node: ASTNode, context: IntegrationContext, steps: StepTree[]): ASTNode {
     const variable = context.variable;
 
     // Handle special single-function cases
@@ -174,7 +173,7 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
   private integrateSingleFunctionByParts(
     node: { name: string; args: ASTNode[] },
     variable: string,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const arg = node.args[0];
     if (!arg || arg.type !== 'Identifier' || arg.name !== variable) {
@@ -269,7 +268,7 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
   private integrateProductByParts(
     node: { operator: '*'; left: ASTNode; right: ASTNode },
     context: IntegrationContext,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const divisions = this.identifyPartsDivisions(node.left, node.right, context.variable);
 
@@ -371,7 +370,7 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
   private applyIntegrationByParts(
     division: PartsDivision,
     context: IntegrationContext,
-    steps: string[]
+    steps: StepTree[]
   ): ASTNode {
     const u = division.u;
     const dv = division.dv;
@@ -417,7 +416,12 @@ export class IntegrationByPartsStrategy implements IntegrationStrategy {
     return false;
   }
 
-  private handleSpecificCase(u: ASTNode, dv: ASTNode, variable: string, steps: string[]): ASTNode {
+  private handleSpecificCase(
+    u: ASTNode,
+    dv: ASTNode,
+    variable: string,
+    steps: StepTree[]
+  ): ASTNode {
     const x = createVariableNode(variable);
 
     // x * e^x case: ∫x·e^x dx = e^x(x-1)

@@ -14,7 +14,8 @@ import {
   PowerSubstitutionStrategy,
   PerfectPowerStrategy,
 } from './strategies';
-import { ASTNode } from '../../types';
+
+import { ASTNode, StepTree } from '@/types';
 
 // Create and configure the factorization engine
 const factorizationEngine = new FactorizationEngine();
@@ -54,18 +55,18 @@ export function factorWithSteps(
   node: ASTNode,
   variable: string = 'x',
   preferences: Partial<FactorizationPreferences> = {}
-): { ast: ASTNode; steps: string[]; changed: boolean } {
+): { ast: ASTNode; steps: StepTree[]; changed: boolean } {
   try {
     let currentAst = node;
     let changed = false;
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
     let prevAstStr = JSON.stringify(currentAst);
     let count = 1;
     // Recursively apply factorization until no further changes
     // frameworkのrecursivelyFactorSubexpressions->subexpressions
     // これ -> ルートレベルでの最終チェク因数分解ループ
     while (true) {
-      const attemptSteps: string[] = [];
+      const attemptSteps: StepTree[] = [];
       attemptSteps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
       attemptSteps.push(...result.steps);
