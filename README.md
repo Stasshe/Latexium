@@ -6,10 +6,9 @@
 </p>
 Latexium is a TypeScript library for parsing and analyzing LaTeX mathematical expressions.
 
----
+
 
 **Note:**
-
 - Features such as factorial simplification (e.g. `!` reduction), advanced integration, definite integrals, `\lim` (limit), and advanced differentiation are **not supported** yet and are under development.
 - The main features currently implemented and tested are:
   - **Distribution** (`distribute` task)
@@ -17,6 +16,94 @@ Latexium is a TypeScript library for parsing and analyzing LaTeX mathematical ex
   - **Evaluation** (`evaluate` task)
   - **Step-by-step process output** (`steps` field in results, useful for debugging and understanding the calculation process)
 - For details and actual supported cases, see the test cases in `tests/master.test.mjs`.
+
+## Example: Step-by-step Output (Raw)
+
+Below is a real output example of the `steps` field from `analyzeResult.json` (fold to view):
+
+
+<h3 style="margin-top:1.5em; font-size:1.25em;">Step-by-step Output Example</h3>
+<details>
+<summary><span style="font-size:1.15em; font-weight:bold; color:#1976d2;">📝 Click to expand steps (from <code>analyzeResult.json</code>)</span></summary>
+
+```json
+{
+  "steps": [
+    "Original expression: x^{3} + 2x^{2} - 3x",
+    "--- overlapSimplify start ---",
+    [
+      "overlapSimplify pass #1",
+      "Starting unified simplification",
+      [
+        "After middle-simplify",
+        [
+          "Converted sqrt to exponential form: x^{3} + 2x^{2} - 3x",
+          "Applied advanced exponential simplification: x^{3} + 2x^{2} - 3x",
+          "Applying basic simplification",
+          "x^{3} + 2x^{2} - 3x",
+          "Finished basic simplification: x^{3} + 2x^{2} - 3x"
+        ]
+      ],
+      "Applying advanced factorization",
+      [
+        "Advanced factorization applied",
+        [
+          "Factorization attempt #1",
+          "Starting factorization of: x^{3} + 2x^{2} - 3x",
+          "Analyzing 3 terms for common factors",
+          "Numeric GCD: 1",
+          "Common variable factors: x",
+          "Factored form: common factor times remaining expression",
+          "rightFactored",
+          [
+            "Starting factorization of: x^{2} + 2x - 3",
+            "PatternRecognitionStrategy: Applied pattern 'quadratic-factorization'.",
+            "\u2713 Applied pattern-recognition: (x - 1)(x + 3)",
+            "No further factorization possible",
+            "Attempting recursive factorization of subexpressions...",
+            "leftFactored",
+            [
+              "Starting factorization of: x - 1",
+              "No further factorization possible",
+              "Attempting recursive factorization of subexpressions..."
+            ],
+            "[recursive-factor] factored left: x - 1",
+            "rightFactored",
+            [
+              "Starting factorization of: x + 3",
+              "No further factorization possible",
+              "Attempting recursive factorization of subexpressions..."
+            ],
+            "[recursive-factor] factored right: x + 3"
+          ],
+          "[recursive-factor] factored right: (x - 1)(x + 3)"
+        ]
+      ],
+      [
+        "Final pass with expand: false",
+        "x(x - 1)(x + 3)"
+      ],
+      [
+        "Unified simplification complete",
+        [
+          "Converted sqrt to exponential form: x(x - 1)(x + 3)",
+          "Applied advanced exponential simplification: x(x - 1)(x + 3)",
+          "Applying basic simplification",
+          "x(x - 1)(x + 3)",
+          "Finished basic simplification: x(x - 1)(x + 3)"
+        ]
+      ]
+    ],
+    "No further change detected, stopping.",
+    "--- overlapSimplify end ---",
+    "Final factored form: x(x - 1)(x + 3)"
+  ],
+  "value": "x(x - 1)(x + 3)",
+  ...other fields...
+```
+
+</details>
+
 
 ---
 
