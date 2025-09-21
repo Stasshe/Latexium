@@ -22,7 +22,7 @@ export function differentiateAST(node: ASTNode, variable: string): ASTNode {
 
     case 'Identifier':
       // d/dx(x) = 1, d/dx(y) = 0 where y ≠ x
-      if (node.name === variable && node.scope === 'free') {
+      if (node.name === variable && (node.scope === 'free' || node.scope === undefined)) {
         return {
           type: 'NumberLiteral',
           value: 1,
@@ -50,6 +50,10 @@ export function differentiateAST(node: ASTNode, variable: string): ASTNode {
     case 'Sum':
     case 'Product':
       throw new Error(`Differentiation of ${node.type} not yet implemented`);
+
+    case 'Derivative':
+      // Differentiate the inner expression with respect to the variable
+      return differentiateAST(node.expression, node.variable);
 
     default:
       throw new Error(
@@ -87,6 +91,38 @@ function differentiateBinaryExpression(
       const leftDerivative = differentiateAST(left, variable);
       const rightDerivative = differentiateAST(right, variable);
 
+      // If both derivatives are zero, the product is constant
+      if (isZero(leftDerivative) && isZero(rightDerivative)) {
+        return { type: 'NumberLiteral', value: 0 };
+      }
+
+      // If left is constant (left' = 0): (c*v)' = c*v'
+      if (isZero(leftDerivative)) {
+        return simplifyAST(
+          {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: left,
+            right: rightDerivative,
+          },
+          { factor: false, expand: false }
+        );
+      }
+
+      // If right is constant (right' = 0): (u*c)' = u'*c
+      if (isZero(rightDerivative)) {
+        return simplifyAST(
+          {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: leftDerivative,
+            right: right,
+          },
+          { factor: false, expand: false }
+        );
+      }
+
+      // General product rule
       return simplifyAST(
         {
           type: 'BinaryExpression',
@@ -341,11 +377,13 @@ function differentiateFunctionCall(
       throw new Error(`Differentiation of function ${node.name} not supported`);
   }
 
-  // Apply chain rule: multiply by argument derivative
+  // Always apply chain rule: f(g(x))' = f'(g(x)) * g'(x)
+  // If argumentDerivative is zero, the whole derivative is zero
   if (isZero(argumentDerivative)) {
-    return argumentDerivative;
+    return { type: 'NumberLiteral', value: 0 };
   }
 
+  // If argumentDerivative is one, just return innerDerivative
   if (isOne(argumentDerivative)) {
     return innerDerivative;
   }
