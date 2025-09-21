@@ -257,13 +257,13 @@ export function overlapSimplify(
     result = simplify(result, options, passSteps, count === 1);
     // 2. AST全体の分数ノードを再帰的に約分・因数分解
     const nextStr = JSON.stringify(result);
-    if (Array.isArray(steps)) steps.push(passSteps);
     if (nextStr === prevStr) {
       if (Array.isArray(steps)) steps.push('No further change detected, stopping.');
       changed = false;
       current = result;
       break;
     } else {
+      if (Array.isArray(steps)) steps.push(passSteps);
       changed = true;
       current = result;
       prevStr = nextStr;

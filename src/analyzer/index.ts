@@ -2,7 +2,7 @@
  * Analysis functions
  */
 
-export { analyzeDifferentiate, differentiateAST } from './differentiator';
+export { analyzeDifferentiate } from './differentiator';
 export { analyzeEvaluate, analyzeApprox, evaluateAST } from './evaluator';
 export { analyzeIntegrate, integrateAST } from './integrator';
 export { analyzeSolve, solveEquation } from './solver';
