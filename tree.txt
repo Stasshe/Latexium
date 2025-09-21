@@ -52,6 +52,7 @@
 │       │   ├── hensel-lifting.ts
 │       │   ├── index.ts
 │       │   └── polynomial-utils.ts
+│       ├── differentiation.ts
 │       ├── distribution.ts
 │       ├── factorization
 │       │   ├── framework.ts
@@ -87,17 +88,15 @@
 │       └── variables.ts
 ├── test-specification.txt
 ├── tests
-│   ├── main.test.mjs
+│   ├── analyze-demo.test.mjs
 │   ├── master.test.mjs
 │   ├── output
+│   │   ├── analyzeResult.json
 │   │   ├── master-test-log.txt
 │   │   ├── master-test-results.json
 │   │   ├── master-test-summary.txt
-│   │   ├── parseResult.json
-│   │   ├── test-log.txt
-│   │   ├── test-results.json
-│   │   └── test-summary.txt
-│   ├── parse.test.mjs
+│   │   └── parseResult.json
+│   ├── parse-demo.test.mjs
 │   └── partial
 │       ├── advanced-factorization.test.mjs
 │       ├── complex-simplify.test.mjs
@@ -114,12 +113,12 @@
 ├── tree.txt
 └── tsconfig.json
 
-22 directories, 93 files
+22 directories, 92 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17645
-Total Characters: 509994
-Total File Size (bytes): 513245
+Total Lines: 17586
+Total Characters: 509031
+Total File Size (bytes): 512558
 
 Development Size
 208M	.

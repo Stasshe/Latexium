@@ -13,6 +13,7 @@ Latexium is a TypeScript library for parsing and analyzing LaTeX mathematical ex
 - The main features currently implemented and tested are:
   - **Distribution** (`distribute` task)
   - **Factorization** (`factor` task, using LLL and Berlekamp-Zassenhaus algorithms)
+  - For now, LLL and BZ factorization does not work at all.
   - **Evaluation** (`evaluate` task)
   - **Step-by-step process output** (`steps` field in results, useful for debugging and understanding the calculation process)
 - For details and actual supported cases, see the test cases in `tests/master.test.mjs`.
