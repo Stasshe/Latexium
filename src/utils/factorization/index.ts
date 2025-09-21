@@ -66,7 +66,8 @@ export function factorWithSteps(
     // frameworkのrecursivelyFactorSubexpressions->subexpressions
     // これ -> ルートレベルでの最終チェク因数分解ループ
     while (true) {
-      steps.push(`Factorization attempt #${count}`);
+      const attemptSteps: StepTree[] = [];
+      attemptSteps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
       // Add strategy names used in this attempt to steps
       if (result.steps && Array.isArray(result.steps)) {
@@ -77,11 +78,11 @@ export function factorWithSteps(
             'strategy' in step &&
             typeof step.strategy === 'string'
           ) {
-            steps.push(`Used strategy: ${step.strategy}`);
+            attemptSteps.push(`Used strategy: ${step.strategy}`);
           }
         }
       }
-      steps.push(result.steps);
+      attemptSteps.push(...result.steps);
       const nextAstStr = JSON.stringify(result.ast);
       if (nextAstStr === prevAstStr) {
         // No further change, do not push this attempt's steps
@@ -90,7 +91,7 @@ export function factorWithSteps(
         break;
       } else {
         // Only push steps if there was a change
-        steps.push(steps);
+        steps.push(...attemptSteps);
         changed = true;
         currentAst = result.ast;
         prevAstStr = nextAstStr;

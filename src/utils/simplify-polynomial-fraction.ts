@@ -31,7 +31,7 @@ export function simplifyPolynomialFraction(
     for (let i = 0; i < denFactors.length; ++i) {
       if (!used[i] && JSON.stringify(nf) === JSON.stringify(denFactors[i])) {
         used[i] = true;
-        if (Array.isArray(steps)) steps.push(['Cancel common factor'], stepsAstToLatex(nf));
+        if (Array.isArray(steps)) steps.push('Cancel common factor' + stepsAstToLatex(nf));
         return false; // cancel
       }
     }
