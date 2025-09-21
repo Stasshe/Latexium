@@ -2,6 +2,13 @@
  * Basic Mathematical Simplification
  * Core simplification functions without distribution or expansion
  * Used by both unified-simplify.ts and distribution.ts to avoid circular dependencies
+ *
+ * !Attention!
+ * 基本的にカッコのない、一つのスコープにのみ適用すること。
+ * 少しでも難しいものはmiddle-simplify.tsやunified-simplify.tsに任せること。
+ * ややこしいから、basic-simplifyで作られた式は、stepsにpushしないこと。
+ * この問題はいつか解決したい。
+ * ちょっと今はいそがしい。
  */
 
 import type { ASTNode, BinaryExpression, UnaryExpression, Fraction, Factorial } from '@/types';

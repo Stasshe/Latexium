@@ -101,20 +101,20 @@ export function simplify(
         if (Array.isArray(steps)) steps.push('Detected need for expansion');
         const before = result;
         const expanded = expandExpression(result);
-        if (Array.isArray(steps) && before !== expanded)
-          steps.push(`Expanded expression: ${stepsAstToLatex(expanded)}`);
-        if (Array.isArray(steps)) steps.push('Applying basic simplification after expansion');
-        const simplified = basicSimplify(expanded, opts, 0);
+        if (Array.isArray(steps))
+          steps.push('Applying basic simplification after expansion', stepsAstToLatex(expanded));
+        const simplified = recursiveBasicSimplify(expanded, opts, 0);
         if (Array.isArray(steps))
           steps.push(
-            `Finished basic simplification after expansion: ${stepsAstToLatex(simplified)}, ${stepsAstToLatex(expanded)}`
+            `Finished basic simplification after expansion: ${stepsAstToLatex(simplified)}`
           );
         return simplified;
       }
     }
 
-    if (Array.isArray(steps)) steps.push('Applying basic simplification', stepsAstToLatex(result));
-    const simplified = basicSimplify(result, opts, 0);
+    if (Array.isArray(steps))
+      steps.push('Applying basic simplification out', stepsAstToLatex(result));
+    const simplified = recursiveBasicSimplify(result, opts, 0);
     if (Array.isArray(steps))
       steps.push(`Finished basic simplification: ${stepsAstToLatex(simplified)}`);
     return simplified;
@@ -178,7 +178,11 @@ function hasComplexStructure(node: ASTNode): boolean {
  * Basic recursive simplification focused on local scope only
  * No distribution or complex expansion - those are handled by distribution.ts
  */
-function basicSimplify(node: ASTNode, options: Required<SimplifyOptions>, depth: number): ASTNode {
+function recursiveBasicSimplify(
+  node: ASTNode,
+  options: Required<SimplifyOptions>,
+  depth: number
+): ASTNode {
   // Prevent infinite recursion
   if (depth > options.maxDepth) {
     return node;
@@ -196,7 +200,7 @@ function basicSimplify(node: ASTNode, options: Required<SimplifyOptions>, depth:
   }
 
   // If changes occurred, apply one more round of basic simplification
-  return basicSimplify(basicSimplified, options, depth + 1);
+  return recursiveBasicSimplify(basicSimplified, options, depth + 1);
 }
 
 /**
@@ -228,7 +232,9 @@ function applyBasicSimplifications(
       {
         // スコープエラー回避のためcase全体をブロックで囲む
         // Recursively simplify arguments
-        const simplifiedArgs = node.args.map(arg => basicSimplify(arg, options, depth + 1));
+        const simplifiedArgs = node.args.map(arg =>
+          recursiveBasicSimplify(arg, options, depth + 1)
+        );
         const funcName = node.name;
         // Only single-argument functions for now
         if (simplifiedArgs.length === 1) {
@@ -345,13 +351,13 @@ function applyBasicSimplifications(
     case 'Integral': {
       const result: Integral = {
         ...node,
-        integrand: basicSimplify(node.integrand, options, depth + 1),
+        integrand: recursiveBasicSimplify(node.integrand, options, depth + 1),
       };
       if (node.lowerBound) {
-        result.lowerBound = basicSimplify(node.lowerBound, options, depth + 1);
+        result.lowerBound = recursiveBasicSimplify(node.lowerBound, options, depth + 1);
       }
       if (node.upperBound) {
-        result.upperBound = basicSimplify(node.upperBound, options, depth + 1);
+        result.upperBound = recursiveBasicSimplify(node.upperBound, options, depth + 1);
       }
       return result;
     }
@@ -360,9 +366,9 @@ function applyBasicSimplifications(
     case 'Product':
       return {
         ...node,
-        expression: basicSimplify(node.expression, options, depth + 1),
-        lowerBound: basicSimplify(node.lowerBound, options, depth + 1),
-        upperBound: basicSimplify(node.upperBound, options, depth + 1),
+        expression: recursiveBasicSimplify(node.expression, options, depth + 1),
+        lowerBound: recursiveBasicSimplify(node.lowerBound, options, depth + 1),
+        upperBound: recursiveBasicSimplify(node.upperBound, options, depth + 1),
       };
 
     default:
@@ -581,7 +587,7 @@ function simplifyUnaryExpression(
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
-  const operand = basicSimplify(node.operand, options, depth + 1);
+  const operand = recursiveBasicSimplify(node.operand, options, depth + 1);
 
   // Double negation: --x = x
   if (node.operator === '-' && operand.type === 'UnaryExpression' && operand.operator === '-') {
@@ -607,7 +613,7 @@ function simplifyUnaryExpression(
     const terms = extractAdditionTerms(binaryOperand);
     const negatedTerms = terms.map(({ term, sign }) => ({ term, sign: -sign }));
     const result = buildAdditionFromTerms(negatedTerms);
-    return basicSimplify(result, options, depth + 1);
+    return recursiveBasicSimplify(result, options, depth + 1);
   }
 
   return { ...node, operand };
@@ -621,8 +627,8 @@ function simplifyBinaryExpression(
   options: Required<SimplifyOptions>,
   depth: number
 ): ASTNode {
-  const left = basicSimplify(node.left, options, depth + 1);
-  const right = basicSimplify(node.right, options, depth + 1);
+  const left = recursiveBasicSimplify(node.left, options, depth + 1);
+  const right = recursiveBasicSimplify(node.right, options, depth + 1);
 
   // Apply operator-specific simplifications
   switch (node.operator) {
@@ -880,8 +886,8 @@ function simplifyFraction(
   }
 
   // Then apply basic simplification
-  numerator = basicSimplify(numerator, options, depth + 1);
-  denominator = basicSimplify(denominator, options, depth + 1);
+  numerator = recursiveBasicSimplify(numerator, options, depth + 1);
+  denominator = recursiveBasicSimplify(denominator, options, depth + 1);
 
   // x / 1 = x
   if (denominator.type === 'NumberLiteral' && denominator.value === 1) {

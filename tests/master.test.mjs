@@ -52,7 +52,7 @@ const complexTestCases = [
   },
   {
     id: 0.9,
-    expression: '(x - 1)^3',
+    expression: 'x(x-1)(x+3)',
     task: 'factor',
     expected: '(x - 1)^3',
   },
