@@ -3,7 +3,7 @@
  */
 
 // Maximum power for automatic expansion
-export const MAX_EXPANSION_POWER = 6;
+export const MAX_EXPANSION_POWER = 10;
 
 export const IS_STEPS_INCLUDE_LATEX = true;
 
