@@ -116,7 +116,8 @@ function simplify(
     return result;
   } catch (error) {
     // Fallback: return original node if simplification fails
-    if (Array.isArray(steps)) steps.push('Unified simplification failed, returning original node');
+    if (Array.isArray(steps))
+      steps.push('Unified simplification failed, returning original node', String(error));
     return node;
   }
 }
@@ -127,28 +128,39 @@ function simplify(
  */
 export function simplifyPolynomialFractionWithFactorization(
   numerator: ASTNode,
-  denominator: ASTNode
+  denominator: ASTNode,
+  steps: StepTree[] = []
 ): ASTNode {
   try {
     // Factor both numerator and denominator using factorWithSteps
-    const factorNum = factorWithSteps(numerator, 'x', {
-      preferCompleteFactorization: true,
-      extractCommonFactors: true,
-      simplifyCoefficients: true,
-    });
-    const factorDen = factorWithSteps(denominator, 'x', {
-      preferCompleteFactorization: true,
-      extractCommonFactors: true,
-      simplifyCoefficients: true,
-    });
+    const factorNum = factorWithSteps(
+      numerator,
+      'x',
+      {
+        preferCompleteFactorization: true,
+        extractCommonFactors: true,
+        simplifyCoefficients: true,
+      },
+      steps
+    );
+    const factorDen = factorWithSteps(
+      denominator,
+      'x',
+      {
+        preferCompleteFactorization: true,
+        extractCommonFactors: true,
+        simplifyCoefficients: true,
+      },
+      steps
+    );
     const factoredNumerator = factorNum && factorNum.ast ? factorNum.ast : numerator;
     const factoredDenominator = factorDen && factorDen.ast ? factorDen.ast : denominator;
 
     // Use middle-simplify's polynomial fraction simplification
-    return simplifyPolynomialFraction(factoredNumerator, factoredDenominator);
-  } catch (error) {
+    return simplifyPolynomialFraction(factoredNumerator, factoredDenominator, steps);
+  } catch {
     // Fallback to basic fraction without factorization
-    return simplifyPolynomialFraction(numerator, denominator);
+    return simplifyPolynomialFraction(numerator, denominator, steps);
   }
 }
 
@@ -171,7 +183,8 @@ function deepFractionSimplify(node: ASTNode, steps?: StepTree[]): ASTNode {
       fracSteps.push('Applying polynomial fraction reduction (deep)', stepsAstToLatex(node));
     const reduced = simplifyPolynomialFractionWithFactorization(
       deepFractionSimplify(node.numerator, fracSteps),
-      deepFractionSimplify(node.denominator, fracSteps)
+      deepFractionSimplify(node.denominator, fracSteps),
+      steps
     );
     if (
       JSON.stringify(reduced) !==
@@ -246,7 +259,6 @@ export function overlapSimplify(
 ): ASTNode {
   let current = node;
   let prevStr = JSON.stringify(current);
-  let changed = false;
   let count = 1;
   if (Array.isArray(steps)) steps.push('--- overlapSimplify start ---');
   while (count <= maxIterations) {
@@ -259,12 +271,10 @@ export function overlapSimplify(
     const nextStr = JSON.stringify(result);
     if (nextStr === prevStr) {
       if (Array.isArray(steps)) steps.push('No further change detected, stopping.');
-      changed = false;
       current = result;
       break;
     } else {
       if (Array.isArray(steps)) steps.push(passSteps);
-      changed = true;
       current = result;
       prevStr = nextStr;
       count++;

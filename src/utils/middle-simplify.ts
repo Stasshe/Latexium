@@ -120,7 +120,8 @@ export function simplify(
     return simplified;
   } catch (error) {
     // Fallback: return original node if simplification fails
-    if (Array.isArray(steps)) steps.push('Simplification failed, returning original node');
+    if (Array.isArray(steps))
+      steps.push('Simplification failed, returning original node: ', String(error));
     return node;
   }
 }
@@ -632,9 +633,9 @@ function simplifyBinaryExpression(
     case '*':
       return simplifyMultiplication(left, right, options, depth);
     case '/':
-      return simplifyDivision(left, right, options, depth);
+      return simplifyDivision(left, right);
     case '^':
-      return simplifyPower(left, right, options, depth);
+      return simplifyPower(left, right);
     default:
       return { type: 'BinaryExpression', operator: node.operator, left, right };
   }
@@ -739,12 +740,7 @@ function simplifyAddition(
 /**
  * Simplify division
  */
-function simplifyDivision(
-  left: ASTNode,
-  right: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
+function simplifyDivision(left: ASTNode, right: ASTNode): ASTNode {
   // 0 / x = 0 (x ≠ 0)
   if (left.type === 'NumberLiteral' && left.value === 0) {
     return { type: 'NumberLiteral', value: 0 };
@@ -784,12 +780,7 @@ function simplifyDivision(
 /**
  * Simplify power expressions
  */
-function simplifyPower(
-  base: ASTNode,
-  exponent: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
+function simplifyPower(base: ASTNode, exponent: ASTNode): ASTNode {
   // x^0 = 1
   if (exponent.type === 'NumberLiteral' && exponent.value === 0) {
     return { type: 'NumberLiteral', value: 1 };
@@ -972,18 +963,6 @@ function draftSimplifyPolynomialFraction(numerator: ASTNode, denominator: ASTNod
   }
 
   return null;
-}
-
-/**
- * Apply structural simplifications (flattening, reordering)
- */
-function applyStructuralSimplifications(
-  node: ASTNode,
-  options: Required<SimplifyOptions>,
-  depth: number
-): ASTNode {
-  // This can be extended for more structural optimizations
-  return node;
 }
 
 /**

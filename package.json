@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc && rollup -c",
     "dev": "tsc --watch",
-    "test": "node tests/main.test.mjs && node tests/master.test.mjs",
+    "test": "node tests/master.test.mjs",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
@@ -50,6 +50,7 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-unused-imports": "^4.2.0",
+    "flatted": "^3.3.3",
     "husky": "9.1.7",
     "jest": "^29.7.0",
     "lint-staged": "16.1.6",

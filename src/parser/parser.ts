@@ -435,12 +435,9 @@ export class LaTeXParser {
     this.consume('LBRACE');
     let numerator: Identifier | ASTNode;
     let isNumeratorD = false;
-    let numeratorToken: Token | null = null;
     if (this.expectToken('IDENTIFIER') && this.currentToken.value === 'd') {
-      const token = this.currentToken;
       numerator = this.parseIdentifier(true);
       isNumeratorD = true;
-      numeratorToken = token;
     } else {
       numerator = this.parseExpression();
     }
@@ -451,7 +448,6 @@ export class LaTeXParser {
     let denominator: Identifier | ASTNode;
     let denominatorVar: string | null = null;
     let isDenominatorDStar = false;
-    let denominatorToken: Token | null = null;
     if (
       this.expectToken('IDENTIFIER') &&
       this.currentToken.value.length >= 1 &&
@@ -463,7 +459,6 @@ export class LaTeXParser {
         denominator = this.parseIdentifier(true);
         denominatorVar = token.value.substring(1);
         isDenominatorDStar = true;
-        denominatorToken = token;
       } else if (token.value === 'd') {
         // d + x pattern
         this.advance();
@@ -473,11 +468,6 @@ export class LaTeXParser {
           this.advance();
           denominator = { type: 'Identifier', name: 'd' + denominatorVar };
           isDenominatorDStar = true;
-          denominatorToken = {
-            type: 'IDENTIFIER',
-            value: 'd' + denominatorVar,
-            position: token.position,
-          };
         } else {
           denominator = { type: 'Identifier', name: 'd' };
         }

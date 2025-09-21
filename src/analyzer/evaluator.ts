@@ -390,7 +390,6 @@ export function analyzeEvaluate(
 ): AnalyzeResult {
   let steps: StepTree = [];
   const values = options.values || {};
-  const precision = options.precision || 6;
 
   try {
     // 1. Add original expression (ネストのルート)

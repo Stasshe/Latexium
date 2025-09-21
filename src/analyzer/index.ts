@@ -55,10 +55,10 @@ export function analyze(ast: ASTNode | null, options: AnalyzeOptions): AnalyzeRe
         return analyzeSolve(ast, options as AnalyzeOptions & { task: 'solve' });
 
       case 'factor':
-        return analyzeFactorization(ast, options as AnalyzeOptions & { task: 'factor' });
+        return analyzeFactorization(ast);
 
       case 'distribute':
-        return analyzeDistribution(ast, options as AnalyzeOptions & { task: 'distribute' });
+        return analyzeDistribution(ast);
 
       case 'analyze-polynomial':
         return analyzePolynomial(ast, options as AnalyzeOptions & { task: 'analyze-polynomial' });

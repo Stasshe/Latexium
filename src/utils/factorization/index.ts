@@ -54,20 +54,19 @@ try {
 export function factorWithSteps(
   node: ASTNode,
   variable: string = 'x',
-  preferences: Partial<FactorizationPreferences> = {}
+  preferences: Partial<FactorizationPreferences> = {},
+  steps: StepTree[] = []
 ): { ast: ASTNode; steps: StepTree[]; changed: boolean } {
   try {
     let currentAst = node;
     let changed = false;
-    const steps: StepTree[] = [];
     let prevAstStr = JSON.stringify(currentAst);
     let count = 1;
     // Recursively apply factorization until no further changes
     // frameworkのrecursivelyFactorSubexpressions->subexpressions
     // これ -> ルートレベルでの最終チェク因数分解ループ
     while (true) {
-      const attemptSteps: StepTree[] = [];
-      attemptSteps.push(`Factorization attempt #${count}`);
+      steps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
       // Add strategy names used in this attempt to steps
       if (result.steps && Array.isArray(result.steps)) {
@@ -78,11 +77,11 @@ export function factorWithSteps(
             'strategy' in step &&
             typeof step.strategy === 'string'
           ) {
-            attemptSteps.push(`Used strategy: ${step.strategy}`);
+            steps.push(`Used strategy: ${step.strategy}`);
           }
         }
       }
-      attemptSteps.push(...result.steps);
+      steps.push(result.steps);
       const nextAstStr = JSON.stringify(result.ast);
       if (nextAstStr === prevAstStr) {
         // No further change, do not push this attempt's steps
@@ -91,7 +90,7 @@ export function factorWithSteps(
         break;
       } else {
         // Only push steps if there was a change
-        steps.push(...attemptSteps);
+        steps.push(steps);
         changed = true;
         currentAst = result.ast;
         prevAstStr = nextAstStr;

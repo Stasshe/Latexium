@@ -12,16 +12,10 @@ import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '@/types';
 /**
  * Analyze factorization task
  */
-export function analyzeFactorization(
-  ast: ASTNode,
-  options: AnalyzeOptions & { task: 'factor' }
-): AnalyzeResult {
+export function analyzeFactorization(ast: ASTNode): AnalyzeResult {
   const steps: StepTree[] = [];
 
   try {
-    // Get variable to factor by (default to 'x')
-    const variable = options.variable || 'x';
-
     steps.push(`Original expression: ${astToLatex(ast)}`);
 
     // // First, expand the expression to ensure all terms are visible
@@ -61,10 +55,7 @@ export function analyzeFactorization(
 /**
  * Analyze distribution/expansion task
  */
-export function analyzeDistribution(
-  ast: ASTNode,
-  options: AnalyzeOptions & { task: 'distribute' }
-): AnalyzeResult {
+export function analyzeDistribution(ast: ASTNode): AnalyzeResult {
   const steps: StepTree[] = [];
 
   try {
@@ -231,33 +222,3 @@ function analyzePolynomialDegree(
 
   return { degree: maxDegree, leadingCoeff };
 }
-
-// /**
-//  * Generate step-by-step factorization explanation
-//  */
-// function getFactorizationSteps(original: ASTNode, factored: ASTNode, variable: string): string[] {
-//   const steps: StepTree[] = [];
-
-//   // Analyze what type of factorization was performed
-//   const originalLatex = astToLatex(original);
-//   const factoredLatex = astToLatex(factored);
-
-//   // Simple heuristics to determine factorization type
-//   if (factoredLatex.includes('(') && factoredLatex.includes(')')) {
-//     if (factoredLatex.includes('^{2}')) {
-//       steps.push('Identified perfect square trinomial pattern');
-//       steps.push('Applied formula: a² ± 2ab + b² = (a ± b)²');
-//     } else if (factoredLatex.includes(' + ') && factoredLatex.includes(' - ')) {
-//       steps.push('Identified difference of squares pattern');
-//       steps.push('Applied formula: a² - b² = (a + b)(a - b)');
-//     } else if (factoredLatex.match(/\([^)]*\)\([^)]*\)/)) {
-//       steps.push('Factored using quadratic factorization');
-//       steps.push('Found linear factors using roots or factorization techniques');
-//     }
-//   } else if (factoredLatex.includes('(')) {
-//     steps.push('Factored out common factors');
-//     steps.push('Applied distributive property: ab + ac = a(b + c)');
-//   }
-
-//   return steps;
-// }
