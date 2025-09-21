@@ -145,23 +145,22 @@ function simplifyAdditionBasic(left: ASTNode, right: ASTNode): ASTNode {
   }
 
   // x + (-x + n) = n, x + (n - x) = n
-  if (left.type === 'Identifier' && right.type === 'BinaryExpression') {
-    // x + (-x + n)
+  // leftとright.left/right.rightがAST的に完全一致する場合のみ適用
+  if (right.type === 'BinaryExpression') {
+    // x + (-x + n) = n
     if (
       right.operator === '+' &&
       right.left.type === 'UnaryExpression' &&
       right.left.operator === '-' &&
-      right.left.operand.type === 'Identifier' &&
-      right.left.operand.name === left.name &&
+      JSON.stringify(right.left.operand) === JSON.stringify(left) &&
       right.right.type === 'NumberLiteral'
     ) {
       return right.right;
     }
-    // x + (n - x)
+    // x + (n - x) = n
     if (
       right.operator === '-' &&
-      right.right.type === 'Identifier' &&
-      right.right.name === left.name &&
+      JSON.stringify(right.right) === JSON.stringify(left) &&
       right.left.type === 'NumberLiteral'
     ) {
       return right.left;

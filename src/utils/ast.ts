@@ -108,15 +108,6 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
 
   switch (node.operator) {
     case '+':
-      // Handle x + (-y) as x - y
-      if (
-        node.right.type === 'UnaryExpression' &&
-        node.right.operator === '-' &&
-        node.right.operand
-      ) {
-        const rightOperand = astToLatex(node.right.operand);
-        return `${left} - ${rightOperand}`;
-      }
       return `${left} + ${right}`;
     case '-':
       return `${left} - ${right}`;
@@ -177,14 +168,14 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         return `${right}${left}`;
       }
 
-      // Variable * Variable should be combined without space (xy, not x y)
-      if (node.left.type === 'Identifier' && node.right.type === 'Identifier') {
-        // Same variable: x * x -> x^2 representation in LaTeX
-        if (node.left.name === node.right.name) {
-          return `${left}^{2}`;
-        }
-        return `${left}${right}`;
-      }
+      // // Variable * Variable should be combined without space (xy, not x y)
+      // if (node.left.type === 'Identifier' && node.right.type === 'Identifier') {
+      //   // Same variable: x * x -> x^2 representation in LaTeX
+      //   if (node.left.name === node.right.name) {
+      //     return `${left}^{2}`;
+      //   }
+      //   return `${left}${right}`;
+      // }
 
       // Handle complex variable multiplication patterns and convert to exponent form
       const simplifiedMultiplication = simplifyVariableMultiplication(node);
@@ -255,8 +246,6 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
 
 function unaryExpressionToLatex(node: UnaryExpression): string {
   const operand = astToLatex(node.operand);
-
-  // For negative expressions, handle multiplication specially
   if (node.operator === '-') {
     // If operand is a multiplication, we want -xy not - x y
     if (node.operand.type === 'BinaryExpression' && node.operand.operator === '*') {
@@ -277,7 +266,6 @@ function unaryExpressionToLatex(node: UnaryExpression): string {
     }
     return `-${operand}`;
   }
-
   return `+${operand}`;
 }
 
