@@ -94,18 +94,12 @@ export class LaTeXParser {
   /**
    * Parse an identifier (variable or function name)
    */
-  /**
-   * Parse an identifier (variable or function name)
-   * @param allowReserved - trueなら予約語チェックをスキップ（d専用）
-   */
-  private parseIdentifier(allowReserved = false): Identifier {
+  private parseIdentifier(): Identifier {
     const token = this.consume('IDENTIFIER');
 
-    // Only check for reserved function names and symbols unless allowed
-    if (
-      !allowReserved &&
-      (RESERVED_FUNCTIONS.has(token.value) || RESERVED_SYMBOLS.has(token.value))
-    ) {
+    // Mathematical constants are allowed as identifiers, will be evaluated later
+    // Only check for reserved function names and symbols
+    if (RESERVED_FUNCTIONS.has(token.value) || RESERVED_SYMBOLS.has(token.value)) {
       throw new Error(
         `Reserved word cannot be used as variable name: ${token.value} at position ${token.position}`
       );
@@ -243,102 +237,6 @@ export class LaTeXParser {
     const token = this.consume('COMMAND');
 
     switch (token.value) {
-      case '\\int': {
-        // Parse optional lower bound (_{...}) and upper bound (^{...})
-        let lowerBound: ASTNode | undefined = undefined;
-        let upperBound: ASTNode | undefined = undefined;
-        if (this.expectToken('UNDERSCORE')) {
-          this.advance(); // consume _
-          if (this.expectToken('LBRACE')) {
-            this.consume('LBRACE');
-            lowerBound = this.parseExpression();
-            this.consume('RBRACE');
-          } else {
-            lowerBound = this.parsePrimary();
-          }
-        }
-        if (this.expectToken('CARET')) {
-          this.advance(); // consume ^
-          if (this.expectToken('LBRACE')) {
-            this.consume('LBRACE');
-            upperBound = this.parseExpression();
-            this.consume('RBRACE');
-          } else {
-            upperBound = this.parsePrimary();
-          }
-        }
-        // Parse integrand (stop at dx/dt/du etc.)
-        // Find the index where IDENTIFIER 'd' or /^d[a-zA-Z]$/ appears (dx/dt/du)
-        let integrandEnd = this.currentTokenIndex;
-        while (integrandEnd < this.tokens.length) {
-          const t = this.tokens[integrandEnd];
-          if (!t) break;
-          if (t.type === 'IDENTIFIER') {
-            if (t.value === 'd') {
-              const next = this.tokens[integrandEnd + 1];
-              if (next && next.type === 'IDENTIFIER' && /^[a-zA-Z]$/.test(next.value)) {
-                break; // dxパターン
-              }
-              break; // d単体
-            } else if (/^d[a-zA-Z]$/.test(t.value)) {
-              break; // dx, dt, duパターン
-            }
-          }
-          integrandEnd++;
-        }
-        // サブパーサーでintegrand部分だけパース
-        const integrandTokens = this.tokens.slice(this.currentTokenIndex, integrandEnd);
-        if (integrandTokens.length === 0) {
-          throw new Error('Missing integrand before dx/dt/du');
-        }
-        const subParser = new LaTeXParser(
-          integrandTokens.concat([{ type: 'EOF', value: '', position: 0 }])
-        );
-        const integrand = subParser.parseExpression();
-        // トークン位置をintegrandEndに進める
-        this.currentTokenIndex = integrandEnd;
-        this.currentToken = this.tokens[this.currentTokenIndex] || {
-          type: 'EOF',
-          value: '',
-          position: 0,
-        };
-        // Parse dx, dt, ... (must be IDENTIFIER, e.g. dx, dt, du)
-        let variable: string | undefined = undefined;
-        // Allow whitespace between integrand and dx
-        while (this.currentToken.type === 'WHITESPACE') this.advance();
-        // Robustly handle both IDENTIFIER: 'dx' or IDENTIFIER: 'd' + IDENTIFIER: 'x'
-        if (this.expectToken('IDENTIFIER')) {
-          const first = this.currentToken;
-          if (first.value === 'd') {
-            this.advance();
-            if (this.expectToken('IDENTIFIER') && /^[a-zA-Z]$/.test(this.currentToken.value)) {
-              const second = this.currentToken;
-              variable = second.value;
-              this.advance();
-            } else {
-              throw new Error(
-                `Expected dx/dt/du etc. after integrand at position ${first.position}`
-              );
-            }
-          } else if (/^d[a-zA-Z]$/.test(first.value)) {
-            variable = first.value.substring(1);
-            this.advance();
-          } else {
-            throw new Error(`Expected dx/dt/du etc. after integrand at position ${first.position}`);
-          }
-        } else {
-          throw new Error(
-            `Expected dx/dt/du etc. after integrand at position ${this.currentToken.position}`
-          );
-        }
-        return {
-          type: 'Integral',
-          integrand,
-          variable: variable!,
-          ...(lowerBound !== undefined ? { lowerBound } : {}),
-          ...(upperBound !== undefined ? { upperBound } : {}),
-        };
-      }
       case '\\frac':
         return this.parseFraction();
       case '\\sqrt':
@@ -426,118 +324,15 @@ export class LaTeXParser {
   /**
    * Parse a fraction \\frac{numerator}{denominator}
    */
-  /**
-   * Parse a fraction \frac{numerator}{denominator}
-   * Special handling for \frac{d}{dx}[expr] → Derivative node
-   */
-  private parseFraction(): Fraction | ASTNode {
-    // Numerator
+  private parseFraction(): Fraction {
     this.consume('LBRACE');
-    let numerator: Identifier | ASTNode;
-    let isNumeratorD = false;
-    let numeratorToken: Token | null = null;
-    if (this.expectToken('IDENTIFIER') && this.currentToken.value === 'd') {
-      const token = this.currentToken;
-      numerator = this.parseIdentifier(true);
-      isNumeratorD = true;
-      numeratorToken = token;
-    } else {
-      numerator = this.parseExpression();
-    }
+    const numerator = this.parseExpression();
     this.consume('RBRACE');
 
-    // Denominator
     this.consume('LBRACE');
-    let denominator: Identifier | ASTNode;
-    let denominatorVar: string | null = null;
-    let isDenominatorDStar = false;
-    let denominatorToken: Token | null = null;
-    if (
-      this.expectToken('IDENTIFIER') &&
-      this.currentToken.value.length >= 1 &&
-      this.currentToken.value[0] === 'd'
-    ) {
-      const token = this.currentToken;
-      if (token.value.length >= 2) {
-        // d* (e.g. dx, dt, du)
-        denominator = this.parseIdentifier(true);
-        denominatorVar = token.value.substring(1);
-        isDenominatorDStar = true;
-        denominatorToken = token;
-      } else if (token.value === 'd') {
-        // d + x pattern
-        this.advance();
-        if (this.expectToken('IDENTIFIER')) {
-          const xToken = this.currentToken;
-          denominatorVar = xToken.value;
-          this.advance();
-          denominator = { type: 'Identifier', name: 'd' + denominatorVar };
-          isDenominatorDStar = true;
-          denominatorToken = {
-            type: 'IDENTIFIER',
-            value: 'd' + denominatorVar,
-            position: token.position,
-          };
-        } else {
-          denominator = { type: 'Identifier', name: 'd' };
-        }
-      } else {
-        denominator = this.parseIdentifier();
-      }
-    } else {
-      denominator = this.parseExpression();
-    }
+    const denominator = this.parseExpression();
     this.consume('RBRACE');
 
-    // 分子がdの時のみDerivative判定
-    if (
-      isNumeratorD &&
-      isDenominatorDStar &&
-      typeof denominatorVar === 'string' &&
-      denominatorVar.length >= 1
-    ) {
-      // Skip whitespace tokens if any
-      while (this.currentToken.type === 'WHITESPACE') this.advance();
-      // Accept {expr}, (expr), or [expr] after the fraction
-      let expr: ASTNode | null = null;
-      if (this.expectToken('LBRACE')) {
-        this.consume('LBRACE');
-        expr = this.parseExpression();
-        this.consume('RBRACE');
-      } else if (this.expectToken('LPAREN')) {
-        this.consume('LPAREN');
-        expr = this.parseExpression();
-        this.consume('RPAREN');
-      } else if (this.expectToken('LBRACKET')) {
-        this.consume('LBRACKET');
-        expr = this.parseExpression();
-        this.consume('RBRACKET');
-      } else {
-        // 何もなければ、残り全体をexprとする
-        const restTokens = this.tokens.slice(this.currentTokenIndex, this.tokens.length - 1); // EOF除く
-        if (restTokens.length === 0) {
-          throw new Error('Expected expression after \\frac{d}{d*}');
-        }
-        const subParser = new LaTeXParser(
-          restTokens.concat([{ type: 'EOF', value: '', position: 0 }])
-        );
-        expr = subParser.parseExpression();
-        // トークン位置を最後まで進める
-        this.currentTokenIndex = this.tokens.length - 1;
-        this.currentToken = this.tokens[this.currentTokenIndex] || {
-          type: 'EOF',
-          value: '',
-          position: 0,
-        };
-      }
-      return {
-        type: 'Derivative',
-        variable: denominatorVar,
-        expression: expr,
-      };
-    }
-
-    // 通常の分数
     return {
       type: 'Fraction',
       numerator,
