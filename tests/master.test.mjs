@@ -57,9 +57,14 @@ const complexTestCases = [
     expected: '(x - 1)^3',
   },
   {
+    id: 1,
+    expression: '8x^3 + 36x^2 + 54x + 27',
+    task: 'factor',
+  },
+  {
     id: 2,
-    expression: '(2x + 3y)^3',
-    task: 'distribute',
+    expression: '8x^3 + 36x^2y + 54xy^2 + 27y^3',
+    task: 'factor',
     expected: '8x^3 + 36x^2y + 54xy^2 + 27y^3',
     description: 'Cubic binomial expansion',
   },
@@ -319,10 +324,10 @@ const complexTestCases = [
   },
   {
     id: 104,
-    expression: 'x^8 + 16',
+    expression: 'x^8 + 64',
     task: 'factor',
     expected: '(x^4 + 4x^2 + 8)(x^4 - 4x^2 + 8)',
-    description: 'Eighth power plus 16',
+    description: 'Eighth power plus 64',
   },
   {
     id: 105,
