@@ -293,7 +293,7 @@ const complexTestCases = [
     id: 100,
     expression: 'x^6 - 1',
     task: 'factor',
-    expected: '(x^2 - x + 1)(x^2 + x + 1)(x - 1)(x + 1)',
+    expected: '(x + 1)(x^{2} - x + 1)(x - 1)(x^{2} + x + 1)',
     description: 'Sixth power minus one (full factorization)',
   },
   {
@@ -335,21 +335,21 @@ const complexTestCases = [
     id: 106,
     expression: 'x^4 - 10x^2 + 9',
     task: 'factor',
-    expected: '(x^2 - 9)(x^2 - 1)',
+    expected: '(x - 3)(x + 3)(x - 1)(x + 1)',
     description: 'Quartic as product of quadratics',
   },
   {
     id: 107,
     expression: 'x^6 + x^3 - 12',
     task: 'factor',
-    expected: '(x^3 + 4)(x^3 - 3)',
+    expected: '(x^{3} - 3)(x^{3} + 4)',
     description: 'Cubic substitution',
   },
   {
     id: 108,
     expression: 'x^8 - 81',
     task: 'factor',
-    expected: '(x - 3)(x + 3)(x - 1)(x + 1)',
+    expected: '(x^{4} + 9)(x^{2} + 3)(x^{2} - 3)',
     description: 'Eighth power minus 81',
   },
   {
@@ -363,7 +363,7 @@ const complexTestCases = [
     id: 110,
     expression: 'x^8 - 2x^4 + 1',
     task: 'factor',
-    expected: '(x^4 - x^2 + 1)^2',
+    expected: '(x^{2} + 1)^{2}(x - 1)^{2}(x + 1)^{2}',
     description: 'Quartic squared',
   },
   {
