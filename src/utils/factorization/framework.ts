@@ -217,11 +217,19 @@ export class FactorizationEngine {
         (node.operator === '+' && FACTORIZATION.applyFactorPlusOperate)
       ) {
         // それぞれの因子/項にfactorを適用
-        const leftFactored = this.factor(left, context.variable, context.preferences).ast;
-        const rightFactored = this.factor(right, context.variable, context.preferences).ast;
-        newNode = { ...node, left: leftFactored, right: rightFactored };
-        context.steps.push(`[recursive-factor] factored left: ${stepsAstToLatex(leftFactored)}`);
-        context.steps.push(`[recursive-factor] factored right: ${stepsAstToLatex(rightFactored)}`);
+        const leftFactored = this.factor(left, context.variable, context.preferences);
+        const rightFactored = this.factor(right, context.variable, context.preferences);
+        newNode = { ...node, left: leftFactored.ast, right: rightFactored.ast };
+        context.steps.push(
+          'leftFactored',
+          leftFactored.steps,
+          `[recursive-factor] factored left: ${stepsAstToLatex(leftFactored.ast)}`
+        );
+        context.steps.push(
+          'rightFactored',
+          rightFactored.steps,
+          `[recursive-factor] factored right: ${stepsAstToLatex(rightFactored.ast)}`
+        );
       }
       return newNode;
     } else if (node.type === 'UnaryExpression') {

@@ -41,7 +41,12 @@ const DEFAULT_SIMPLIFY_OPTIONS: Required<SimplifyOptions> = {
  * Unified simplification function
  * Uses middle-simplify as base, adds factorization capabilities
  */
-function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: StepTree[]): ASTNode {
+function simplify(
+  node: ASTNode,
+  options: SimplifyOptions = {},
+  steps: StepTree[],
+  overlapExpand: boolean
+): ASTNode {
   const opts = { ...DEFAULT_SIMPLIFY_OPTIONS, ...options };
 
   if (!node) return node;
@@ -55,7 +60,7 @@ function simplify(node: ASTNode, options: SimplifyOptions = {}, steps?: StepTree
       node,
       {
         combineLikeTerms: opts.combineLikeTerms,
-        expand: true,
+        expand: overlapExpand,
         simplifyFractions: opts.simplifyFractions,
         applyIdentities: opts.applyIdentities,
         convertSqrtToExponential: opts.convertSqrtToExponential,
@@ -249,7 +254,7 @@ export function overlapSimplify(
     if (Array.isArray(passSteps)) passSteps.push(`overlapSimplify pass #${count}`);
     // 1. 普通の簡約
     let result = deepFractionSimplify(current, passSteps);
-    result = simplify(result, options, passSteps);
+    result = simplify(result, options, passSteps, count === 1);
     // 2. AST全体の分数ノードを再帰的に約分・因数分解
     const nextStr = JSON.stringify(result);
     if (Array.isArray(steps)) steps.push(passSteps);
