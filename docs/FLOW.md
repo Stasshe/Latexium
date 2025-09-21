@@ -6,11 +6,11 @@ flowchart TD
     B --> C[Push 'Starting factorization' to steps]
     C --> D{Iteration < maxIterations?}
     D -- No --> Z1[Push 'Max iterations reached', go to RecursiveSub]
-    D -- Yes --> E[For each registered strategy (priority order)]
-    E --> F{strategy.canApply(currentNode, context)?}
+    D -- Yes --> E[For each registered strategy]
+    E --> F{strategy.canApply currentNode, context?}
     F -- No --> E
-    F -- Yes --> G[Push 'Attempting {strategy.name}' to steps]
-    G --> H[strategy.apply(currentNode, context)]
+    F -- Yes --> G[Push 'Attempting strategy.name' to steps]
+    G --> H[strategy.apply currentNode, context]
     H --> I{result.success & result.changed?}
     I -- No --> J[Push fail reason to steps, try next strategy]
     I -- Yes --> K[Update currentNode = result.ast, hasChanged = true, iterationChanged = true]
@@ -24,7 +24,7 @@ flowchart TD
     %% Recursive factorization of subexpressions
     RecursiveSub[Recursively factor subexpressions]
     RecursiveSub --> O{Node type}
-    O -- BinaryExpression --> P[Recurse left/right, apply factor() to each if * or +]
+    O -- BinaryExpression --> P[Recurse left/right, apply factor to each if * or +]
     O -- UnaryExpression --> Q[Recurse operand]
     O -- FunctionCall --> R[Recurse all args]
     O -- Others --> S[Return node as is]
@@ -35,9 +35,9 @@ flowchart TD
 
     %% Details inside strategies (examples)
     subgraph STRATEGY_DETAILS
-      F1[PatternRecognitionStrategy] --> F2[findPattern(node)]
+      F1[PatternRecognitionStrategy] --> F2[findPattern node]
       F2 --> F3{Pattern found?}
-      F3 -- Yes --> F4[pattern.factor(node) → new AST]
+      F3 -- Yes --> F4[pattern.factor node → new AST]
       F3 -- No --> F5[Return unchanged]
       F4 --> F6[Push pattern name to steps]
       F6 --> F7[Return changed AST, steps]
@@ -50,30 +50,30 @@ flowchart TD
 
       H1[DifferenceOfSquaresStrategy] --> H2[Check a^2 - b^2 form]
       H2 --> H3{Match?}
-      H3 -- Yes --> H4[Build (a+b)(a-b), push steps]
+      H3 -- Yes --> H4[Build, push steps]
       H3 -- No --> H5[Return unchanged]
 
       I1[BerlekampZassenhausStrategy] --> I2[Check polynomial degree, not already factored]
       I2 --> I3{Degree >= 2?}
-      I3 -- Yes --> I4[berlekampZassenhausFactor(node)]
+      I3 -- Yes --> I4[berlekampZassenhausFactor]
       I4 --> I5{Factors found?}
       I5 -- Yes --> I6[Build product AST, push steps]
       I5 -- No --> I7[Return unchanged]
 
       J1[LLLFactorizationStrategy] --> J2[Check degree >= 3, not already factored]
-      J2 --> J3[lllFactor(node)]
+      J2 --> J3[lllFactor]
       J3 --> J4{Factors found?}
       J4 -- Yes --> J5[Build product AST, push steps]
       J4 -- No --> J6[Return unchanged]
 
-      K1[PowerSubstitutionStrategy] --> K2[Detect x^{nk} + ... form]
+      K1[PowerSubstitutionStrategy] --> K2[Detect x^<nk> + ... form]
       K2 --> K3{Can substitute t = x^k?}
       K3 -- Yes --> K4[Factor as poly in t, back-substitute, push steps]
       K3 -- No --> K5[Return unchanged]
 
-      L1[PerfectPowerStrategy] --> L2[Detect (ax+b)^k expansion]
+      L1[PerfectPowerStrategy] --> L2[Detect <ax+b>^k expansion]
       L2 --> L3{Match?}
-      L3 -- Yes --> L4[Build (ax+b)^k AST, push steps]
+      L3 -- Yes --> L4[Build AST, push steps]
       L3 -- No --> L5[Return unchanged]
 
       M1[GroupingStrategy] --> M2[Extract 4+ terms, try groupings]
@@ -94,7 +94,7 @@ flowchart TD
     F --> G[Return ParseResult]
     G --> H{analyze called?}
     H -- No --> Z2[Return AST only]
-    H -- Yes --> I[analyze(ast, options)]
+    H -- Yes --> I[analyze ast, options]
     I --> J{options.task}
     J -- evaluate --> K1[analyzeEvaluate: Calculate value]
     J -- approx --> K2[analyzeApprox: Calculate approximate value]
