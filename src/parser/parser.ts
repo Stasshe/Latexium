@@ -94,12 +94,18 @@ export class LaTeXParser {
   /**
    * Parse an identifier (variable or function name)
    */
-  private parseIdentifier(): Identifier {
+  /**
+   * Parse an identifier (variable or function name)
+   * @param allowReserved - trueなら予約語チェックをスキップ（d専用）
+   */
+  private parseIdentifier(allowReserved = false): Identifier {
     const token = this.consume('IDENTIFIER');
 
-    // Mathematical constants are allowed as identifiers, will be evaluated later
-    // Only check for reserved function names and symbols
-    if (RESERVED_FUNCTIONS.has(token.value) || RESERVED_SYMBOLS.has(token.value)) {
+    // Only check for reserved function names and symbols unless allowed
+    if (
+      !allowReserved &&
+      (RESERVED_FUNCTIONS.has(token.value) || RESERVED_SYMBOLS.has(token.value))
+    ) {
       throw new Error(
         `Reserved word cannot be used as variable name: ${token.value} at position ${token.position}`
       );
@@ -324,14 +330,85 @@ export class LaTeXParser {
   /**
    * Parse a fraction \\frac{numerator}{denominator}
    */
-  private parseFraction(): Fraction {
+  /**
+   * Parse a fraction \frac{numerator}{denominator}
+   * Special handling for \frac{d}{dx}[expr] → Derivative node
+   */
+  private parseFraction(): Fraction | ASTNode {
+    // Numerator: always allow reserved for d
     this.consume('LBRACE');
-    const numerator = this.parseExpression();
+    let numerator: Identifier | ASTNode;
+    if (this.expectToken('IDENTIFIER')) {
+      const token = this.currentToken;
+      if (token.value === 'd') {
+        numerator = this.parseIdentifier(true);
+      } else {
+        numerator = this.parseIdentifier();
+      }
+    } else {
+      numerator = this.parseExpression();
+    }
     this.consume('RBRACE');
 
+    // Denominator: handle d + x pattern (e.g. {dx} or {d}{x})
     this.consume('LBRACE');
-    const denominator = this.parseExpression();
+    let denominator: Identifier | ASTNode;
+    if (this.expectToken('IDENTIFIER')) {
+      const token = this.currentToken;
+      if (token.value === 'dx') {
+        denominator = this.parseIdentifier(true);
+      } else if (token.value === 'd') {
+        // Lookahead: if next token is IDENTIFIER (e.g. d x)
+        const dToken = this.parseIdentifier(true);
+        if (this.expectToken('IDENTIFIER')) {
+          const xToken = this.parseIdentifier();
+          // 合成: dx
+          denominator = { type: 'Identifier', name: xToken.name };
+        } else {
+          denominator = dToken;
+        }
+      } else {
+        denominator = this.parseIdentifier();
+      }
+    } else {
+      denominator = this.parseExpression();
+    }
     this.consume('RBRACE');
+
+    // Special case: \frac{d}{dx} [expr] or {expr}
+    if (
+      numerator &&
+      numerator.type === 'Identifier' &&
+      numerator.name === 'd' &&
+      denominator &&
+      denominator.type === 'Identifier' &&
+      denominator.name.length >= 1
+    ) {
+      // Accept {expr}, (expr), or [expr] after the fraction
+      let expr: ASTNode | null = null;
+      // Skip whitespace tokens if any
+      while (this.currentToken.type === 'WHITESPACE') this.advance();
+      if (this.expectToken('LBRACE')) {
+        this.consume('LBRACE');
+        expr = this.parseExpression();
+        this.consume('RBRACE');
+      } else if (this.expectToken('LPAREN')) {
+        this.consume('LPAREN');
+        expr = this.parseExpression();
+        this.consume('RPAREN');
+      } else if (this.expectToken('LBRACKET')) {
+        this.consume('LBRACKET');
+        expr = this.parseExpression();
+        this.consume('RBRACKET');
+      } else {
+        throw new Error('Expected {expr}, (expr), or [expr] after \\frac{d}{dx}');
+      }
+      return {
+        type: 'Derivative',
+        variable: denominator.name,
+        expression: expr,
+      };
+    }
 
     return {
       type: 'Fraction',

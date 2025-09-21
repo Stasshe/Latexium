@@ -11,6 +11,8 @@ export type TokenType =
   | 'RPAREN'
   | 'LBRACE'
   | 'RBRACE'
+  | 'LBRACKET'
+  | 'RBRACKET'
   | 'COMMAND'
   | 'UNDERSCORE'
   | 'CARET'
@@ -166,6 +168,12 @@ export class LaTeXTokenizer {
         case '}':
           this.advance();
           return { type: 'RBRACE', value: '}', position };
+        case '[':
+          this.advance();
+          return { type: 'LBRACKET', value: '[', position };
+        case ']':
+          this.advance();
+          return { type: 'RBRACKET', value: ']', position };
         case '_':
           this.advance();
           return { type: 'UNDERSCORE', value: '_', position };
@@ -175,15 +183,10 @@ export class LaTeXTokenizer {
         case ',':
           this.advance();
           return { type: 'COMMA', value: ',', position };
-        case '[':
-        case ']':
-          // Ignore [ and ] as whitespace (skip them)
-          this.advance();
-          continue;
         case '!':
           this.advance();
           // Instead of FACTORIAL, return as COMMAND for unified handling
-          return { type: 'COMMAND', value: '\\factorial', position };
+          return { type: 'COMMAND', value: '\factorial', position };
         case '+':
         case '-':
         case '*':
