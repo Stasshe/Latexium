@@ -243,6 +243,102 @@ export class LaTeXParser {
     const token = this.consume('COMMAND');
 
     switch (token.value) {
+      case '\\int': {
+        // Parse optional lower bound (_{...}) and upper bound (^{...})
+        let lowerBound: ASTNode | undefined = undefined;
+        let upperBound: ASTNode | undefined = undefined;
+        if (this.expectToken('UNDERSCORE')) {
+          this.advance(); // consume _
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            lowerBound = this.parseExpression();
+            this.consume('RBRACE');
+          } else {
+            lowerBound = this.parsePrimary();
+          }
+        }
+        if (this.expectToken('CARET')) {
+          this.advance(); // consume ^
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            upperBound = this.parseExpression();
+            this.consume('RBRACE');
+          } else {
+            upperBound = this.parsePrimary();
+          }
+        }
+        // Parse integrand (stop at dx/dt/du etc.)
+        // Find the index where IDENTIFIER 'd' or /^d[a-zA-Z]$/ appears (dx/dt/du)
+        let integrandEnd = this.currentTokenIndex;
+        while (integrandEnd < this.tokens.length) {
+          const t = this.tokens[integrandEnd];
+          if (!t) break;
+          if (t.type === 'IDENTIFIER') {
+            if (t.value === 'd') {
+              const next = this.tokens[integrandEnd + 1];
+              if (next && next.type === 'IDENTIFIER' && /^[a-zA-Z]$/.test(next.value)) {
+                break; // dxパターン
+              }
+              break; // d単体
+            } else if (/^d[a-zA-Z]$/.test(t.value)) {
+              break; // dx, dt, duパターン
+            }
+          }
+          integrandEnd++;
+        }
+        // サブパーサーでintegrand部分だけパース
+        const integrandTokens = this.tokens.slice(this.currentTokenIndex, integrandEnd);
+        if (integrandTokens.length === 0) {
+          throw new Error('Missing integrand before dx/dt/du');
+        }
+        const subParser = new LaTeXParser(
+          integrandTokens.concat([{ type: 'EOF', value: '', position: 0 }])
+        );
+        const integrand = subParser.parseExpression();
+        // トークン位置をintegrandEndに進める
+        this.currentTokenIndex = integrandEnd;
+        this.currentToken = this.tokens[this.currentTokenIndex] || {
+          type: 'EOF',
+          value: '',
+          position: 0,
+        };
+        // Parse dx, dt, ... (must be IDENTIFIER, e.g. dx, dt, du)
+        let variable: string | undefined = undefined;
+        // Allow whitespace between integrand and dx
+        while (this.currentToken.type === 'WHITESPACE') this.advance();
+        // Robustly handle both IDENTIFIER: 'dx' or IDENTIFIER: 'd' + IDENTIFIER: 'x'
+        if (this.expectToken('IDENTIFIER')) {
+          const first = this.currentToken;
+          if (first.value === 'd') {
+            this.advance();
+            if (this.expectToken('IDENTIFIER') && /^[a-zA-Z]$/.test(this.currentToken.value)) {
+              const second = this.currentToken;
+              variable = second.value;
+              this.advance();
+            } else {
+              throw new Error(
+                `Expected dx/dt/du etc. after integrand at position ${first.position}`
+              );
+            }
+          } else if (/^d[a-zA-Z]$/.test(first.value)) {
+            variable = first.value.substring(1);
+            this.advance();
+          } else {
+            throw new Error(`Expected dx/dt/du etc. after integrand at position ${first.position}`);
+          }
+        } else {
+          throw new Error(
+            `Expected dx/dt/du etc. after integrand at position ${this.currentToken.position}`
+          );
+        }
+        return {
+          type: 'Integral',
+          integrand,
+          variable: variable!,
+          ...(lowerBound !== undefined ? { lowerBound } : {}),
+          ...(upperBound !== undefined ? { upperBound } : {}),
+        };
+      }
       case '\\frac':
         return this.parseFraction();
       case '\\sqrt':

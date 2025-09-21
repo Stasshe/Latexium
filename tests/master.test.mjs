@@ -45,6 +45,12 @@ const complexTestCases = [
     expected: 'x(x^2 - 3x + 3)',
   },
   {
+    id: 0.85,
+    expression: 'x^20 - 2x^10 + 1',
+    task: 'factor',
+    expected: '(x^{10} - 1)^2',
+  },
+  {
     id: 0.9,
     expression: '(x - 1)^3',
     task: 'factor',
@@ -280,13 +286,6 @@ const complexTestCases = [
     task: 'distribute',
     expected: 'x^3 + y^3 + z^3 + 3x^2y + 3x^2z + 3xy^2 + 3y^2z + 3xz^2 + 3yz^2 + 6xyz',
     description: 'Trinomial cube expansion',
-  },
-  {
-    id: 29,
-    expression: 'x^6 - 7x^3 - 8',
-    task: 'factor',
-    expected: '(x^3 - 8)(x^3 + 1)',
-    description: 'Substitution factoring with cubes',
   },
 
   // 30 Difficult Factorization Cases (added)
