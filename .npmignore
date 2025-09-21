@@ -14,7 +14,8 @@ CODE_OF_CONDUCT.md
 Development/
 tree.*
 *.txt
-*.md
 .prettierrc
 package-lock.json
 .github/workflows/
+docs/*
+Development/*
