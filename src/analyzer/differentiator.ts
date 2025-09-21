@@ -3,15 +3,15 @@
  * Implements symbolic differentiation for mathematical expressions
  */
 
-import { ASTNode, AnalyzeOptions, AnalyzeResult } from '../types';
-import { astToLatex } from '../utils/ast';
+import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '../types';
+import { stepsAstToLatex, astToLatex } from '../utils/ast';
 import { simplify as simplifyAST } from '../utils/unified-simplify';
 import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
  * Differentiate an AST node with respect to a variable
  */
-export function differentiateAST(node: ASTNode, variable: string): ASTNode {
+export function differentiateAST(node: ASTNode, variable: string, steps?: StepTree[]): ASTNode {
   switch (node.type) {
     case 'NumberLiteral':
       // d/dx(c) = 0
@@ -34,17 +34,21 @@ export function differentiateAST(node: ASTNode, variable: string): ASTNode {
         };
       }
 
-    case 'BinaryExpression':
-      return differentiateBinaryExpression(node, variable);
+    case 'BinaryExpression': {
+      const subSteps: StepTree[] = [];
+      const result = differentiateBinaryExpression(node, variable, subSteps);
+      if (steps) steps.push([`differentiateAST: BinaryExpression (${node.operator})`, subSteps]);
+      return result;
+    }
 
     case 'UnaryExpression':
-      return differentiateUnaryExpression(node, variable);
+      return differentiateUnaryExpression(node, variable, steps);
 
     case 'FunctionCall':
-      return differentiateFunctionCall(node, variable);
+      return differentiateFunctionCall(node, variable, steps);
 
     case 'Fraction':
-      return differentiateFraction(node, variable);
+      return differentiateFraction(node, variable, steps);
 
     case 'Integral':
     case 'Sum':
@@ -53,7 +57,7 @@ export function differentiateAST(node: ASTNode, variable: string): ASTNode {
 
     case 'Derivative':
       // Differentiate the inner expression with respect to the variable
-      return differentiateAST(node.expression, node.variable);
+      return differentiateAST(node.expression, node.variable, steps);
 
     default:
       throw new Error(
@@ -67,137 +71,109 @@ export function differentiateAST(node: ASTNode, variable: string): ASTNode {
  */
 function differentiateBinaryExpression(
   node: { operator: string; left: ASTNode; right: ASTNode },
-  variable: string
+  variable: string,
+  steps?: StepTree[]
 ): ASTNode {
   const left = node.left;
   const right = node.right;
-
   switch (node.operator) {
     case '+':
-    case '-':
+    case '-': {
       // (u ± v)' = u' ± v'
-      return simplifyAST(
+      const subSteps: StepTree[] = [];
+      const leftDiff = differentiateAST(left, variable, subSteps);
+      const rightDiff = differentiateAST(right, variable, subSteps);
+      if (steps) steps.push([`differentiateBinaryExpression: ${node.operator}`, subSteps]);
+      const result = simplifyAST(
         {
           type: 'BinaryExpression',
           operator: node.operator as '+' | '-',
-          left: differentiateAST(left, variable),
-          right: differentiateAST(right, variable),
-        },
+          left: leftDiff,
+          right: rightDiff,
+        } as const,
         { factor: false, expand: false }
       );
+      if (steps) steps.push([`simplifyAST for ${node.operator}`, [JSON.stringify(result)]]);
+      return result;
+    }
 
     case '*': {
       // Product rule: (uv)' = u'v + uv'
-      const leftDerivative = differentiateAST(left, variable);
-      const rightDerivative = differentiateAST(right, variable);
-
-      // If both derivatives are zero, the product is constant
-      if (isZero(leftDerivative) && isZero(rightDerivative)) {
-        return { type: 'NumberLiteral', value: 0 };
-      }
-
-      // If left is constant (left' = 0): (c*v)' = c*v'
-      if (isZero(leftDerivative)) {
-        return simplifyAST(
-          {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: left,
-            right: rightDerivative,
-          },
-          { factor: false, expand: false }
-        );
-      }
-
-      // If right is constant (right' = 0): (u*c)' = u'*c
-      if (isZero(rightDerivative)) {
-        return simplifyAST(
-          {
-            type: 'BinaryExpression',
-            operator: '*',
-            left: leftDerivative,
-            right: right,
-          },
-          { factor: false, expand: false }
-        );
-      }
-
-      // General product rule
-      return simplifyAST(
-        {
-          type: 'BinaryExpression',
-          operator: '+',
-          left: simplifyAST(
-            {
-              type: 'BinaryExpression',
-              operator: '*',
-              left: leftDerivative,
-              right: right,
-            },
-            { factor: false, expand: false }
-          ),
-          right: simplifyAST(
-            {
-              type: 'BinaryExpression',
-              operator: '*',
-              left: left,
-              right: rightDerivative,
-            },
-            { factor: false, expand: false }
-          ),
+      const subSteps: StepTree[] = [];
+      const leftDerivative = differentiateAST(left, variable, subSteps);
+      const rightDerivative = differentiateAST(right, variable, subSteps);
+      if (steps) steps.push([`differentiateBinaryExpression: *`, subSteps]);
+      const prodResult = {
+        type: 'BinaryExpression' as const,
+        operator: '+' as const,
+        left: {
+          type: 'BinaryExpression' as const,
+          operator: '*' as const,
+          left: leftDerivative,
+          right: right,
         },
-        { factor: false, expand: false }
-      );
+        right: {
+          type: 'BinaryExpression' as const,
+          operator: '*' as const,
+          left: left,
+          right: rightDerivative,
+        },
+      };
+      if (steps) steps.push([`product rule AST`, [stepsAstToLatex(prodResult)]]);
+      const result = simplifyAST(prodResult, { factor: false, expand: false });
+      if (steps) steps.push([`simplifyAST for *`, [stepsAstToLatex(result)]]);
+      return result;
     }
 
     case '/': {
       // /は必ずFractionノードになるので、ここはFractionノードに任せる
       // ただし、念のためFractionノードを返す
-      const uPrime = differentiateAST(left, variable);
-      const vPrime = differentiateAST(right, variable);
-      return simplifyAST(
-        {
-          type: 'Fraction',
-          numerator: simplifyAST(
-            {
-              type: 'BinaryExpression',
-              operator: '-',
-              left: simplifyAST(
-                {
-                  type: 'BinaryExpression',
-                  operator: '*',
-                  left: uPrime,
-                  right: right,
-                },
-                { factor: false, expand: false }
-              ),
-              right: simplifyAST(
-                {
-                  type: 'BinaryExpression',
-                  operator: '*',
-                  left: left,
-                  right: vPrime,
-                },
-                { factor: false, expand: false }
-              ),
-            },
-            { factor: false, expand: false }
-          ),
-          denominator: simplifyAST(
-            {
-              type: 'BinaryExpression',
-              operator: '^',
-              left: right,
-              right: {
-                type: 'NumberLiteral',
-                value: 2,
+      const uPrime = differentiateAST(left, variable, steps);
+      const vPrime = differentiateAST(right, variable, steps);
+      const fracResult = {
+        type: 'Fraction' as const,
+        numerator: simplifyAST(
+          {
+            type: 'BinaryExpression' as const,
+            operator: '-' as const,
+            left: simplifyAST(
+              {
+                type: 'BinaryExpression' as const,
+                operator: '*' as const,
+                left: uPrime,
+                right: right,
               },
+              { factor: false, expand: false }
+            ),
+            right: simplifyAST(
+              {
+                type: 'BinaryExpression' as const,
+                operator: '*' as const,
+                left: left,
+                right: vPrime,
+              },
+              { factor: false, expand: false }
+            ),
+          },
+          { factor: false, expand: false }
+        ),
+        denominator: simplifyAST(
+          {
+            type: 'BinaryExpression' as const,
+            operator: '^' as const,
+            left: right,
+            right: {
+              type: 'NumberLiteral' as const,
+              value: 2,
             },
-            { factor: false, expand: false }
-          ),
-        },
-        { factor: false, expand: false }
-      );
+          },
+          { factor: false, expand: false }
+        ),
+      };
+      if (steps) steps.push(`[quotient rule] AST: ${JSON.stringify(fracResult)}`);
+      const result = simplifyAST(fracResult, { factor: false, expand: false });
+      if (steps) steps.push(`[simplifyAST] for /: ${JSON.stringify(result)}`);
+      return result;
     }
 
     case '^':
@@ -217,22 +193,26 @@ function differentiateBinaryExpression(
  */
 function differentiateUnaryExpression(
   node: { operator: string; operand: ASTNode },
-  variable: string
+  variable: string,
+  steps?: StepTree[]
 ): ASTNode {
-  const derivative = differentiateAST(node.operand, variable);
+  const derivative = differentiateAST(node.operand, variable, steps);
 
   switch (node.operator) {
     case '+':
       return derivative;
-    case '-':
-      return simplifyAST(
+    case '-': {
+      const result = simplifyAST(
         {
-          type: 'UnaryExpression',
-          operator: '-',
+          type: 'UnaryExpression' as const,
+          operator: '-' as const,
           operand: derivative,
         },
         { factor: false, expand: false }
       );
+      if (steps) steps.push(`[simplifyAST] for unary -: ${JSON.stringify(result)}`);
+      return result;
+    }
     default:
       throw new Error(`Unsupported unary operator for differentiation: ${node.operator}`);
   }
@@ -243,7 +223,8 @@ function differentiateUnaryExpression(
  */
 function differentiateFunctionCall(
   node: { name: string; args: ASTNode[] },
-  variable: string
+  variable: string,
+  steps?: StepTree[]
 ): ASTNode {
   if (node.args.length !== 1) {
     throw new Error(
@@ -256,7 +237,7 @@ function differentiateFunctionCall(
     throw new Error(`Function ${node.name} missing required argument`);
   }
 
-  const argumentDerivative = differentiateAST(argument, variable);
+  const argumentDerivative = differentiateAST(argument, variable, steps);
 
   // Chain rule: f(g(x))' = f'(g(x)) * g'(x)
   let innerDerivative: ASTNode;
@@ -380,23 +361,29 @@ function differentiateFunctionCall(
   // Always apply chain rule: f(g(x))' = f'(g(x)) * g'(x)
   // If argumentDerivative is zero, the whole derivative is zero
   if (isZero(argumentDerivative)) {
+    if (steps) steps.push(`[chain rule] argumentDerivative is zero, result=0`);
     return { type: 'NumberLiteral', value: 0 };
   }
 
   // If argumentDerivative is one, just return innerDerivative
   if (isOne(argumentDerivative)) {
+    if (steps)
+      steps.push(
+        `[chain rule] argumentDerivative is one, result=${stepsAstToLatex(innerDerivative)}`
+      );
     return innerDerivative;
   }
 
-  return simplifyAST(
-    {
-      type: 'BinaryExpression',
-      operator: '*',
-      left: innerDerivative,
-      right: argumentDerivative,
-    },
-    { factor: false, expand: false }
-  );
+  const chainResult = {
+    type: 'BinaryExpression' as const,
+    operator: '*' as const,
+    left: innerDerivative,
+    right: argumentDerivative,
+  };
+  if (steps) steps.push(`[chain rule] AST: ${JSON.stringify(chainResult)}`);
+  const result = simplifyAST(chainResult, { factor: false, expand: false });
+  if (steps) steps.push(`[simplifyAST] for chain: ${JSON.stringify(result)}`);
+  return result;
 }
 
 /**
@@ -404,13 +391,14 @@ function differentiateFunctionCall(
  */
 function differentiateFraction(
   node: { numerator: ASTNode; denominator: ASTNode },
-  variable: string
+  variable: string,
+  steps?: StepTree[]
 ): ASTNode {
   // (u/v)' = (u'v - uv')/v²
   const u = node.numerator;
   const v = node.denominator;
-  const uPrime = differentiateAST(u, variable);
-  const vPrime = differentiateAST(v, variable);
+  const uPrime = differentiateAST(u, variable, steps);
+  const vPrime = differentiateAST(v, variable, steps);
 
   // Check for special cases to simplify early
   const uPrimeIsZero = isZero(uPrime);
@@ -418,77 +406,83 @@ function differentiateFraction(
 
   // If v is constant (v' = 0), then (u/c)' = u'/c
   if (vPrimeIsZero) {
-    return simplifyAST(
+    const result = simplifyAST(
       {
-        type: 'Fraction',
+        type: 'Fraction' as const,
         numerator: uPrime,
         denominator: v,
       },
       { factor: false, expand: false }
     );
+    if (steps) steps.push(`[simplifyAST] for fraction (v const): ${JSON.stringify(result)}`);
+    return result;
   }
 
   // If u is constant (u' = 0), then (c/v)' = -c*v'/v²
   if (uPrimeIsZero) {
-    return simplifyAST(
+    const result = simplifyAST(
       {
-        type: 'Fraction',
+        type: 'Fraction' as const,
         numerator: {
-          type: 'UnaryExpression',
-          operator: '-',
+          type: 'UnaryExpression' as const,
+          operator: '-' as const,
           operand: {
-            type: 'BinaryExpression',
-            operator: '*',
+            type: 'BinaryExpression' as const,
+            operator: '*' as const,
             left: u,
             right: vPrime,
           },
         },
         denominator: {
-          type: 'BinaryExpression',
-          operator: '^',
+          type: 'BinaryExpression' as const,
+          operator: '^' as const,
           left: v,
           right: {
-            type: 'NumberLiteral',
+            type: 'NumberLiteral' as const,
             value: 2,
           },
         },
       },
       { factor: false, expand: false }
     );
+    if (steps) steps.push(`[simplifyAST] for fraction (u const): ${JSON.stringify(result)}`);
+    return result;
   }
 
   // General case: (u/v)' = (u'v - uv')/v²
-  return simplifyAST(
+  const result = simplifyAST(
     {
-      type: 'Fraction',
+      type: 'Fraction' as const,
       numerator: {
-        type: 'BinaryExpression',
-        operator: '-',
+        type: 'BinaryExpression' as const,
+        operator: '-' as const,
         left: {
-          type: 'BinaryExpression',
-          operator: '*',
+          type: 'BinaryExpression' as const,
+          operator: '*' as const,
           left: uPrime,
           right: v,
         },
         right: {
-          type: 'BinaryExpression',
-          operator: '*',
+          type: 'BinaryExpression' as const,
+          operator: '*' as const,
           left: u,
           right: vPrime,
         },
       },
       denominator: {
-        type: 'BinaryExpression',
-        operator: '^',
+        type: 'BinaryExpression' as const,
+        operator: '^' as const,
         left: v,
         right: {
-          type: 'NumberLiteral',
+          type: 'NumberLiteral' as const,
           value: 2,
         },
       },
     },
     { factor: false, expand: false }
   );
+  if (steps) steps.push(`[simplifyAST] for fraction (general): ${JSON.stringify(result)}`);
+  return result;
 }
 
 /**
@@ -612,7 +606,8 @@ function isConstant(node: ASTNode, variable: string): boolean {
     case 'NumberLiteral':
       return true;
     case 'Identifier':
-      return node.name !== variable || node.scope !== 'free';
+      // scopeがfreeまたはundefinedなら変数自身、そうでなければ定数扱い
+      return node.name !== variable || (node.scope !== 'free' && node.scope !== undefined);
     case 'BinaryExpression':
       return isConstant(node.left, variable) && isConstant(node.right, variable);
     case 'UnaryExpression':
@@ -649,15 +644,18 @@ export function analyzeDifferentiate(
 ): AnalyzeResult {
   // If ast is Derivative node, extract variable and expression
   if (ast.type === 'Derivative') {
-    const steps: string[] = [];
+    const steps: StepTree[] = [];
     try {
       const variable = ast.variable;
-      steps.push(`Differentiating with respect to ${variable}`);
-      steps.push(`Expression: ${astToLatex(ast.expression)}`);
-      const derivative = differentiateAST(ast.expression, variable);
+      steps.push([`Differentiating with respect to ${variable}`]);
+      steps.push([`Expression: ${astToLatex(ast.expression)}`]);
+      const diffSteps: StepTree[] = [];
+      const derivative = differentiateAST(ast.expression, variable, diffSteps);
+      steps.push([`differentiateAST`, diffSteps]);
       const simplifiedDerivative = simplifyAST(derivative, { factor: false, expand: false });
+      steps.push([`final simplifyAST`, [`${astToLatex(simplifiedDerivative)}`]]);
       const derivativeLatex = astToLatex(simplifiedDerivative);
-      steps.push(`Derivative: ${derivativeLatex}`);
+      steps.push([`Derivative: ${derivativeLatex}`]);
       return {
         steps,
         value: derivativeLatex,
@@ -675,7 +673,7 @@ export function analyzeDifferentiate(
       };
     }
   }
-  const steps: string[] = [];
+  const steps: StepTree[] = [];
 
   try {
     // Automatic variable inference
@@ -684,24 +682,27 @@ export function analyzeDifferentiate(
 
     // Add informative steps about variable selection
     if (!options.variable && freeVars.size > 1) {
-      steps.push(
-        `Multiple variables found: {${Array.from(freeVars).join(', ')}}. Using '${variable}' for differentiation.`
-      );
+      steps.push([
+        `Multiple variables found: {${Array.from(freeVars).join(', ')}}. Using '${variable}' for differentiation.`,
+      ]);
     } else if (!options.variable && freeVars.size === 1) {
-      steps.push(`Auto-detected variable: ${variable}`);
+      steps.push([`Auto-detected variable: ${variable}`]);
     }
 
-    steps.push(`Differentiating with respect to ${variable}`);
-    steps.push(`Expression: ${astToLatex(ast)}`);
+    steps.push([`Differentiating with respect to ${variable}`]);
+    steps.push([`Expression: ${astToLatex(ast)}`]);
 
     // Perform differentiation
-    const derivative = differentiateAST(ast, variable);
+    const diffSteps: StepTree[] = [];
+    const derivative = differentiateAST(ast, variable, diffSteps);
+    steps.push([`differentiateAST`, diffSteps]);
 
     // Apply simplification to the derivative
     const simplifiedDerivative = simplifyAST(derivative, { factor: false, expand: false });
+    steps.push([`final simplifyAST`, [`${stepsAstToLatex(simplifiedDerivative)}`]]);
     const derivativeLatex = astToLatex(simplifiedDerivative);
 
-    steps.push(`Derivative: ${derivativeLatex}`);
+    steps.push([`Derivative: ${derivativeLatex}`]);
 
     return {
       steps,
