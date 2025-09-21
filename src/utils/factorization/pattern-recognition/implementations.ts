@@ -345,12 +345,19 @@ class QuadraticPattern implements FactorizationPattern {
 
     if (constant === 0) {
       return coeffTerm;
+    } else if (constant > 0) {
+      // (x + q)
+      return PatternUtils.createBinaryExpression(
+        coeffTerm,
+        '+',
+        PatternUtils.createNumber(constant)
+      );
     } else {
-      // (x - - q) 形式に統一
+      // (x - |q|)
       return PatternUtils.createBinaryExpression(
         coeffTerm,
         '-',
-        PatternUtils.createNumber(constant)
+        PatternUtils.createNumber(-constant)
       );
     }
   }
@@ -389,20 +396,125 @@ class QuadraticPattern implements FactorizationPattern {
     degree: number;
     variable: string;
   }> {
-    // For testing purposes, handle the specific case x^2 - 3x + 2
-    const nodeStr = JSON.stringify(node);
+    // Flatten the sum tree into terms
+    const terms: ASTNode[] = [];
+    const collectTerms = (n: ASTNode): void => {
+      if (n.type === 'BinaryExpression' && (n.operator === '+' || n.operator === '-')) {
+        collectTerms(n.left);
+        // 右項がマイナスの場合は符号を反転
+        if (n.operator === '-') {
+          // 右項の係数を反転
+          terms.push({
+            type: 'BinaryExpression',
+            operator: '*',
+            left: { type: 'NumberLiteral', value: -1 },
+            right: n.right,
+          } as ASTNode);
+        } else {
+          terms.push(n.right);
+        }
+      } else {
+        terms.push(n);
+      }
+    };
+    collectTerms(node);
 
-    // This is a very basic pattern matcher for testing
-    if (nodeStr.includes('"value":2') && nodeStr.includes('"value":3')) {
-      // Likely x^2 - 3x + 2
-      return [
-        { coefficient: 1, degree: 2, variable: 'x' },
-        { coefficient: -3, degree: 1, variable: 'x' },
-        { coefficient: 2, degree: 0, variable: 'x' },
-      ];
-    }
-
-    return [];
+    // Extract coefficient, degree, variable for each term
+    const parsed = terms.map(term => {
+      let coefficient = 1;
+      let degree = 0;
+      let variable = '';
+      if (term.type === 'NumberLiteral') {
+        coefficient = term.value;
+        degree = 0;
+        variable = 'x';
+      } else if (term.type === 'Identifier') {
+        coefficient = 1;
+        degree = 1;
+        variable = term.name;
+      } else if (term.type === 'BinaryExpression') {
+        if (term.operator === '*') {
+          // 係数×変数 or 係数×累乗
+          const left = term.left;
+          const right = term.right;
+          if (left.type === 'NumberLiteral' && right.type === 'Identifier') {
+            coefficient = left.value;
+            degree = 1;
+            variable = right.name;
+          } else if (left.type === 'Identifier' && right.type === 'NumberLiteral') {
+            coefficient = right.value;
+            degree = 1;
+            variable = left.name;
+          } else if (
+            left.type === 'BinaryExpression' &&
+            left.operator === '^' &&
+            right.type === 'NumberLiteral'
+          ) {
+            // (x^2)*3
+            if (left.left.type === 'Identifier' && left.right.type === 'NumberLiteral') {
+              coefficient = right.value;
+              degree = left.right.value;
+              variable = left.left.name;
+            }
+          } else if (
+            left.type === 'Identifier' &&
+            right.type === 'BinaryExpression' &&
+            right.operator === '^'
+          ) {
+            // x*x^2 = x^3
+            if (
+              right.left.type === 'Identifier' &&
+              right.right.type === 'NumberLiteral' &&
+              left.name === right.left.name
+            ) {
+              coefficient = 1;
+              degree = 1 + right.right.value;
+              variable = left.name;
+            }
+          } else if (
+            left.type === 'NumberLiteral' &&
+            right.type === 'BinaryExpression' &&
+            right.operator === '*'
+          ) {
+            // 2*x*y のような多変数は未対応
+            coefficient = left.value;
+            degree = 1;
+            variable = '?';
+          } else if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
+            coefficient = left.value * right.value;
+            degree = 0;
+            variable = 'x';
+          } else if (
+            left.type === 'NumberLiteral' &&
+            right.type === 'BinaryExpression' &&
+            right.operator === '^'
+          ) {
+            if (right.left.type === 'Identifier' && right.right.type === 'NumberLiteral') {
+              coefficient = left.value;
+              degree = right.right.value;
+              variable = right.left.name;
+            }
+          } else if (left.type === 'NumberLiteral' && right.type === 'BinaryExpression') {
+            coefficient = left.value;
+            degree = 1;
+            variable = '?';
+          } else if (left.type === 'NumberLiteral') {
+            coefficient = left.value;
+            degree = 0;
+            variable = 'x';
+          }
+        } else if (term.operator === '^') {
+          // x^2
+          if (term.left.type === 'Identifier' && term.right.type === 'NumberLiteral') {
+            coefficient = 1;
+            degree = term.right.value;
+            variable = term.left.name;
+          }
+        }
+      }
+      return { coefficient, degree, variable };
+    });
+    return parsed;
   }
 
   private findQuadraticFactors(
