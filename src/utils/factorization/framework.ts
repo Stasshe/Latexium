@@ -207,6 +207,12 @@ export class FactorizationEngine {
   private recursivelyFactorSubexpressions(node: ASTNode, context: FactorizationContext): ASTNode {
     // Recursively factor subexpressions (true factorization)
     // Only apply to subnodes, not the root node itself
+    // 単項式（単なる変数や数値、単純な積やべき）は再帰的因数分解・steps pushを行わない
+    // 単項式判定: NumberLiteral, Identifier, 単純な x^n, c*x^n, -x^n など
+    if (this.isMonomial(node)) {
+      // 単項式の場合は何もしない
+      return node;
+    }
     if (node.type === 'BinaryExpression') {
       const left = this.recursivelyFactorSubexpressions(node.left, context);
       const right = this.recursivelyFactorSubexpressions(node.right, context);
@@ -216,63 +222,22 @@ export class FactorizationEngine {
         node.operator === '*' ||
         (node.operator === '+' && FACTORIZATION.applyFactorPlusOperate)
       ) {
-        // 単項式判定関数
-        const isMonomial = (n: ASTNode): boolean => {
-          if (n.type === 'NumberLiteral' || n.type === 'Identifier') return true;
-          if (n.type === 'BinaryExpression') {
-            if (n.operator === '*') {
-              // 係数付き変数や係数付きべき乗
-              return (
-                (n.left.type === 'NumberLiteral' &&
-                  (n.right.type === 'Identifier' ||
-                    (n.right.type === 'BinaryExpression' &&
-                      n.right.operator === '^' &&
-                      n.right.left.type === 'Identifier' &&
-                      n.right.right.type === 'NumberLiteral'))) ||
-                (n.right.type === 'NumberLiteral' &&
-                  (n.left.type === 'Identifier' ||
-                    (n.left.type === 'BinaryExpression' &&
-                      n.left.operator === '^' &&
-                      n.left.left.type === 'Identifier' &&
-                      n.left.right.type === 'NumberLiteral')))
-              );
-            }
-            if (n.operator === '^') {
-              // 変数のべき乗
-              return n.left.type === 'Identifier' && n.right.type === 'NumberLiteral';
-            }
-          }
-          return false;
-        };
-
-        const shouldFactorLeft = !isMonomial(left);
-        const shouldFactorRight = !isMonomial(right);
-
-        const leftFactored = shouldFactorLeft
-          ? { ast: left, steps: [], changed: false }
-          : this.factor(left, context.variable, context.preferences);
-        const rightFactored = shouldFactorRight
-          ? { ast: right, steps: [], changed: false }
-          : this.factor(right, context.variable, context.preferences);
+        // それぞれの因子/項にfactorを適用
+        const leftFactored = this.factor(left, context.variable, context.preferences);
+        const rightFactored = this.factor(right, context.variable, context.preferences);
         newNode = { ...node, left: leftFactored.ast, right: rightFactored.ast };
-        // Only output if steps are non-empty and not empty string/null
-        if (shouldFactorLeft && Array.isArray(leftFactored.steps)) {
-          context.steps.push('leftFactored', leftFactored.steps);
-        }
-        if (shouldFactorLeft && stepsAstToLatex(leftFactored.ast)) {
+        // 単項式でなければstepsをpush
+        if (!this.isMonomial(leftFactored.ast)) {
           context.steps.push(
+            'leftFactored',
+            leftFactored.steps,
             `[recursive-factor] factored left: ${stepsAstToLatex(leftFactored.ast)}`
           );
         }
-        if (
-          shouldFactorRight &&
-          Array.isArray(rightFactored.steps) &&
-          rightFactored.steps.length > 0
-        ) {
-          context.steps.push('rightFactored', rightFactored.steps);
-        }
-        if (shouldFactorRight && stepsAstToLatex(rightFactored.ast)) {
+        if (!this.isMonomial(rightFactored.ast)) {
           context.steps.push(
+            'rightFactored',
+            rightFactored.steps,
             `[recursive-factor] factored right: ${stepsAstToLatex(rightFactored.ast)}`
           );
         }
@@ -288,6 +253,131 @@ export class FactorizationEngine {
     // 他の型はそのまま返す
     return node;
   }
+  /**
+   * Check if the node is a monomial (single term, e.g. c*x^n, x, 3, -x^2, etc.)
+   */
+  private isMonomial(node: ASTNode): boolean {
+    // Number or variable
+    if (node.type === 'NumberLiteral' || node.type === 'Identifier') return true;
+    // -x^n or -x or -c
+    if (node.type === 'UnaryExpression' && node.operator === '-') {
+      return this.isMonomial(node.operand);
+    }
+    // c*x^n, c*x, x^n, c
+    if (node.type === 'BinaryExpression') {
+      if (node.operator === '*') {
+        // Both sides must be monomials (e.g. 3*x, 2*x^2)
+        return this.isMonomial(node.left) && this.isMonomial(node.right);
+      }
+      if (node.operator === '^') {
+        // x^n, (c*x)^n, etc.
+        return this.isMonomial(node.left) && this.isMonomial(node.right);
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Combine factored left and right sides of multiplication
+   * Handles cases where either side might be a product of multiple factors
+   */
+  private combineFactoredMultiplication(
+    left: ASTNode,
+    right: ASTNode,
+    context: FactorizationContext
+  ): ASTNode {
+    // Extract all factors from both sides
+    const leftFactors = this.extractMultiplicationFactors(left);
+    const rightFactors = this.extractMultiplicationFactors(right);
+
+    // Combine all factors
+    const allFactors = [...leftFactors, ...rightFactors];
+
+    if (allFactors.length <= 1) {
+      return allFactors[0] || { type: 'NumberLiteral', value: 1 };
+    }
+
+    // Build the result as a chain of multiplications
+    let result = allFactors[0]!;
+    for (let i = 1; i < allFactors.length; i++) {
+      result = {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: result,
+        right: allFactors[i]!,
+      };
+    }
+
+    return result;
+  }
+
+  /**
+   * Extract all factors from a multiplication expression
+   * Returns an array of individual factors
+   */
+  private extractMultiplicationFactors(node: ASTNode): ASTNode[] {
+    if (node.type === 'BinaryExpression' && node.operator === '*') {
+      return [
+        ...this.extractMultiplicationFactors(node.left),
+        ...this.extractMultiplicationFactors(node.right),
+      ];
+    }
+    return [node];
+  }
+
+  /**
+   * Check if we should skip recursive factorization for this node
+   * Used to avoid incorrect factorization of sum/difference of cubes results
+   */
+  // private shouldSkipRecursiveFactorization(node: ASTNode, context: FactorizationContext): boolean {
+  //   // Skip factorization of expressions that look like x² ± ax + a²
+  //   // These are typically results from sum/difference of cubes and shouldn't be factored further
+  //   if (node.type === 'BinaryExpression' && node.operator === '+') {
+  //     const poly = PolynomialAnalyzer.analyzePolynomial(node, context.variable);
+  //     if (poly && poly.degree === 2) {
+  //       const a = poly.coefficients.get(2) || 0;
+  //       const b = poly.coefficients.get(1) || 0;
+  //       const c = poly.coefficients.get(0) || 0;
+
+  //       // Check if discriminant is negative (no real roots)
+  //       const discriminant = b * b - 4 * a * c;
+  //       if (discriminant < 0) {
+  //         context.steps.push(
+  //           '  Skipping factorization of irreducible quadratic (negative discriminant)'
+  //         );
+  //         return true;
+  //       }
+  //     }
+  //   }
+  //   return false;
+  // }
+
+  // /**
+  //  * Attempt factorization on a single expression
+  //  */
+  // private attemptFactorization(node: ASTNode, context: FactorizationContext): ASTNode {
+  //   // Create a fresh context for recursive factorization to avoid iteration limit issues
+  //   const recursiveContext: FactorizationContext = {
+  //     ...context,
+  //     currentIteration: 0, // Reset iteration counter for recursive calls
+  //     steps: [], // Use separate steps array to avoid cluttering main output
+  //   };
+
+  //   // Try factorization strategies on this subexpression
+  //   for (const strategy of this.strategies) {
+  //     if (strategy.canApply(node, recursiveContext)) {
+  //       const result = strategy.apply(node, recursiveContext);
+  //       if (result.success && result.changed) {
+  //         context.steps.push(`  Subfactor: Applied ${strategy.name} to subexpression`);
+
+  //         // If factorization was successful, recursively factor the result
+  //         return this.recursivelyFactorSubexpressions(result.ast, context);
+  //       }
+  //     }
+  //   }
+
+  //   return node;
+  // }
 
   /**
    * Initialize all available strategies

@@ -610,8 +610,12 @@ export class LaTeXParser {
       };
     }
 
-    while (this.expectToken('COMMAND') && this.currentToken.value === '\\factorial') {
-      this.advance(); // consume \factorial
+    // Support both \factorial (COMMAND) and ! (FACTORIAL) as postfix
+    while (
+      (this.expectToken('COMMAND') && this.currentToken.value === '\\factorial') ||
+      this.expectToken('FACTORIAL')
+    ) {
+      this.advance(); // consume ! or \factorial
       left = {
         type: 'Factorial',
         argument: left,
