@@ -158,11 +158,15 @@ export class ConcreteCommonFactorPattern implements FactorizationPattern {
   description = 'Extract common factors from polynomial terms';
 
   matches(node: ASTNode): boolean {
+    // Only apply to sum/difference of 2+ terms (not monomials/constants)
     if (node.type !== 'BinaryExpression') return false;
     if (node.operator !== '+' && node.operator !== '-') return false;
 
     const terms = this.extractTerms(node);
     if (terms.length < 2) return false;
+
+    // Prevent matching if all terms are constants or if only one term
+    if (terms.every(term => term.type === 'NumberLiteral')) return false;
 
     const coefficients = terms.map(term => PatternUtils.getCoefficient(term));
     const gcd = PatternUtils.gcdArray(coefficients);
@@ -171,9 +175,13 @@ export class ConcreteCommonFactorPattern implements FactorizationPattern {
   }
 
   factor(node: ASTNode): ASTNode | null {
+    // Guard: only apply to sum/difference of 2+ terms (not monomials/constants)
     if (!this.matches(node)) return null;
 
     const terms = this.extractTerms(node as BinaryExpression);
+    if (terms.length < 2) return null;
+    if (terms.every(term => term.type === 'NumberLiteral')) return null;
+
     const coefficients = terms.map(term => PatternUtils.getCoefficient(term));
     const gcd = PatternUtils.gcdArray(coefficients);
 
@@ -307,7 +315,8 @@ class QuadraticPattern implements FactorizationPattern {
   matches(node: ASTNode): boolean {
     if (node.type === 'BinaryExpression') {
       const quadratic = this.extractQuadraticCoefficients(node);
-      return quadratic !== null && quadratic.a !== 0;
+      // a ≠ 0 かつ (b ≠ 0 または c ≠ 0) のときのみマッチ
+      return quadratic !== null && quadratic.a !== 0 && (quadratic.b !== 0 || quadratic.c !== 0);
     }
     return false;
   }
@@ -330,7 +339,12 @@ class QuadraticPattern implements FactorizationPattern {
     const firstFactor = this.buildLinearFactor(p, q, variable);
     const secondFactor = this.buildLinearFactor(r, s, variable);
 
-    return PatternUtils.createBinaryExpression(firstFactor, '*', secondFactor);
+    const factored = PatternUtils.createBinaryExpression(firstFactor, '*', secondFactor);
+    // 変化がなければnullを返す
+    if (JSON.stringify(factored) === JSON.stringify(node)) {
+      return null;
+    }
+    return factored;
   }
 
   private buildLinearFactor(coeff: number, constant: number, variable: string): ASTNode {

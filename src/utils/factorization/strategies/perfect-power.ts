@@ -18,7 +18,10 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
       return false;
     }
     const result = this.detectPerfectPower(node, context.variable);
-    return result !== null;
+    // 既に (ax+b)^k の形や単項式 x^k には適用しない
+    if (!result) return false;
+    if (this.isAlreadyPerfectPower(node, result, context.variable)) return false;
+    return true;
   }
   // nodeにx以外の変数が含まれていればtrue
   private hasOtherVariables(node: ASTNode, variable: string): boolean {
@@ -43,7 +46,7 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
     const result = this.detectPerfectPower(node, context.variable);
-    if (!result) {
+    if (!result || this.isAlreadyPerfectPower(node, result, context.variable)) {
       return {
         success: false,
         ast: node,
@@ -87,6 +90,17 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
     };
     // Apply middle-simplify (expand: false) to combine like terms in the output
     const simplifiedAst = middleSimplify(resultAst, { expand: false });
+    // 変化がなければchanged: falseで返す
+    if (JSON.stringify(simplifiedAst) === JSON.stringify(node)) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     return {
       success: true,
       ast: simplifiedAst,
@@ -97,6 +111,50 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
       strategyUsed: this.name,
       canContinue: false,
     };
+  }
+
+  // 既に (ax+b)^k の形や単項式 x^k ならtrue
+  private isAlreadyPerfectPower(
+    node: ASTNode,
+    result: { a: number; b: number; k: number },
+    variable: string
+  ): boolean {
+    // (ax+b)^k
+    if (
+      node.type === 'BinaryExpression' &&
+      node.operator === '^' &&
+      node.left.type === 'BinaryExpression' &&
+      node.left.operator === '+' &&
+      ((node.left.left.type === 'Identifier' &&
+        result.a === 1 &&
+        node.left.left.name === variable) ||
+        (node.left.left.type === 'BinaryExpression' &&
+          node.left.left.operator === '*' &&
+          node.left.left.left.type === 'NumberLiteral' &&
+          node.left.left.left.value === result.a &&
+          node.left.left.right.type === 'Identifier' &&
+          node.left.left.right.name === variable)) &&
+      node.left.right.type === 'NumberLiteral' &&
+      node.left.right.value === result.b &&
+      node.right.type === 'NumberLiteral' &&
+      node.right.value === result.k
+    ) {
+      return true;
+    }
+    // x^k
+    if (
+      node.type === 'BinaryExpression' &&
+      node.operator === '^' &&
+      node.left.type === 'Identifier' &&
+      node.left.name === variable &&
+      node.right.type === 'NumberLiteral' &&
+      result.a === 1 &&
+      result.b === 0 &&
+      node.right.value === result.k
+    ) {
+      return true;
+    }
+    return false;
   }
 
   // --- ユーティリティ ---

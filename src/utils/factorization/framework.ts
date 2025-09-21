@@ -216,20 +216,66 @@ export class FactorizationEngine {
         node.operator === '*' ||
         (node.operator === '+' && FACTORIZATION.applyFactorPlusOperate)
       ) {
-        // それぞれの因子/項にfactorを適用
-        const leftFactored = this.factor(left, context.variable, context.preferences);
-        const rightFactored = this.factor(right, context.variable, context.preferences);
+        // 単項式判定関数
+        const isMonomial = (n: ASTNode): boolean => {
+          if (n.type === 'NumberLiteral' || n.type === 'Identifier') return true;
+          if (n.type === 'BinaryExpression') {
+            if (n.operator === '*') {
+              // 係数付き変数や係数付きべき乗
+              return (
+                (n.left.type === 'NumberLiteral' &&
+                  (n.right.type === 'Identifier' ||
+                    (n.right.type === 'BinaryExpression' &&
+                      n.right.operator === '^' &&
+                      n.right.left.type === 'Identifier' &&
+                      n.right.right.type === 'NumberLiteral'))) ||
+                (n.right.type === 'NumberLiteral' &&
+                  (n.left.type === 'Identifier' ||
+                    (n.left.type === 'BinaryExpression' &&
+                      n.left.operator === '^' &&
+                      n.left.left.type === 'Identifier' &&
+                      n.left.right.type === 'NumberLiteral')))
+              );
+            }
+            if (n.operator === '^') {
+              // 変数のべき乗
+              return n.left.type === 'Identifier' && n.right.type === 'NumberLiteral';
+            }
+          }
+          return false;
+        };
+
+        const shouldFactorLeft = !isMonomial(left);
+        const shouldFactorRight = !isMonomial(right);
+
+        const leftFactored = shouldFactorLeft
+          ? { ast: left, steps: [], changed: false }
+          : this.factor(left, context.variable, context.preferences);
+        const rightFactored = shouldFactorRight
+          ? { ast: right, steps: [], changed: false }
+          : this.factor(right, context.variable, context.preferences);
         newNode = { ...node, left: leftFactored.ast, right: rightFactored.ast };
-        context.steps.push(
-          'leftFactored',
-          leftFactored.steps,
-          `[recursive-factor] factored left: ${stepsAstToLatex(leftFactored.ast)}`
-        );
-        context.steps.push(
-          'rightFactored',
-          rightFactored.steps,
-          `[recursive-factor] factored right: ${stepsAstToLatex(rightFactored.ast)}`
-        );
+        // Only output if steps are non-empty and not empty string/null
+        if (shouldFactorLeft && Array.isArray(leftFactored.steps)) {
+          context.steps.push('leftFactored', leftFactored.steps);
+        }
+        if (shouldFactorLeft && stepsAstToLatex(leftFactored.ast)) {
+          context.steps.push(
+            `[recursive-factor] factored left: ${stepsAstToLatex(leftFactored.ast)}`
+          );
+        }
+        if (
+          shouldFactorRight &&
+          Array.isArray(rightFactored.steps) &&
+          rightFactored.steps.length > 0
+        ) {
+          context.steps.push('rightFactored', rightFactored.steps);
+        }
+        if (shouldFactorRight && stepsAstToLatex(rightFactored.ast)) {
+          context.steps.push(
+            `[recursive-factor] factored right: ${stepsAstToLatex(rightFactored.ast)}`
+          );
+        }
       }
       return newNode;
     } else if (node.type === 'UnaryExpression') {
