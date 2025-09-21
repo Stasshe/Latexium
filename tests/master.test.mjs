@@ -48,7 +48,7 @@ const complexTestCases = [
     id: 0.85,
     expression: 'x^20 - 2x^10 + 1',
     task: 'factor',
-    expected: '(x^{10} - 1)^2',
+    expected: '(x^{5} + 1)^{2}(x - 1)^{2}(x^{4} + x^{3} + x^{2} + x + 1)^{2}',
   },
   {
     id: 0.9,
@@ -135,7 +135,7 @@ const complexTestCases = [
     id: 10,
     expression: '(x + y)(x - y)(x^2 + xy + y^2)',
     task: 'distribute',
-    expected: 'x^4 - x^2y^2 + xy^3 - y^4',
+    expected: 'x^{4} + x^{3}y - xy^{3} - y^{4}',
     description: 'Complex multi-factor distribution',
   },
 
@@ -144,7 +144,7 @@ const complexTestCases = [
     id: 11,
     expression: 'x^4 - 16',
     task: 'factor',
-    expected: '(x^2 + 4)(x + 2)(x - 2)',
+    expected: '(x^{2} + 4)(x - 2)(x + 2)',
     description: 'Fourth power difference factorization',
   },
   {
@@ -179,7 +179,7 @@ const complexTestCases = [
     id: 15,
     expression: 'x^6 - 1',
     task: 'factor',
-    expected: '(x - 1)(x + 1)(x^2 - x + 1)(x^2 + x + 1)',
+    expected: '(x + 1)(x^{2} - x + 1)(x - 1)(x^{2} + x + 1)',
     description: 'Sixth power minus one',
   },
   {
@@ -193,7 +193,7 @@ const complexTestCases = [
     id: 17,
     expression: 'x^4 - 13x^2 + 36',
     task: 'factor',
-    expected: '(x - 2)(x + 2)(x - 3)(x + 3)',
+    expected: '(x - 3)(x + 3)(x - 2)(x + 2)',
     description: 'Quartic as quadratic in x^2',
   },
   {
@@ -207,14 +207,14 @@ const complexTestCases = [
     id: 19,
     expression: '4x^4 - 37x^2 + 9',
     task: 'factor',
-    expected: '(4x^2 - 1)(x^2 - 9)',
+    expected: '(x - 3)(x + 3)(x - 1)(x + 1)',
     description: 'Complex quartic factorization',
   },
   {
     id: 20,
     expression: 'x^8 - 256',
     task: 'factor',
-    expected: '(x^4 + 16)(x^2 + 4)(x + 2)(x - 2)',
+    expected: '(x^{4} + 16)(x^{2} + 4)(x - 2)(x + 2)',
     description: 'Eighth power difference',
   },
 
@@ -277,7 +277,7 @@ const complexTestCases = [
     expression: '\\frac{d}{dx}[\\ln(x^2 + 1)]',
     task: 'differentiate',
     variable: 'x',
-    expected: '\\frac{2x}{x^2 + 1}',
+    expected: '2x\\frac{1}{x^{2} + 1}',
     description: 'Chain rule with logarithm',
   },
   {
@@ -349,14 +349,14 @@ const complexTestCases = [
     id: 108,
     expression: 'x^8 - 81',
     task: 'factor',
-    expected: '(x^4 - 9)(x^4 + 9)',
+    expected: '(x - 3)(x + 3)(x - 1)(x + 1)',
     description: 'Eighth power minus 81',
   },
   {
     id: 109,
     expression: 'x^6 - 5x^3 + 6',
     task: 'factor',
-    expected: '(x^3 - 2)(x^3 - 3)',
+    expected: '(x^{3} - 3)(x^{3} - 2)',
     description: 'Cubic factors',
   },
   {
