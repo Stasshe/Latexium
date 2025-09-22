@@ -1,10 +1,30 @@
 import { FactorizationPattern, PatternUtils } from './pattern-utils';
+import { FactorizationContext, FactorizationResult } from '../framework';
 
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '@/types';
 
 export class CyclotomicPattern implements FactorizationPattern {
   name = 'cyclotomic';
   description = 'Factor x^n - 1, x^n + 1 into cyclotomic polynomials';
+  priority = 40;
+
+  canApply(node: ASTNode, _context: FactorizationContext): boolean {
+    return this.matches(node);
+  }
+
+  apply(node: ASTNode, _context: FactorizationContext): FactorizationResult {
+    const factored = this.factor(node);
+    return {
+      success: !!factored,
+      ast: factored ?? node,
+      changed: !!factored,
+      steps: factored
+        ? [`[CyclotomicPattern] Factored: ...`]
+        : ['No cyclotomic factorization found'],
+      strategyUsed: this.name,
+      canContinue: true,
+    };
+  }
 
   matches(node: ASTNode): boolean {
     if (node.type !== 'BinaryExpression') return false;

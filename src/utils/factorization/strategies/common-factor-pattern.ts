@@ -1,10 +1,15 @@
 import { FactorizationPattern, PatternUtils } from './pattern-utils';
+import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
 
 import { ASTNode, BinaryExpression } from '@/types';
 
-export class ConcreteCommonFactorPattern implements FactorizationPattern {
+export class ConcreteCommonFactorPattern implements FactorizationPattern, FactorizationStrategy {
   name = 'common-factor';
   description = 'Extract common factors from polynomial terms';
+  priority = 20;
+  factor(node: ASTNode): ASTNode | null {
+    throw new Error('Method not implemented.');
+  }
 
   matches(node: ASTNode): boolean {
     if (node.type !== 'BinaryExpression') return false;
@@ -17,14 +22,45 @@ export class ConcreteCommonFactorPattern implements FactorizationPattern {
     return gcd > 1;
   }
 
-  factor(node: ASTNode): ASTNode | null {
-    if (!this.matches(node)) return null;
+  canApply(node: ASTNode, _context: FactorizationContext): boolean {
+    return this.matches(node);
+  }
+
+  apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
+    const steps = context.steps || [];
+    if (!this.matches(node)) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [...steps, 'No common factor found'],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     const terms = this.extractTerms(node as BinaryExpression);
-    if (terms.length < 2) return null;
-    if (terms.every(term => term.type === 'NumberLiteral')) return null;
+    if (terms.length < 2 || terms.every(term => term.type === 'NumberLiteral')) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [...steps, 'No common factor found'],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     const coefficients = terms.map(term => PatternUtils.getCoefficient(term));
     const gcd = PatternUtils.gcdArray(coefficients);
-    if (gcd <= 1) return null;
+    if (gcd <= 1) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [...steps, 'No common factor found'],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     const factorNode = PatternUtils.createNumber(gcd);
     const simplifiedTerms = terms.map(term => {
       const coeff = PatternUtils.getCoefficient(term);
@@ -42,15 +78,41 @@ export class ConcreteCommonFactorPattern implements FactorizationPattern {
         return PatternUtils.createNumber(newCoeff);
       }
     });
-    if (simplifiedTerms.length === 0) return null;
+    if (simplifiedTerms.length === 0) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [...steps, 'No common factor found'],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     let simplified = simplifiedTerms[0];
-    if (!simplified) return null;
+    if (!simplified) {
+      return {
+        success: false,
+        ast: node,
+        changed: false,
+        steps: [...steps, 'No common factor found'],
+        strategyUsed: this.name,
+        canContinue: false,
+      };
+    }
     for (let i = 1; i < simplifiedTerms.length; i++) {
       const term = simplifiedTerms[i];
       if (!term) continue;
       simplified = PatternUtils.createBinaryExpression(simplified, '+', term);
     }
-    return PatternUtils.createBinaryExpression(factorNode, '*', simplified);
+    const resultAst = PatternUtils.createBinaryExpression(factorNode, '*', simplified);
+    return {
+      success: true,
+      ast: resultAst,
+      changed: true,
+      steps: [...steps, 'Extracted common factor'],
+      strategyUsed: this.name,
+      canContinue: true,
+    };
   }
 
   private extractTerms(node: BinaryExpression): ASTNode[] {

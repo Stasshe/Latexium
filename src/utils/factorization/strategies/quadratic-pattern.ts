@@ -1,10 +1,27 @@
 import { FactorizationPattern, PatternUtils } from './pattern-utils';
+import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
 
 import { ASTNode } from '@/types';
 
-export class QuadraticPattern implements FactorizationPattern {
+export class QuadraticPattern implements FactorizationPattern, FactorizationStrategy {
+  canApply(node: ASTNode, _context: FactorizationContext): boolean {
+    return this.matches(node);
+  }
+
+  apply(node: ASTNode, _context: FactorizationContext): FactorizationResult {
+    const factored = this.factor(node);
+    return {
+      success: !!factored,
+      ast: factored ?? node,
+      changed: !!factored,
+      steps: factored ? [`[QuadraticPattern] Factored: ...`] : ['No quadratic factorization found'],
+      strategyUsed: this.name,
+      canContinue: true,
+    };
+  }
   name = 'quadratic-factorization';
   description = 'Factor quadratic expressions ax² + bx + c';
+  priority = 30;
 
   matches(node: ASTNode): boolean {
     if (node.type === 'BinaryExpression') {

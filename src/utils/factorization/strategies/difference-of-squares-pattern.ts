@@ -1,10 +1,31 @@
+import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
 import { FactorizationPattern, PatternUtils } from './pattern-utils';
 
 import { ASTNode, BinaryExpression } from '@/types';
 
-export class ConcreteDifferenceOfSquaresPattern implements FactorizationPattern {
+export class ConcreteDifferenceOfSquaresPattern
+  implements FactorizationPattern, FactorizationStrategy
+{
+  canApply(node: ASTNode, _context: FactorizationContext): boolean {
+    return this.matches(node);
+  }
+
+  apply(node: ASTNode, _context: FactorizationContext): FactorizationResult {
+    const factored = this.factor(node);
+    return {
+      success: !!factored,
+      ast: factored ?? node,
+      changed: !!factored,
+      steps: factored
+        ? [`[DifferenceOfSquaresPattern] Factored: ...`]
+        : ['No difference of squares found'],
+      strategyUsed: this.name,
+      canContinue: true,
+    };
+  }
   name = 'difference-of-squares';
   description = 'Factor expressions of the form a² - b²';
+  priority = 10;
 
   matches(node: ASTNode): boolean {
     if (node.type === 'BinaryExpression' && node.operator === '-') {

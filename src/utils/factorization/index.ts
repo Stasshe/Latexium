@@ -13,6 +13,10 @@ import {
   PowerSubstitutionStrategy,
   PerfectPowerStrategy,
 } from './strategies';
+import { ConcreteCommonFactorPattern } from './strategies/common-factor-pattern';
+import { CyclotomicPattern } from './strategies/cyclotomic';
+import { ConcreteDifferenceOfSquaresPattern } from './strategies/difference-of-squares-pattern';
+import { QuadraticPattern } from './strategies/quadratic-pattern';
 
 import { ASTNode, StepTree } from '@/types';
 
@@ -20,7 +24,14 @@ import { ASTNode, StepTree } from '@/types';
 const factorizationEngine = new FactorizationEngine();
 
 // Register essential strategies only (per factor.md)
+
 try {
+  // Register pattern strategies (priority order)
+  factorizationEngine.registerStrategy(new ConcreteDifferenceOfSquaresPattern());
+  factorizationEngine.registerStrategy(new ConcreteCommonFactorPattern());
+  factorizationEngine.registerStrategy(new QuadraticPattern());
+  factorizationEngine.registerStrategy(new CyclotomicPattern());
+  // Register main strategies
   factorizationEngine.registerStrategy(new PerfectPowerStrategy());
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
