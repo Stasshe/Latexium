@@ -163,7 +163,8 @@ export class FactorizationEngine {
             break;
           } else if (!result.success) {
             context.steps.push(
-              `✗ ${strategy.name} failed: ${Array.isArray(result.steps) ? result.steps.join(', ') : result.steps}`
+              `✗ ${strategy.name} failed: ${stepsAstToLatex(result.ast)}`,
+              result.steps
             );
           }
         }

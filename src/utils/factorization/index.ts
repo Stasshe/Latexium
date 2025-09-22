@@ -27,9 +27,9 @@ try {
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
+  factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
   factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
   factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
-  factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
 } catch (strategyError) {
   throw new Error(
     `Strategy registration failed: ${strategyError instanceof Error ? strategyError.message : 'Unknown error'}`
@@ -70,18 +70,6 @@ export function factorWithSteps(
       attemptSteps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
       // Add strategy names used in this attempt to steps
-      if (result.steps && Array.isArray(result.steps)) {
-        for (const step of result.steps) {
-          if (
-            step &&
-            typeof step === 'object' &&
-            'strategy' in step &&
-            typeof step.strategy === 'string'
-          ) {
-            attemptSteps.push(`Used strategy: ${step.strategy}`);
-          }
-        }
-      }
       attemptSteps.push(...result.steps);
       const nextAstStr = JSON.stringify(result.ast);
       if (nextAstStr === prevAstStr) {

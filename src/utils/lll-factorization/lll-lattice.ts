@@ -111,10 +111,11 @@ export function lllReduce(basis: number[][], delta: number = 0.75): number[][] {
       ? (mu[k] as number[])
       : (new Array(m).fill(0) as number[]);
     const muKKm1 = typeof mu_k[k - 1] === 'number' ? mu_k[k - 1] : 0;
-    // @ts-expect-error TypeScript is too strict here, but undefined is already handled
-    const rhs =
-      (delta - Number(muKKm1 ?? 0) ** 2) *
-      (typeof BstarNorm[k - 1] === 'number' ? BstarNorm[k - 1] : 0);
+
+    let rhs = 0;
+    if (BstarNorm[k - 1] !== undefined) {
+      rhs = (delta - Number(muKKm1 ?? 0) ** 2) * (BstarNorm[k - 1] as number);
+    }
     // @ts-expect-error lhs is always number here
     if (lhs < rhs) {
       // Swap B[k] and B[k-1]
