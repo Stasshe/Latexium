@@ -4,7 +4,6 @@
  */
 
 import { FactorizationEngine, FactorizationPreferences } from './framework';
-import { PatternRecognitionStrategy } from './pattern-recognition/strategy';
 import {
   CommonFactorStrategy,
   DifferenceOfSquaresStrategy,
@@ -22,7 +21,6 @@ const factorizationEngine = new FactorizationEngine();
 
 // Register essential strategies only (per factor.md)
 try {
-  factorizationEngine.registerStrategy(new PatternRecognitionStrategy());
   factorizationEngine.registerStrategy(new PerfectPowerStrategy());
   factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
