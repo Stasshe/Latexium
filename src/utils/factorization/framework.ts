@@ -142,12 +142,7 @@ export class FactorizationEngine {
             currentNode = result.ast;
             hasChanged = true;
             iterationChanged = true;
-            if (Array.isArray(result.steps)) {
-              totalSteps.push(...result.steps);
-            } else {
-              totalSteps.push(result.steps);
-            }
-
+            totalSteps.push(...result.steps);
             // Safe LaTeX conversion with error handling
             try {
               const latexStr = astToLatex(currentNode);
@@ -158,7 +153,6 @@ export class FactorizationEngine {
                 `LaTeX conversion failed after ${strategy.name}: ${latexError instanceof Error ? latexError.message : 'Unknown error'}`
               );
             }
-
             // Continue to next iteration to try other strategies on the new result
             break;
           } else if (!result.success) {

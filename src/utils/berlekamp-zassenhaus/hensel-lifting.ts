@@ -22,29 +22,110 @@ export class HenselLifting {
     originalCoeffs: number[],
     factorCoeffs: number[][],
     prime: number,
-    targetPrecision: number
+    targetPrecision: number,
+    steps?: string[]
   ): number[][] {
     if (factorCoeffs.length <= 1) {
+      if (steps) steps.push(`[Hensel] 1因子なのでリフト不要`);
       return factorCoeffs;
     }
 
     try {
-      // Start with mod p factorization
-      let currentFactors = factorCoeffs.map(coeffs => [...coeffs]);
+      // 多因子対応: すべての因子をリフト
+      const currentFactors = factorCoeffs.map(coeffs => [...coeffs]);
       let currentMod = prime;
+      if (steps)
+        steps.push(`[Hensel] 初期因子: ${JSON.stringify(currentFactors)}, mod ${currentMod}`);
 
-      // Lift precision iteratively
+      // 多段階リフト
       while (currentMod < targetPrecision) {
         const nextMod = Math.min(currentMod * prime, targetPrecision);
-        currentFactors = this.liftStep(originalCoeffs, currentFactors, currentMod, nextMod, prime);
+        // 多因子リフト: 各ペアで順次リフト
+        for (let i = 0; i < currentFactors.length - 1; i++) {
+          const f1 = currentFactors[i] ?? [];
+          const f2 = currentFactors[i + 1] ?? [];
+          const productOthers = currentFactors
+            .filter((_, idx) => idx !== i && idx !== i + 1)
+            .reduce((acc, arr) => this.multiplyPolynomials(acc, arr), [1]);
+          // 元多項式を他因子で割ったものをリフト対象に
+          const target = this.dividePolynomials(originalCoeffs, productOthers);
+          const liftedPair = this.liftStep(target, [f1, f2], currentMod, nextMod, prime);
+          currentFactors[i] = liftedPair[0] ?? f1;
+          currentFactors[i + 1] = liftedPair[1] ?? f2;
+        }
         currentMod = nextMod;
+        if (steps)
+          steps.push(`[Hensel] mod ${currentMod} でリフト: ${JSON.stringify(currentFactors)}`);
       }
 
-      return currentFactors;
+      // mod p^k から整数係数へ昇格
+      // 係数が負の場合も考慮し、最も自然な整数係数に正規化
+      const normalized = currentFactors.map(fac =>
+        fac.map(c => this.normalizeCoeff(c, currentMod))
+      );
+      if (steps) steps.push(`[Hensel] 整数係数へ昇格: ${JSON.stringify(normalized)}`);
+
+      // 全因子の積が元多項式になるかチェックし、ならない場合は元の因子を返す
+      const product = normalized.reduce((acc, arr) => this.multiplyPolynomials(acc, arr), [1]);
+      if (!this.arraysEqual(this.trimZeros(product), this.trimZeros(originalCoeffs))) {
+        if (steps) steps.push(`[Hensel] 昇格後の積が元多項式と一致しないためリフト失敗`);
+        return factorCoeffs;
+      }
+      return normalized;
     } catch (error) {
+      if (steps)
+        steps.push(`[Hensel] 例外発生: ${error instanceof Error ? error.message : String(error)}`);
       // Fallback: return original factors if lifting fails
       return factorCoeffs;
     }
+  }
+
+  // mod n で最も自然な整数係数に正規化
+  private normalizeCoeff(c: number, mod: number): number {
+    let v = c % mod;
+    if (v > mod / 2) v -= mod;
+    if (v < -mod / 2) v += mod;
+    return v;
+  }
+
+  // 配列が等しいか
+  private arraysEqual(a: number[], b: number[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  // 末尾の0を除去
+  private trimZeros(arr: number[]): number[] {
+    const res = arr.slice();
+    while (res.length > 1 && (res[res.length - 1] ?? 0) === 0) res.pop();
+    return res;
+  }
+
+  // 多項式の割り算（余り無視、割り切れない場合はそのまま返す）
+  private dividePolynomials(a: number[], b: number[]): number[] {
+    const dividend = a.slice();
+    const divisor = b.slice();
+    const result: number[] = [];
+    while (
+      dividend.length >= divisor.length &&
+      divisor.length > 0 &&
+      (divisor[divisor.length - 1] ?? 0) !== 0
+    ) {
+      const leadDiv = dividend[dividend.length - 1] ?? 0;
+      const leadDivisor = divisor[divisor.length - 1] ?? 1;
+      const coeff = leadDiv / leadDivisor;
+      const deg = dividend.length - divisor.length;
+      result[deg] = coeff;
+      for (let i = 0; i < divisor.length; i++) {
+        dividend[deg + i] = (dividend[deg + i] ?? 0) - coeff * (divisor[i] ?? 0);
+      }
+      while (dividend.length > 0 && Math.abs(dividend[dividend.length - 1] ?? 0) < 1e-10)
+        dividend.pop();
+    }
+    return result.length ? result : a;
   }
 
   /**

@@ -42,7 +42,7 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
       steps.push(`[DEBUG] originalLatex: ${originalLatex}`);
 
       // Apply Berlekamp-Zassenhaus algorithm
-      const factors = berlekampZassenhausFactor(node, context.variable);
+      const factors = berlekampZassenhausFactor(node, context.variable, {}, steps);
       steps.push(`[DEBUG] raw factors count: ${factors ? factors.length : 'null'}`);
       if (factors) {
         steps.push(`[DEBUG] raw factors LaTeX: ${factors.map(astToLatex).join(' | ')}`);

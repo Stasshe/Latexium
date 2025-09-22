@@ -14,7 +14,8 @@
 import { BerlekampAlgorithm } from './berlekamp';
 import { HenselLifting } from './hensel-lifting';
 import { PolynomialUtils } from './polynomial-utils';
-import { ASTNode } from '../../types';
+import { ASTNode, StepTree } from '../../types';
+import type { NumberLiteral } from '../../types/ast';
 
 /**
  * Berlekamp-Zassenhaus factorization options
@@ -65,69 +66,80 @@ export class BerlekampZassenhausFactorizer {
   factor(
     polynomial: ASTNode,
     variable: string = 'x',
-    options: BZFactorizationOptions = {}
+    options: BZFactorizationOptions = {},
+    steps?: StepTree[]
   ): ASTNode[] | null {
     const opts = { ...DEFAULT_BZ_OPTIONS, ...options };
 
     try {
+      if (steps) steps.push(`[BZ] 入力AST: ${JSON.stringify(polynomial)}`);
       // Step 1: Validate and prepare polynomial
       if (!this.polynomialUtils.isPolynomial(polynomial, variable)) {
+        if (steps) steps.push(`[BZ] 入力は多項式ではありません`);
         return null;
       }
 
       // Extract coefficients and degree
       const coefficients = this.polynomialUtils.extractCoefficients(polynomial, variable);
       const degree = coefficients.length - 1;
+      if (steps) steps.push(`[BZ] 係数配列: ${JSON.stringify(coefficients)}, 次数: ${degree}`);
 
       if (degree < 2) {
+        if (steps) steps.push(`[BZ] 次数が2未満なので因数分解しません`);
         return null; // Cannot factor linear or constant polynomials
       }
 
       if (degree > opts.maxDegree) {
+        if (steps) steps.push(`[BZ] 次数が最大値${opts.maxDegree}を超えています`);
         throw new Error(`Polynomial degree ${degree} exceeds maximum ${opts.maxDegree}`);
       }
 
       // Step 2: Select appropriate prime
       const prime = this.selectPrime(coefficients, opts.prime);
+      if (steps) steps.push(`[BZ] 使用素数: ${prime}`);
       if (!prime) {
+        if (steps) steps.push(`[BZ] 有効な素数が見つかりません`);
         throw new Error('Could not find suitable prime for factorization');
       }
 
-      // Step 3: Apply square-free decomposition (preprocessing)
-      const squareFreeFactors = this.squareFreeDecomposition(coefficients, prime);
-
-      // Step 4: Factor each square-free factor
+      // Step 3: Factor the polynomial (square-free decomposition is handled elsewhere)
       const allFactors: number[][] = [];
 
-      for (const factor of squareFreeFactors) {
-        // Phase 1: Berlekamp algorithm in finite field
-        const finiteFieldFactors = this.berlekamp.factorInFiniteField(factor, prime);
+      // Phase 1: Berlekamp algorithm in finite field
+      const finiteFieldFactors = this.berlekamp.factorInFiniteField(coefficients, prime);
+      if (steps) steps.push(`[BZ] 有限体因数分解結果: ${JSON.stringify(finiteFieldFactors)}`);
 
-        if (finiteFieldFactors.length <= 1) {
-          // Irreducible in finite field
-          allFactors.push(factor);
-          continue;
-        }
-
+      if (finiteFieldFactors.length <= 1) {
+        // Irreducible in finite field
+        if (steps) steps.push(`[BZ] 有限体で既約`);
+        allFactors.push(coefficients);
+      } else {
         // Phase 2: Hensel lifting
+        if (steps) steps.push(`[BZ] Henselリフト開始`);
         const liftedFactors = this.henselLifting.liftFactors(
-          factor,
+          coefficients,
           finiteFieldFactors,
           prime,
           opts.targetPrecision
         );
-
+        if (steps) steps.push(`[BZ] Henselリフト結果: ${JSON.stringify(liftedFactors)}`);
         allFactors.push(...liftedFactors);
       }
 
-      // Step 5: Convert coefficient arrays back to AST nodes
+      // Convert coefficient arrays back to AST nodes
       if (allFactors.length <= 1) {
+        if (steps)
+          steps.push(`[BZ] 高度な因数分解で分解できなかったので基本因数分解にフォールバック`);
         // Try basic factorization as fallback
         return this.attemptBasicFactorization(polynomial, variable);
       }
 
-      return this.convertCoefficientsToAST(allFactors, variable);
+      const astFactors = this.convertCoefficientsToAST(allFactors, variable);
+      if (steps) steps.push(`[BZ] AST因数リスト: ${JSON.stringify(astFactors)}`);
+      return astFactors;
     } catch (error) {
+      if (steps)
+        steps.push(`[BZ] 例外発生: ${error instanceof Error ? error.message : String(error)}`);
       // Fallback to basic factorization
       return this.attemptBasicFactorization(polynomial, variable);
     }
@@ -137,6 +149,37 @@ export class BerlekampZassenhausFactorizer {
    * Fallback: Basic factorization for simple cases
    */
   private attemptBasicFactorization(polynomial: ASTNode, variable: string): ASTNode[] | null {
+    const coefficients = this.polynomialUtils.extractCoefficients(polynomial, variable);
+    // 和・差の立方公式: x^3 + a^3 = (x + a)(x^2 - a x + a^2), x^3 - a^3 = (x - a)(x^2 + a x + a^2)
+    if (coefficients.length === 4) {
+      const d = coefficients[0]; // 定数項
+      const c = coefficients[1]; // 1次
+      const b = coefficients[2]; // 2次
+      const a = coefficients[3]; // 3次
+      // x^3 + a^3
+      if (a === 1 && b === 0 && c === 0 && typeof d === 'number') {
+        const cubeRoot = Math.cbrt(Math.abs(d));
+        if (Number.isInteger(cubeRoot)) {
+          if (d > 0) {
+            // x^3 + a^3
+            const lin = this.createLinearFactor(1, cubeRoot, variable);
+            const quad = this.polynomialUtils.coefficientsToAST(
+              [cubeRoot * cubeRoot, -cubeRoot, 1],
+              variable
+            );
+            return [lin, quad];
+          } else if (d < 0) {
+            // x^3 - a^3
+            const lin = this.createLinearFactor(1, -cubeRoot, variable);
+            const quad = this.polynomialUtils.coefficientsToAST(
+              [cubeRoot * cubeRoot, cubeRoot, 1],
+              variable
+            );
+            return [lin, quad];
+          }
+        }
+      }
+    }
     try {
       const coefficients = this.polynomialUtils.extractCoefficients(polynomial, variable);
 
@@ -300,14 +343,27 @@ export class BerlekampZassenhausFactorizer {
       return suggestedPrime;
     }
 
-    // Find the first valid prime
+    // まず全ての係数で割り切れない素数を探す
     for (const prime of primes) {
       if (this.isPrimeValid(prime, coefficients)) {
         return prime;
       }
     }
 
-    return null;
+    // それでも見つからない場合、定数項と最高次項の最大公約数で割り切れない素数を探す
+    const nonZeroCoeffs = coefficients.filter(c => c !== 0).map(c => Math.abs(c));
+    const constant = nonZeroCoeffs[0] ?? 1;
+    const leading = nonZeroCoeffs[nonZeroCoeffs.length - 1] ?? 1;
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const g = gcd(constant, leading);
+    for (const prime of primes) {
+      if (g % prime !== 0) {
+        return prime;
+      }
+    }
+
+    // それでもダメなら primes のどれかを強制的に返す（BZが失敗してもstepsに記録される）
+    return primes[0] ?? null;
   }
 
   /**
@@ -317,23 +373,73 @@ export class BerlekampZassenhausFactorizer {
     return coefficients.every(coeff => coeff % prime !== 0);
   }
 
-  /**
-   * Square-free decomposition preprocessing step
-   * Returns array of square-free factors
-   */
-  private squareFreeDecomposition(coefficients: number[], prime: number): number[][] {
-    // For now, return the original polynomial
-    // In a full implementation, this would separate square factors
-    return [coefficients];
-  }
+  // Square-free decomposition and substitutions (e.g., t = x^k) are handled by other strategies.
 
   /**
    * Convert coefficient arrays back to AST node representation
    */
   private convertCoefficientsToAST(factorCoefficients: number[][], variable: string): ASTNode[] {
-    return factorCoefficients.map(coeffs =>
-      this.polynomialUtils.coefficientsToAST(coeffs, variable)
+    // 型ガード
+    function isNumberLiteral(node: ASTNode): node is { type: 'NumberLiteral'; value: number } {
+      return node.type === 'NumberLiteral' && typeof (node as NumberLiteral).value === 'number';
+    }
+
+    // すべての因子をASTに変換し、undefinedを除外
+    const astFactors = factorCoefficients
+      .map(coeffs => this.polynomialUtils.coefficientsToAST(coeffs, variable))
+      .filter((node): node is ASTNode => node !== undefined && node !== null);
+
+    // 定数因子と多項式因子を分離
+    const constantFactors = astFactors
+      .filter(isNumberLiteral)
+      .filter(node => node.value !== 1 && node.value !== 0);
+    const polyFactors = astFactors.filter(
+      node => !isNumberLiteral(node) || node.value === 1 || node.value === 0
     );
+
+    // 定数因子をまとめて掛ける
+    let constantProduct = 1;
+    for (const node of constantFactors) {
+      if (isNumberLiteral(node)) {
+        constantProduct *= node.value;
+      }
+    }
+
+    // 0が含まれていれば全体が0
+    if (constantProduct === 0) {
+      return [{ type: 'NumberLiteral', value: 0 }];
+    }
+
+    // 1以外の定数因子があれば先頭に掛ける
+    let resultFactors = polyFactors.filter(
+      node => !(isNumberLiteral(node) && node.value === 1 && node !== undefined)
+    );
+    resultFactors = resultFactors.filter(
+      (node): node is ASTNode => node !== undefined && node !== null
+    );
+    if (constantProduct !== 1) {
+      resultFactors = [{ type: 'NumberLiteral', value: constantProduct }, ...resultFactors];
+    }
+
+    // すべての因子を掛け合わせたASTを返す
+    if (!resultFactors || resultFactors.length === 0) {
+      return [{ type: 'NumberLiteral', value: 1 }];
+    } else if (resultFactors.length === 1) {
+      // filterでundefined/nullを除外済み
+      return [resultFactors[0] as ASTNode];
+    } else {
+      // 左から順に掛ける
+      let acc: ASTNode = resultFactors[0] as ASTNode;
+      for (let i = 1; i < resultFactors.length; i++) {
+        acc = {
+          type: 'BinaryExpression',
+          operator: '*',
+          left: acc,
+          right: resultFactors[i] as ASTNode,
+        };
+      }
+      return [acc];
+    }
   }
 }
 
@@ -343,10 +449,11 @@ export class BerlekampZassenhausFactorizer {
 export function berlekampZassenhausFactor(
   polynomial: ASTNode,
   variable: string = 'x',
-  options: BZFactorizationOptions = {}
+  options: BZFactorizationOptions = {},
+  steps?: StepTree[]
 ): ASTNode[] | null {
   const factorizer = new BerlekampZassenhausFactorizer();
-  return factorizer.factor(polynomial, variable, options);
+  return factorizer.factor(polynomial, variable, options, steps);
 }
 
 // Re-export related classes
