@@ -38,50 +38,39 @@ export class LLLFactorizationStrategy implements FactorizationStrategy {
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
     try {
       const originalLatex = astToLatex(node);
+      // Debug: record entry into LLL
+      const debugSteps: string[] = [`LLL: called with node ${originalLatex}`];
 
-      // Apply LLL algorithm
-      const factors = lllFactor(node, context.variable);
+      // Pass context for debugging (not used by lllFactor, but for traceability)
+      const lllOptions = {
+        delta: 0.75,
+        maxDegree: 15,
+        precision: 1000,
+      };
+      const factored = lllFactor(node, context.variable, { ...lllOptions });
+      //debugSteps.push('LLL: result', originalLatex, stepsAstToLatex(factored));
 
-      if (!factors || factors.length <= 1) {
-        // No factorization found or polynomial is irreducible
+      // 変化なし、またはnullなら失敗扱い
+      if (!factored || astToLatex(factored) === originalLatex) {
         return {
           success: false,
           ast: node,
           changed: false,
-          steps: [`LLL: Polynomial appears to be irreducible or too complex`],
+          steps: [...debugSteps, `LLL: Polynomial appears to be irreducible or too complex`],
           strategyUsed: this.name,
           canContinue: false,
         };
       }
 
-      // Construct factored expression from factors
-      const factoredExpression = this.constructFactoredExpression(factors);
-
-      // Apply basic simplification to normalize expressions like (x - -1) → (x + 1)
-      const simplifiedExpression = basicSimplify(factoredExpression);
+      // 変化があれば成功扱い
+      const simplifiedExpression = basicSimplify(factored);
       const factoredLatex = astToLatex(simplifiedExpression);
-
-      if (factoredLatex === originalLatex) {
-        // No change achieved
-        return {
-          success: false,
-          ast: node,
-          changed: false,
-          steps: [`LLL: No further factorization possible`],
-          strategyUsed: this.name,
-          canContinue: false,
-        };
-      }
-
+      debugSteps.push(`LLL: factoredLatex = ${factoredLatex}`);
       return {
         success: true,
         ast: simplifiedExpression,
         changed: true,
-        steps: [
-          `Applied LLL factorization algorithm`,
-          `Factored into ${factors.length} factors`,
-          `Result: ${factoredLatex}`,
-        ],
+        steps: [...debugSteps, `Applied LLL factorization algorithm`, `Result: ${factoredLatex}`],
         strategyUsed: this.name,
         canContinue: true,
       };
