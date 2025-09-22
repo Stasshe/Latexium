@@ -4,6 +4,7 @@
  * 例: x^6 - 13x^3 + 36 = (x^3)^2 - 13(x^3) + 36 = (x^3 - 4)(x^3 - 9)
  */
 import { ASTNode, BinaryExpression } from '../../../types/ast';
+import { simplify as middleSimplify } from '../../middle-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 
 export class PowerSubstitutionStrategy implements FactorizationStrategy {
@@ -63,11 +64,16 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
         right: this.buildPowerFactor(roots[i] ?? 0, context.variable, k),
       };
     }
+    // middle-simplify を通すが、expand: false で再展開・再因数分解を抑制
+    const simplified = middleSimplify(factored, { expand: false });
     return {
       success: true,
-      ast: factored,
+      ast: simplified,
       changed: true,
-      steps: [`Applied power substitution: t = ${context.variable}^${k}`],
+      steps: [
+        `Applied power substitution: t = ${context.variable}^${k}`,
+        'middle-simplify (expand: false) applied',
+      ],
       strategyUsed: this.name,
       canContinue: false,
     };

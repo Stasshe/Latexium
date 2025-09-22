@@ -13,6 +13,7 @@ import {
   PowerSubstitutionStrategy,
   PerfectPowerStrategy,
 } from './strategies';
+import { stepsAstToLatex } from '../ast';
 import { ConcreteCommonFactorPattern } from './strategies/common-factor-pattern';
 import { CyclotomicPattern } from './strategies/cyclotomic';
 import { ConcreteDifferenceOfSquaresPattern } from './strategies/difference-of-squares-pattern';
@@ -69,25 +70,80 @@ export function factorWithSteps(
   try {
     let currentAst = node;
     let changed = false;
+    // --- 累乗の底が掛け算の場合の分解 ---
+    // (A)^n の形でAが多項式（単項式でない）なら、Aを因数分解し、各因数にn乗を分配して再構成
+    if (
+      currentAst &&
+      currentAst.type === 'BinaryExpression' &&
+      currentAst.operator === '^' &&
+      currentAst.right &&
+      currentAst.right.type === 'NumberLiteral' &&
+      Number.isInteger(currentAst.right.value) &&
+      currentAst.right.value >= 2
+    ) {
+      const n = currentAst.right.value;
+      const base = currentAst.left;
+      // baseが単項式（Identifier, NumberLiteral, Fraction, 単純な累乗）なら何もしない
+      const isMonomial =
+        base.type === 'Identifier' ||
+        base.type === 'NumberLiteral' ||
+        base.type === 'Fraction' ||
+        (base.type === 'BinaryExpression' && base.operator === '^');
+      if (!isMonomial) {
+        // まず底を因数分解
+        const baseFact = factorWithSteps(base, variable, preferences, steps);
+        // baseFactが積なら因数を列挙、そうでなければ1因数扱い
+        function collectFactors(expr: ASTNode): ASTNode[] {
+          if (expr.type === 'BinaryExpression' && expr.operator === '*') {
+            return [...collectFactors(expr.left), ...collectFactors(expr.right)];
+          } else {
+            return [expr];
+          }
+        }
+        const factors: ASTNode[] = collectFactors(baseFact.ast);
+        if (factors.length > 1) {
+          factors.map(f => steps.push(`Factor: ${stepsAstToLatex(f)}`));
+          changed = true;
+        }
+        // 各因数を n 乗して掛け合わせる
+        let newAst: ASTNode | undefined = undefined;
+        for (const factor of factors) {
+          const powNode: ASTNode = {
+            type: 'BinaryExpression',
+            operator: '^',
+            left: factor,
+            right: { type: 'NumberLiteral', value: n },
+          };
+          newAst = newAst
+            ? {
+                type: 'BinaryExpression',
+                operator: '*',
+                left: newAst,
+                right: powNode,
+              }
+            : powNode;
+        }
+        steps.push(`Factored base and distributed power: (A)^n → (F1^n)*(F2^n)*...`);
+        if (newAst) {
+          currentAst = newAst;
+          changed = true;
+        }
+      }
+    }
     let prevAstStr = JSON.stringify(currentAst);
     let count = 1;
     // Recursively apply factorization until no further changes
-    // frameworkのrecursivelyFactorSubexpressions->subexpressions
-    // これ -> ルートレベルでの最終チェク因数分解ループ
     while (true) {
       const attemptSteps: StepTree[] = [];
       attemptSteps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
-      // Add strategy names used in this attempt to steps
       attemptSteps.push(...result.steps);
       const nextAstStr = JSON.stringify(result.ast);
       if (nextAstStr === prevAstStr) {
-        // No further change, do not push this attempt's steps
         changed = changed || result.changed;
         currentAst = result.ast;
         break;
       } else {
-        // Only push steps if there was a change
         steps.push(...attemptSteps);
         changed = true;
         currentAst = result.ast;

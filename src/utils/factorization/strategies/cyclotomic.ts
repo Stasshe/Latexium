@@ -85,7 +85,7 @@ export class CyclotomicPattern implements FactorizationPattern {
       const term = PatternUtils.createBinaryExpression(
         PatternUtils.createIdentifier(variable),
         '^',
-        PatternUtils.createNumber(n - k)
+        PatternUtils.createNumber(k)
       );
       const signedTerm =
         sign === 1

@@ -327,60 +327,6 @@ export class FactorizationEngine {
   }
 
   /**
-   * Check if we should skip recursive factorization for this node
-   * Used to avoid incorrect factorization of sum/difference of cubes results
-   */
-  // private shouldSkipRecursiveFactorization(node: ASTNode, context: FactorizationContext): boolean {
-  //   // Skip factorization of expressions that look like x² ± ax + a²
-  //   // These are typically results from sum/difference of cubes and shouldn't be factored further
-  //   if (node.type === 'BinaryExpression' && node.operator === '+') {
-  //     const poly = PolynomialAnalyzer.analyzePolynomial(node, context.variable);
-  //     if (poly && poly.degree === 2) {
-  //       const a = poly.coefficients.get(2) || 0;
-  //       const b = poly.coefficients.get(1) || 0;
-  //       const c = poly.coefficients.get(0) || 0;
-
-  //       // Check if discriminant is negative (no real roots)
-  //       const discriminant = b * b - 4 * a * c;
-  //       if (discriminant < 0) {
-  //         context.steps.push(
-  //           '  Skipping factorization of irreducible quadratic (negative discriminant)'
-  //         );
-  //         return true;
-  //       }
-  //     }
-  //   }
-  //   return false;
-  // }
-
-  // /**
-  //  * Attempt factorization on a single expression
-  //  */
-  // private attemptFactorization(node: ASTNode, context: FactorizationContext): ASTNode {
-  //   // Create a fresh context for recursive factorization to avoid iteration limit issues
-  //   const recursiveContext: FactorizationContext = {
-  //     ...context,
-  //     currentIteration: 0, // Reset iteration counter for recursive calls
-  //     steps: [], // Use separate steps array to avoid cluttering main output
-  //   };
-
-  //   // Try factorization strategies on this subexpression
-  //   for (const strategy of this.strategies) {
-  //     if (strategy.canApply(node, recursiveContext)) {
-  //       const result = strategy.apply(node, recursiveContext);
-  //       if (result.success && result.changed) {
-  //         context.steps.push(`  Subfactor: Applied ${strategy.name} to subexpression`);
-
-  //         // If factorization was successful, recursively factor the result
-  //         return this.recursivelyFactorSubexpressions(result.ast, context);
-  //       }
-  //     }
-  //   }
-
-  //   return node;
-  // }
-
-  /**
    * Initialize all available strategies
    */
   private initializeStrategies(): void {
