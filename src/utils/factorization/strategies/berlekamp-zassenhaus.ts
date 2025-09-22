@@ -36,19 +36,26 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {
+    const steps: string[] = [];
     try {
       const originalLatex = astToLatex(node);
+      steps.push(`[DEBUG] originalLatex: ${originalLatex}`);
 
       // Apply Berlekamp-Zassenhaus algorithm
       const factors = berlekampZassenhausFactor(node, context.variable);
+      steps.push(`[DEBUG] raw factors count: ${factors ? factors.length : 'null'}`);
+      if (factors) {
+        steps.push(`[DEBUG] raw factors LaTeX: ${factors.map(astToLatex).join(' | ')}`);
+      }
 
       if (!factors || factors.length <= 1) {
         // No factorization found or polynomial is irreducible
+        steps.push('Berlekamp-Zassenhaus: Polynomial appears to be irreducible over the integers');
         return {
           success: false,
           ast: node,
           changed: false,
-          steps: [`Berlekamp-Zassenhaus: Polynomial appears to be irreducible over the integers`],
+          steps,
           strategyUsed: this.name,
           canContinue: false,
         };
@@ -56,43 +63,46 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
 
       // Construct factored expression from factors
       const factoredExpression = this.constructFactoredExpression(factors);
+      steps.push(`[DEBUG] factoredExpression LaTeX: ${astToLatex(factoredExpression)}`);
 
       // Apply basic simplification to normalize expressions like (x - -1) → (x + 1)
       const simplifiedExpression = basicSimplify(factoredExpression);
       const factoredLatex = astToLatex(simplifiedExpression);
+      steps.push(`[DEBUG] simplifiedExpression LaTeX: ${factoredLatex}`);
 
       if (factoredLatex === originalLatex) {
         // No change achieved
+        steps.push('Berlekamp-Zassenhaus: No further factorization possible');
         return {
           success: false,
           ast: node,
           changed: false,
-          steps: [`Berlekamp-Zassenhaus: No further factorization possible`],
+          steps,
           strategyUsed: this.name,
           canContinue: false,
         };
       }
 
+      steps.push('Applied Berlekamp-Zassenhaus algorithm');
+      steps.push(`Factored into ${factors.length} irreducible factors`);
+      steps.push(`Result: ${factoredLatex}`);
       return {
         success: true,
         ast: simplifiedExpression,
         changed: true,
-        steps: [
-          `Applied Berlekamp-Zassenhaus algorithm`,
-          `Factored into ${factors.length} irreducible factors`,
-          `Result: ${factoredLatex}`,
-        ],
+        steps,
         strategyUsed: this.name,
         canContinue: true,
       };
     } catch (error) {
+      steps.push(
+        `Berlekamp-Zassenhaus failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       return {
         success: false,
         ast: node,
         changed: false,
-        steps: [
-          `Berlekamp-Zassenhaus failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ],
+        steps,
         strategyUsed: this.name,
         canContinue: false,
       };
