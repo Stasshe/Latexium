@@ -152,16 +152,63 @@ export class HenselLifting {
       const isEqual = (a: number[], b: number[]): boolean =>
         this.arraysEqual(this.trimZeros(a), this.trimZeros(b));
 
-      // 2つ以上の因子の積で元多項式と一致する組み合わせを探索（任意個数グループ）
-      for (const partition of allSetPartitions(normalizedHensel)) {
-        // 各グループの積を計算
-        const prods = partition.map(g => this.multiplyPolyList(g as number[][]));
-        // すべて次数>0かつ、積が元多項式と一致
-        if (
-          prods.every(p => p.length > 1) &&
-          isEqual(this.multiplyPolyList(prods), this.trimZeros(originalCoeffs))
-        ) {
-          return prods;
+      // --- 各因子を最大公約数で割って正規化し、全ての定数倍・順列の組み合わせで積が元多項式と一致するものを探索 ---
+      // --- ユーティリティ関数を外に出してthis参照を排除 ---
+      const gcdArray = (arr: number[]): number => {
+        let g = 0;
+        for (const v of arr) g = this.gcd(g, v);
+        return Math.abs(g);
+      };
+      const normalizeFactors = (factors: number[][]): number[][] => {
+        return factors.map(fac => {
+          const g = gcdArray(fac);
+          if (g > 1) return fac.map(c => c / g);
+          if (g < 0) return fac.map(c => -c / Math.abs(g));
+          return fac;
+        });
+      };
+      const maxAbsLead = 8;
+      const constChoices: number[][] = normalizedHensel.map(fac => {
+        const lead = fac[fac.length - 1] ?? 1;
+        const absLead = Math.abs(lead);
+        const choices: number[] = [];
+        for (let c = 1; c <= Math.max(absLead, maxAbsLead); ++c) {
+          choices.push(c);
+          choices.push(-c);
+        }
+        return choices;
+      });
+      const cartesian = (arr: number[][]): number[][] => {
+        return arr.reduce<number[][]>(
+          (acc, curr) => acc.flatMap(a => curr.map(b => [...a, b])),
+          [[]]
+        );
+      };
+      const permute = <T>(arr: T[]): T[][] => {
+        if (arr.length <= 1) return [arr];
+        const result: T[][] = [];
+        for (let i = 0; i < arr.length; i++) {
+          const rest = arr.slice(0, i).concat(arr.slice(i + 1));
+          for (const p of permute(rest)) {
+            result.push([arr[i] as T, ...p]);
+          }
+        }
+        return result;
+      };
+      const allConstCombos = cartesian(constChoices);
+      for (const constSet of allConstCombos) {
+        const scaled = normalizedHensel.map((fac, i) => fac.map(c => c * constSet[i]!));
+        const normed = normalizeFactors(scaled);
+        for (const perm of permute(normed)) {
+          for (const partition of allSetPartitions(perm)) {
+            const prods = partition.map(g => this.multiplyPolyList(g as number[][]));
+            if (
+              prods.every(p => p.length > 1) &&
+              isEqual(this.multiplyPolyList(prods), this.trimZeros(originalCoeffs))
+            ) {
+              return prods;
+            }
+          }
         }
       }
       // 組み合わせが見つからなければ従来通り返す

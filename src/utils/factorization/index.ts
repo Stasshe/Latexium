@@ -13,12 +13,13 @@ import {
   PowerSubstitutionStrategy,
   PerfectPowerStrategy,
 } from './strategies';
+// import { FACTORIZATION } from '@/config';
 import { stepsAstToLatex } from '../ast';
 import { ConcreteCommonFactorPattern } from './strategies/common-factor-pattern';
 import { CyclotomicPattern } from './strategies/cyclotomic';
-import { ConcreteDifferenceOfSquaresPattern } from './strategies/difference-of-squares-pattern';
 import { QuadraticPattern } from './strategies/quadratic-pattern';
 
+import { FACTORIZATION } from '@/config';
 import { ASTNode, StepTree } from '@/types';
 
 // Create and configure the factorization engine
@@ -28,7 +29,6 @@ const factorizationEngine = new FactorizationEngine();
 
 try {
   // Register pattern strategies (priority order)
-  factorizationEngine.registerStrategy(new ConcreteDifferenceOfSquaresPattern());
   factorizationEngine.registerStrategy(new ConcreteCommonFactorPattern());
   factorizationEngine.registerStrategy(new QuadraticPattern());
   factorizationEngine.registerStrategy(new CyclotomicPattern());
@@ -38,8 +38,12 @@ try {
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
   factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
-  factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
-  factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
+  if (FACTORIZATION.useLLL) {
+    factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
+  }
+  if (FACTORIZATION.useBerlekampZassenhaus) {
+    factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
+  }
 } catch (strategyError) {
   throw new Error(
     `Strategy registration failed: ${strategyError instanceof Error ? strategyError.message : 'Unknown error'}`
@@ -134,13 +138,11 @@ export function factorWithSteps(
     let count = 1;
     // Recursively apply factorization until no further changes
     while (true) {
-      const attemptSteps: StepTree[] = [];
-      attemptSteps.push(`Factorization attempt #${count}`);
       const result = factorizationEngine.factor(currentAst, variable, preferences);
-      attemptSteps.push(...result.steps);
       const nextAstStr = JSON.stringify(result.ast);
-      steps.push(...attemptSteps);
-      if (nextAstStr === prevAstStr) {
+      // stepsはresult.stepsに完全依存
+      steps.push(...result.steps);
+      if (nextAstStr === prevAstStr || !result.canContinue) {
         changed = changed || result.changed;
         currentAst = result.ast;
         break;

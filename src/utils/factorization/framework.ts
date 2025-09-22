@@ -127,10 +127,10 @@ export class FactorizationEngine {
     let hasChanged = false;
     const totalSteps: StepTree = [...context.steps];
 
-    while (context.currentIteration < context.maxIterations) {
+    let shouldContinue = true;
+    while (context.currentIteration < context.maxIterations && shouldContinue) {
       context.currentIteration++;
       let iterationChanged = false;
-      const shouldContinue = true;
 
       for (const strategy of this.strategies) {
         if (strategy.canApply(currentNode, context)) {
@@ -142,7 +142,9 @@ export class FactorizationEngine {
             currentNode = result.ast;
             hasChanged = true;
             iterationChanged = true;
-            totalSteps.push(...result.steps);
+            if (Array.isArray(result.steps)) {
+              context.steps.push(...result.steps);
+            }
             // Safe LaTeX conversion with error handling
             try {
               const latexStr = astToLatex(currentNode);
@@ -153,7 +155,8 @@ export class FactorizationEngine {
                 `LaTeX conversion failed after ${strategy.name}: ${latexError instanceof Error ? latexError.message : 'Unknown error'}`
               );
             }
-            // Continue to next iteration to try other strategies on the new result
+            // canContinue=falseなら以降の戦略もループも即座に打ち切る
+            shouldContinue = result.canContinue;
             break;
           } else if (!result.success) {
             context.steps.push(
@@ -179,18 +182,25 @@ export class FactorizationEngine {
     if (context.currentIteration >= context.maxIterations) {
       context.steps.push('Maximum iterations reached');
     }
+    if (!shouldContinue) {
+      context.steps.push('Factorization halted by strategy request');
+      return {
+        success: true,
+        ast: currentNode,
+        changed: hasChanged,
+        steps: context.steps,
+        strategyUsed: hasChanged ? 'Multiple strategies' : 'No change',
+        canContinue: false,
+      };
+    }
     context.steps.push('Attempting recursive factorization of subexpressions...');
     currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
-    // Ensure all context steps are included in totalSteps
-    if (Array.isArray(context.steps)) {
-      totalSteps.push(...context.steps.slice(totalSteps.length));
-    }
-
+    // stepsはcontext.stepsに統一
     return {
       success: true,
       ast: currentNode,
       changed: hasChanged,
-      steps: totalSteps,
+      steps: context.steps,
       strategyUsed: hasChanged ? 'Multiple strategies' : 'No change',
       canContinue: false,
     };
@@ -239,6 +249,7 @@ export class FactorizationEngine {
       }
       return newNode;
     } else if (node.type === 'UnaryExpression') {
+      context.steps.push(`Recursively factoring unary expression: ${stepsAstToLatex(node)}`);
       const operand = this.recursivelyFactorSubexpressions(node.operand, context);
       return { ...node, operand };
     } else if (node.type === 'FunctionCall') {
