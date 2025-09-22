@@ -32,10 +32,21 @@ export class HenselLifting {
 
     try {
       // 多因子対応: すべての因子をリフト
-      const currentFactors = factorCoeffs.map(coeffs => [...coeffs]);
+      // モニック化: 各因子の最高次係数を1に正規化（mod prime）
+      const monicFactors = factorCoeffs.map(coeffs => {
+        if (!coeffs || coeffs.length === 0) return [];
+        const lastIdx = coeffs.length - 1;
+        const lead = typeof coeffs[lastIdx] === 'number' ? coeffs[lastIdx] % prime : 0;
+        // 最高次係数の逆元をかける
+        const inv = this.modInv(lead, prime, steps);
+        return coeffs.map(c => (((c * inv) % prime) + prime) % prime);
+      });
+      const currentFactors = monicFactors.map(coeffs => [...coeffs]);
       const currentMod = prime;
       if (steps)
-        steps.push(`[Hensel] 初期因子: ${JSON.stringify(currentFactors)}, mod ${currentMod}`);
+        steps.push(
+          `[Hensel] 初期因子(モニック化): ${JSON.stringify(currentFactors)}, mod ${currentMod}`
+        );
 
       // 本格的な多因子Henselリフト（mod p^k で全因子同時補正）
       let m = prime;
@@ -43,26 +54,59 @@ export class HenselLifting {
         const nextMod = Math.min(m * prime, targetPrecision);
         const prod = this.multiplyPolyList(currentFactors);
         const h = this.modPoly(this.subtractPolynomials(originalCoeffs, prod), nextMod);
+        // 追加: 各因子の最高次係数とgcdをログ出力
+        if (steps) {
+          const leadCoeffs = currentFactors.map(fac =>
+            Array.isArray(fac) && fac.length > 0 ? Number(fac[fac.length - 1]) : 0
+          );
+          // undefinedや非数を除外
+          const safeCoeffs = leadCoeffs.filter(x => typeof x === 'number' && Number.isFinite(x));
+          let gcdAll = 0;
+          if (safeCoeffs.length > 0) {
+            gcdAll = safeCoeffs.reduce((acc, v) => this.gcd(acc, v));
+          }
+          steps.push(
+            `[Hensel-DEBUG] mod ${m} 各因子の最高次係数: ${JSON.stringify(leadCoeffs)}, gcd: ${gcdAll}`
+          );
+        }
+        // --- 多因子同時補正 ---
+        // 1. 各因子以外の積Q_iを計算
+        const Qs = currentFactors.map((_, i) =>
+          this.multiplyPolyList(currentFactors.filter((_, idx) => idx !== i))
+        );
+        // 2. 各因子ごとに extendedEuclidean で補正多項式s_iを計算
+        const Ss = [];
         for (let i = 0; i < currentFactors.length; i++) {
-          const Q = this.multiplyPolyList(currentFactors.filter((_, idx) => idx !== i));
-          const [d, s, t] = this.extendedEuclidean(currentFactors[i] ?? [], Q, nextMod, steps);
+          const cf = currentFactors[i] as number[];
+          const qf = Qs[i] as number[];
+          const [d, s, t] = this.extendedEuclidean(cf, qf, nextMod, steps);
           if (!d || d.length !== 1 || d[0] !== 1) {
             if (steps) (steps ?? []).push(`[Hensel] f_i, Qが互いに素でないためリフト失敗`);
             return factorCoeffs;
           }
-          const s_h = this.multiplyPolynomials(s, h);
-          const s_h_modQ = this.polyMod(s_h, Q, nextMod);
-          const updatedFactor = this.modPoly(
-            this.addPolynomials(currentFactors[i] ?? [], s_h_modQ),
-            nextMod
-          );
-
+          Ss.push(s);
+        }
+        // 3. 各因子の補正量 delta_i = s_i * h mod Q_i, Q_i = prod(他因子)
+        const deltas = Ss.map((s, i) =>
+          this.polyMod(this.multiplyPolynomials(s, h), Array.isArray(Qs[i]) ? Qs[i] : [], nextMod)
+        );
+        // 4. 全因子を同時に補正
+        for (let i = 0; i < currentFactors.length; i++) {
+          const cf2 = currentFactors[i] as number[];
+          const delta = deltas[i] as number[];
+          let updatedFactor = this.modPoly(this.addPolynomials(cf2, delta), nextMod);
+          // --- ここでモニック化 ---
+          if (updatedFactor.length > 0) {
+            const lead = updatedFactor[updatedFactor.length - 1];
+            const safeLead = typeof lead === 'number' && Number.isFinite(lead) ? lead : 1;
+            const inv = this.modInv(safeLead, nextMod, steps);
+            updatedFactor = updatedFactor.map(c => (((c * inv) % nextMod) + nextMod) % nextMod);
+          }
           // Check if the updated factor is valid
           if (updatedFactor.some(coeff => isNaN(coeff))) {
             if (steps) steps.push(`[Hensel] Invalid factor encountered during lifting, aborting.`);
             return factorCoeffs;
           }
-
           currentFactors[i] = updatedFactor;
         }
         m = nextMod;
@@ -78,6 +122,49 @@ export class HenselLifting {
         if (steps) (steps ?? []).push(`[Hensel] 本格リフト後の積が元多項式と一致しないため失敗`);
         return factorCoeffs;
       }
+      // --- ここから因子組み合わせ探索 ---
+      // normalizedHenselの全部分割（2つ以上のグループ）を列挙し、各グループの積が元多項式になるものを返す
+      // 全ての部分集合分割（空集合・全体集合以外）を列挙
+      function* allSetPartitions<T>(arr: T[]): Generator<T[][]> {
+        const n = arr.length;
+        if (n < 2) return;
+        // 再帰的に全分割を生成
+        function* helper(idx: number, groups: T[][]): Generator<T[][]> {
+          if (idx === n) {
+            if (groups.length > 1) yield groups.map(g => [...g]);
+            return;
+          }
+          for (let i = 0; i < groups.length; ++i) {
+            const group = groups[i];
+            if (!group) continue;
+            group.push(arr[idx]!);
+            yield* helper(idx + 1, groups);
+            group.pop();
+          }
+          groups.push([arr[idx]!]);
+          yield* helper(idx + 1, groups);
+          groups.pop();
+        }
+        yield* helper(0, []);
+      }
+
+      // 係数配列の積が一致するか
+      const isEqual = (a: number[], b: number[]): boolean =>
+        this.arraysEqual(this.trimZeros(a), this.trimZeros(b));
+
+      // 2つ以上の因子の積で元多項式と一致する組み合わせを探索（任意個数グループ）
+      for (const partition of allSetPartitions(normalizedHensel)) {
+        // 各グループの積を計算
+        const prods = partition.map(g => this.multiplyPolyList(g as number[][]));
+        // すべて次数>0かつ、積が元多項式と一致
+        if (
+          prods.every(p => p.length > 1) &&
+          isEqual(this.multiplyPolyList(prods), this.trimZeros(originalCoeffs))
+        ) {
+          return prods;
+        }
+      }
+      // 組み合わせが見つからなければ従来通り返す
       return normalizedHensel;
     } catch (error) {
       if (steps)
@@ -279,5 +366,39 @@ export class HenselLifting {
     const res = arr.slice();
     while (res.length > 1 && (res[res.length - 1] ?? 0) === 0) res.pop();
     return res;
+  }
+
+  // 与えられた因子配列の定数倍（1〜p-1）と順列の全組み合わせを生成
+  private allFactorCombinations(factorCoeffs: number[][], prime: number): number[][][] {
+    const constMults = factorCoeffs.map(fac => {
+      const arr: number[][] = [];
+      for (let c = 1; c < prime; ++c) {
+        arr.push(fac.map(x => (((x * c) % prime) + prime) % prime));
+      }
+      return arr;
+    });
+    function permute<T>(arr: T[]): T[][] {
+      if (arr.length <= 1) return [arr];
+      const result: T[][] = [];
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i] === undefined) continue;
+        const rest = arr.slice(0, i).concat(arr.slice(i + 1));
+        for (const p of permute(rest)) {
+          result.push([arr[i] as T, ...p]);
+        }
+      }
+      return result;
+    }
+    function cartesian<T>(arr: T[][]): T[][] {
+      return arr.reduce<T[][]>((acc, curr) => acc.flatMap(a => curr.map(b => [...a, b])), [[]]);
+    }
+    const allConstMults = cartesian(constMults);
+    const allCombos: number[][][] = [];
+    for (const constSet of allConstMults) {
+      for (const perm of permute(constSet)) {
+        allCombos.push(perm);
+      }
+    }
+    return allCombos;
   }
 }
