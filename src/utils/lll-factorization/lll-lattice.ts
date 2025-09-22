@@ -6,21 +6,33 @@
  */
 
 // Lattice basis construction for a given polynomial
-export function createLatticeBasis(coefficients: number[], bound: number = 1000): number[][] {
-  // For degree n, construct (n+1)x(n+1) matrix
-  // Diagonal: bound, last row: coefficients
+// Returns an array of bases for all possible factor degrees (1 to n-1)
+export function createLatticeBases(coefficients: number[], bound: number = 1000): number[][][] {
+  // For degree n, try all possible factor degrees m = 1..n-1
   const n = coefficients.length - 1;
-  const basis: number[][] = [];
-  for (let i = 0; i < n; i++) {
-    const row = new Array(n + 1).fill(0);
-    row[i] = bound;
-    basis.push(row);
+  const bases: number[][][] = [];
+  for (let m = 1; m <= n - 1; m++) {
+    // Each basis is (n-m+1) x (n+1)
+    // First (n-m) rows: diagonal bound
+    const basis: number[][] = [];
+    for (let i = 0; i < n - m; i++) {
+      const row = new Array(n + 1).fill(0);
+      row[i] = bound;
+      basis.push(row);
+    }
+    // Last (m+1) rows: shifted coefficients of f(x) * x^k (k=0..m)
+    for (let k = 0; k <= m; k++) {
+      const row = new Array(n + 1).fill(0);
+      for (let j = 0; j <= n; j++) {
+        if (j - k >= 0 && j - k <= n) {
+          row[j] = coefficients[j - k];
+        }
+      }
+      basis.push(row);
+    }
+    bases.push(basis);
   }
-  // Last row: polynomial coefficients
-  const lastRow = coefficients.slice();
-  while (lastRow.length < n + 1) lastRow.push(0);
-  basis.push(lastRow);
-  return basis;
+  return bases;
 }
 
 // LLL lattice basis reduction (simplified, integer arithmetic)

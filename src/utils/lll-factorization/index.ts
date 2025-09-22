@@ -3,7 +3,7 @@
  * Advanced polynomial factorization using lattice basis reduction
  */
 
-import { createLatticeBasis, lllReduce, findShortVectors } from './lll-lattice';
+import { createLatticeBases, lllReduce, findShortVectors } from './lll-lattice';
 import { ASTNode } from '../../types';
 import { PolynomialUtils } from '../berlekamp-zassenhaus/polynomial-utils';
 import { FactorizationContext } from '../factorization/framework';
@@ -128,42 +128,91 @@ export class LLLFactorizer {
     const degree = coefficients.length - 1;
     if (degree < 3) return null;
 
-    // --- Step 1: 格子基底生成 ---
+    // --- Step 1: 複数基底生成（全因数次数m=1..n-1） ---
     const bound = 1000;
-    const basis = createLatticeBasis(coefficients, bound);
-    if (!basis || basis.length === 0) return null;
+    const bases = createLatticeBases(coefficients, bound);
+    if (!bases || bases.length === 0) return null;
 
-    // --- Step 2: LLL還元 ---
-    const reduced = lllReduce(basis);
-    if (!reduced || reduced.length === 0) return null;
+    // --- Step 2: 各基底でLLL還元・短ベクトル抽出 ---
+    const allCandidates: number[][] = [];
+    for (let m = 1; m <= bases.length; m++) {
+      const basis = bases[m - 1];
+      if (!basis) continue;
+      const reduced = lllReduce(basis);
+      if (!reduced || reduced.length === 0) continue;
+      const shortVecs: number[][] = findShortVectors(reduced, 10000);
+      if (!shortVecs || shortVecs.length === 0) continue;
+      // m+1次の短ベクトルのみを因数候補とする
+      for (const v of shortVecs) {
+        const coeffs = v.map(x => Math.round(x));
+        // 先頭係数が0や次数がm+1でないものは除外
+        const deg = coeffs.findIndex(x => Math.abs(x) > 1e-8);
+        const actualDegree = coeffs.length - 1 - deg;
+        if (deg < 0) continue;
+        if (actualDegree !== m) continue;
+        // 先頭係数は±1のみ許可
+        const lead = coeffs[deg];
+        if (typeof lead !== 'number' || Math.abs(lead) !== 1) continue;
+        // 定数多項式は除外
+        if (coeffs.length <= 1) continue;
+        // 0多項式除外
+        if (!coeffs.some(x => Math.abs(x) > 1e-8)) continue;
+        // 多項式除算で割り切れるか厳密判定
+        const div = tryPolyDivide(coefficients, coeffs.slice(deg));
+        if (
+          div &&
+          div.remainder.every((x: number | undefined) => Math.abs(x ?? 0) < 1e-8) &&
+          div.quotient.length > 0
+        ) {
+          allCandidates.push(coeffs.slice(deg));
+        }
+      }
+    }
+    if (allCandidates.length === 0) return null;
 
-    // --- Step 3: 短ベクトル抽出（因数候補）---
-    const shortVecs: number[][] = findShortVectors(reduced, 10000);
-    if (!shortVecs || shortVecs.length === 0) return null;
-
-    // --- Step 4: 短ベクトル→多項式係数→因数性検証 ---
-    const candidates: number[][] = shortVecs
-      .map((v: number[]) => v.map((x: number) => Math.round(x)))
-      .filter((v: number[]) => v.length > 1 && v.some((x: number) => x !== 0));
-
+    // --- Step 3: 短ベクトル→多項式係数→因数性検証 ---
     const variable = context.variable || 'x';
     const utils = this.polynomialUtils;
-    const factors: ASTNode[] = [];
-    let remaining = coefficients.slice();
-    for (const cand of candidates) {
-      if (cand[0] === 0 || cand[cand.length - 1] === 0) continue;
-      const div = tryPolyDivide(remaining, cand);
-      if (div && div.remainder.every((x: number | undefined) => Math.abs(x ?? 0) < 1e-8)) {
-        factors.push(utils.coefficientsToAST(cand, variable));
-        remaining = div.quotient;
+
+    // 再帰的に全ての因数候補の組み合わせを探索
+    function recursiveFactor(
+      coeffs: number[],
+      remainingCandidates: number[][],
+      used: boolean[]
+    ): ASTNode[] | null {
+      // 既に定数または1次以下なら終了
+      if (coeffs.length <= 1 || (coeffs.length === 2 && Math.abs(coeffs[0] ?? 0) < 1e-8)) {
+        return [utils.coefficientsToAST(coeffs, variable)];
       }
-    }
-    if (factors.length > 0) {
-      if (remaining.length > 1 || (remaining.length === 1 && Math.abs(remaining[0] ?? 0) > 1e-8)) {
-        factors.push(utils.coefficientsToAST(remaining, variable));
+      for (let i = 0; i < remainingCandidates.length; i++) {
+        if (used[i]) continue;
+        const cand = remainingCandidates[i];
+        if (!cand || cand[0] === 0 || cand[cand.length - 1] === 0) continue;
+        const div = tryPolyDivide(coeffs, cand);
+        if (
+          div &&
+          div.remainder.every((x: number | undefined) => Math.abs(x ?? 0) < 1e-8) &&
+          div.quotient.length > 0
+        ) {
+          used[i] = true;
+          const subfactors = recursiveFactor(div.quotient, remainingCandidates, used);
+          used[i] = false;
+          if (subfactors) {
+            return [utils.coefficientsToAST(cand, variable), ...subfactors];
+          }
+        }
       }
-      return factors;
+      // どの因数候補でも割り切れなければ元の多項式を返す
+      return null;
     }
+
+    // まず全候補で再帰的に探索
+    const used = new Array(allCandidates.length).fill(false);
+    const result = recursiveFactor(coefficients, allCandidates, used);
+    if (result && result.length > 0) {
+      return result;
+    }
+    // 失敗した場合は元の多項式のみ返す
     return null;
   }
 }

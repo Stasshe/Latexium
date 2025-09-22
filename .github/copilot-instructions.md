@@ -1,9 +1,6 @@
 必要なライブラリがあれば、インストールすること。
 コードは全て英語で、コメントも英語で書くこと。
-tsなので、コードを変更した場合はビルドすること。
-
-!important
-testのためのmjsは、必ず./testsフォルダに作成し、import { parseLatex, analyze } from '../../dist/index.esm.js';のように、dist/index.esm.jsからインポートすること。一時的なテストケースは、tests/temp/*におくこと。
+tsなので、コードを変更した場合はnpm run buildし、テストはnpm testで実行。
 
 ややこしいので、task: 'simplify'は使わないこと。task: 'distribute'か、'factor'を使うこと。変数の順番は、テストケースのexpectedが間違えている時がある。
 
