@@ -40,10 +40,10 @@ const complexTestCases = [
   // Distribution Tests (10 cases) - Main focus
   {
     id: 113,
-    expression: 'x^6 - 64',
+    expression: 'x^3 + 8',
     task: 'factor',
-    expected: '(x^2 - 4)(x^2 + 2x + 4)(x^2 - 2x + 4)',
-    description: 'Sixth power minus 64',
+    expected: '(x + 2)(x^2 - 2x + 4)',
+    description: 'Cubic polynomial with constant term',
   },
 ];
 

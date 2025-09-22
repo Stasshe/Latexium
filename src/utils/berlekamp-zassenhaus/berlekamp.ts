@@ -5,6 +5,8 @@
 
 import { FiniteFieldPolynomial, ModularArithmetic } from './finite-field';
 
+import { StepTree } from '@/types';
+
 /**
  * Berlekamp algorithm for polynomial factorization in finite fields
  */
@@ -16,7 +18,7 @@ export class BerlekampAlgorithm {
    * @param prime - Prime for finite field
    * @returns Array of irreducible factor polynomials
    */
-  factorInFiniteField(coefficients: number[], prime: number): number[][] {
+  factorInFiniteField(coefficients: number[], prime: number, steps?: StepTree[]): number[][] {
     const polynomial = new FiniteFieldPolynomial(coefficients, prime);
 
     if (polynomial.degree <= 1) {
@@ -26,20 +28,31 @@ export class BerlekampAlgorithm {
     try {
       // Step 1: Construct Berlekamp matrix Q
       const Q = this.constructBerlekampMatrix(polynomial, prime);
+      if (steps) steps.push(`[BZ:FF] Berlekamp行列Q: ${JSON.stringify(Q)}`);
 
       // Step 2: Find null space of (Q - I)
       const nullSpace = this.findNullSpace(Q, prime);
+      // if (steps) steps.push(`[BZ:FF] Null空間ベクトル: ${JSON.stringify(nullSpace)}`);
 
       // Step 3: If nullity = 1, polynomial is irreducible
       if (nullSpace.length <= 1) {
+        if (steps) steps.push(`[BZ:FF] Null空間次元1→既約`);
         return [coefficients];
       }
 
       // Step 4: Use null space vectors to find factors
-      const factors = this.extractFactors(polynomial, nullSpace, prime);
-
+      // 定数多項式でないベクトルのみ使う
+      const nonConstNulls = nullSpace.filter(v => v.some((c, i) => i > 0 && c !== 0));
+      // if (steps) steps.push(`[BZ:FF] 定数多項式でないNull空間ベクトル: ${JSON.stringify(nonConstNulls)}`);
+      const factors = this.extractFactors(polynomial, nonConstNulls, prime, steps);
+      if (steps)
+        steps.push(
+          `[BZ:FF] 有限体因数分解結果: ${JSON.stringify(factors.map(f => f.coefficients))}`
+        );
       return factors.map(factor => factor.coefficients);
     } catch (error) {
+      if (steps)
+        steps.push(`[BZ:FF] 例外発生: ${error instanceof Error ? error.message : String(error)}`);
       // Fallback: return original polynomial if algorithm fails
       return [coefficients];
     }
@@ -57,9 +70,15 @@ export class BerlekampAlgorithm {
     for (let i = 0; i < n; i++) {
       // Compute x^(p*i) mod f(x)
       const powerPoly = this.computeXPowerMod(prime * i, polynomial, prime);
-      // Extract coefficients for Q matrix, default to 0 if undefined
+      // Extract coefficients for Q matrix, default to 0 if undefined/null/NaN
       for (let j = 0; j < n; j++) {
-        Q[i]![j] = Number(powerPoly.coefficients[j]);
+        let val = 0;
+        if (powerPoly.coefficients && Array.isArray(powerPoly.coefficients)) {
+          const v = powerPoly.coefficients[j];
+          val = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+        }
+        if (!Q[i]) Q[i] = Array(n).fill(0);
+        Q[i]![j] = val;
       }
     }
     return Q;
@@ -73,29 +92,23 @@ export class BerlekampAlgorithm {
     polynomial: FiniteFieldPolynomial,
     prime: number
   ): FiniteFieldPolynomial {
-    if (exp === 0) {
-      return new FiniteFieldPolynomial([1], prime);
-    }
-
-    // Start with x
-    let result = new FiniteFieldPolynomial([0, 1], prime);
-    let currentPower = 1;
-
-    // Binary exponentiation with modular reduction
-    while (currentPower < exp) {
-      const nextPower = Math.min(currentPower * 2, exp);
-      const exponentDiff = nextPower - currentPower;
-
-      // Multiply by x^exponentDiff
-      for (let i = 0; i < exponentDiff; i++) {
-        result = result.multiply(new FiniteFieldPolynomial([0, 1], prime));
+    // Computes x^exp mod polynomial over F_p
+    let result = new FiniteFieldPolynomial([1], prime); // x^0 = 1
+    let base = new FiniteFieldPolynomial([0, 1], prime); // x
+    let e = exp;
+    while (e > 0) {
+      if (e % 2 === 1) {
+        result = result.multiply(base);
         const [, remainder] = result.divmod(polynomial);
         result = remainder;
       }
-
-      currentPower = nextPower;
+      e = Math.floor(e / 2);
+      if (e > 0) {
+        base = base.multiply(base);
+        const [, remainder] = base.divmod(polynomial);
+        base = remainder;
+      }
     }
-
     return result;
   }
 
@@ -219,28 +232,29 @@ export class BerlekampAlgorithm {
   private extractFactors(
     polynomial: FiniteFieldPolynomial,
     nullSpace: number[][],
-    prime: number
+    prime: number,
+    steps?: import('../../types/ast').StepTree[]
   ): FiniteFieldPolynomial[] {
     const factors: FiniteFieldPolynomial[] = [polynomial.clone()];
 
     for (const nullVector of nullSpace) {
       const newFactors: FiniteFieldPolynomial[] = [];
-
       for (const factor of factors) {
         if (factor.degree <= 1) {
           newFactors.push(factor);
           continue;
         }
-
         // Try to split the factor using this null vector
-        const subFactors = this.splitUsingNullVector(factor, nullVector, prime);
+        const subFactors = this.splitUsingNullVector(factor, nullVector, prime, steps);
+        if (steps)
+          steps.push(
+            `[BZ:FF] nullVector=${JSON.stringify(nullVector)}で分割: ${subFactors.map(f => JSON.stringify(f.coefficients)).join(' | ')}`
+          );
         newFactors.push(...subFactors);
       }
-
       factors.length = 0;
       factors.push(...newFactors);
     }
-
     return factors;
   }
 
@@ -250,26 +264,28 @@ export class BerlekampAlgorithm {
   private splitUsingNullVector(
     factor: FiniteFieldPolynomial,
     nullVector: number[],
-    prime: number
+    prime: number,
+    steps?: import('../../types/ast').StepTree[]
   ): FiniteFieldPolynomial[] {
     // Create polynomial from null vector
     const nullPoly = new FiniteFieldPolynomial(nullVector, prime);
-
-    // Try different values a: gcd(factor, nullPoly - a)
     for (let a = 0; a < prime; a++) {
       const constantPoly = new FiniteFieldPolynomial([a], prime);
       const testPoly = nullPoly.subtract(constantPoly);
-
       const gcdResult = factor.gcd(testPoly);
-
+      if (steps) steps.push(`[BZ:FF] split: a=${a}, gcd=${JSON.stringify(gcdResult.coefficients)}`);
       if (!gcdResult.isZero && gcdResult.degree > 0 && gcdResult.degree < factor.degree) {
         // Found a non-trivial factor
         const [quotient] = factor.divmod(gcdResult);
+        if (steps)
+          steps.push(
+            `[BZ:FF] 分割成功: gcd=${JSON.stringify(gcdResult.coefficients)}, quotient=${JSON.stringify(quotient.coefficients)}`
+          );
         return [gcdResult, quotient];
       }
     }
-
     // No split found
+    if (steps) steps.push(`[BZ:FF] 分割失敗: ${JSON.stringify(factor.coefficients)}`);
     return [factor];
   }
 }

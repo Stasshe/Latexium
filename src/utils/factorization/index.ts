@@ -139,12 +139,12 @@ export function factorWithSteps(
       const result = factorizationEngine.factor(currentAst, variable, preferences);
       attemptSteps.push(...result.steps);
       const nextAstStr = JSON.stringify(result.ast);
+      steps.push(...attemptSteps);
       if (nextAstStr === prevAstStr) {
         changed = changed || result.changed;
         currentAst = result.ast;
         break;
       } else {
-        steps.push(...attemptSteps);
         changed = true;
         currentAst = result.ast;
         prevAstStr = nextAstStr;

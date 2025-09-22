@@ -759,6 +759,7 @@ async function runTestCase(testCase) {
     expected: testCase.expected,
   };
 
+  const start = Date.now();
   try {
     // Parse the LaTeX expression
     const parseResult = parseLatex(testCase.expression);
@@ -767,6 +768,7 @@ async function runTestCase(testCase) {
       console.log(`❌ PARSE ERROR: ${parseResult.error}`);
       testResult.status = 'parse_error';
       testResult.error = parseResult.error;
+      testResult.durationMs = Date.now() - start;
       return testResult;
     }
 
@@ -799,6 +801,7 @@ async function runTestCase(testCase) {
       /* eslint-disable-next-line no-unused-vars */
       const { ast: _analyzeAst, ...analyzeResultNoAst } = analyzeResult;
       testResult.analyzeResult = analyzeResultNoAst;
+      testResult.durationMs = Date.now() - start;
       return testResult;
     }
 
@@ -837,16 +840,19 @@ async function runTestCase(testCase) {
       console.log(`❌ INVALID RESULT STRUCTURE: ${isValidResult.reason}`);
       testResult.status = 'structure_error';
       testResult.error = isValidResult.reason;
+      testResult.durationMs = Date.now() - start;
       return testResult;
     }
 
     testResult.status = 'success';
+    testResult.durationMs = Date.now() - start;
     return testResult;
   } catch (error) {
     console.log(`💥 RUNTIME ERROR: ${error.message}`);
     testResult.status = 'runtime_error';
     testResult.error = error.message;
     testResult.stackTrace = error.stack;
+    testResult.durationMs = Date.now() - start;
     return testResult;
   }
 }
@@ -912,6 +918,7 @@ async function runTestSuite() {
     evaluate: { total: 0, parse_success: 0, expected_match: 0 },
   };
 
+  // 各テストケースの実行時間を記録
   for (let i = 0; i < complexTestCases.length; i++) {
     const testCase = complexTestCases[i];
     const result = await runTestCase(testCase);
@@ -940,6 +947,12 @@ async function runTestSuite() {
 
     console.log('');
   }
+
+  // 実行時間が長い上位3件を抽出
+  const top3 = [...detailedResults]
+    .sort((a, b) => (b.durationMs || 0) - (a.durationMs || 0))
+    .slice(0, 3)
+    .map(r => r.id);
 
   console.log('\n=== MASTER TEST SUITE RESULTS ===');
   console.log(
@@ -971,6 +984,7 @@ async function runTestSuite() {
     testCount: complexTestCases.length,
     parseSuccessRate: ((results.parse_success / complexTestCases.length) * 100).toFixed(1),
     expectedMatchRate: ((results.expected_match / complexTestCases.length) * 100).toFixed(1),
+    top3Longest: top3,
   };
 }
 
@@ -988,6 +1002,9 @@ console.log('🚀 Starting Master Test Suite execution...\n');
 const results = await runTestSuite();
 
 console.log('\n🏆 MASTER TEST SUITE COMPLETED 🏆');
+if (results.top3Longest && results.top3Longest.length > 0) {
+  console.log(`\n⏳ Top 3 longest test cases (by id): ${results.top3Longest.join(', ')}`);
+}
 
 const endTime = new Date();
 const duration = (endTime - startTime) / 1000;

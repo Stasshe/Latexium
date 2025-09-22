@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const parseResult = parseLatex('x^{3} + 2x^{2} - 3x');
-const result = analyze(parseResult.ast, { task: 'factor'});
+const result = analyze(parseResult.ast, { task: 'factor' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

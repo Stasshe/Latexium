@@ -75,11 +75,16 @@ function simplify(
     if (opts.factor) {
       const factorSteps: StepTree[] = [];
       if (Array.isArray(steps)) steps.push('Applying advanced factorization');
-      const factorResult = factorWithSteps(result, 'x', {
-        preferCompleteFactorization: true,
-        extractCommonFactors: true,
-        simplifyCoefficients: true,
-      });
+      const factorResult = factorWithSteps(
+        result,
+        'x',
+        {
+          preferCompleteFactorization: true,
+          extractCommonFactors: true,
+          simplifyCoefficients: true,
+        },
+        factorSteps
+      );
       if (factorResult && factorResult.ast) {
         result = factorResult.ast;
         if (Array.isArray(steps) && Array.isArray(factorResult.steps)) {

@@ -16,6 +16,7 @@ import { HenselLifting } from './hensel-lifting';
 import { PolynomialUtils } from './polynomial-utils';
 import { ASTNode, StepTree } from '../../types';
 import type { NumberLiteral } from '../../types/ast';
+import { stepsAstToLatex } from '../ast';
 
 /**
  * Berlekamp-Zassenhaus factorization options
@@ -72,7 +73,7 @@ export class BerlekampZassenhausFactorizer {
     const opts = { ...DEFAULT_BZ_OPTIONS, ...options };
 
     try {
-      if (steps) steps.push(`[BZ] 入力AST: ${JSON.stringify(polynomial)}`);
+      if (steps) steps.push(`[BZ] 入力AST: ${stepsAstToLatex(polynomial)}`);
       // Step 1: Validate and prepare polynomial
       if (!this.polynomialUtils.isPolynomial(polynomial, variable)) {
         if (steps) steps.push(`[BZ] 入力は多項式ではありません`);
@@ -94,49 +95,41 @@ export class BerlekampZassenhausFactorizer {
         throw new Error(`Polynomial degree ${degree} exceeds maximum ${opts.maxDegree}`);
       }
 
-      // Step 2: Select appropriate prime
-      const prime = this.selectPrime(coefficients, opts.prime);
-      if (steps) steps.push(`[BZ] 使用素数: ${prime}`);
-      if (!prime) {
-        if (steps) steps.push(`[BZ] 有効な素数が見つかりません`);
-        throw new Error('Could not find suitable prime for factorization');
+      // Step 2: 複数の素数で有限体分解を順次試行
+      const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+      let foundFactors: number[][] | null = null;
+      let usedPrime: number | null = null;
+      for (const prime of primes) {
+        if (steps) steps.push(`[BZ] 素数${prime}で有限体分解を試行`);
+        const finiteFieldFactors = this.berlekamp.factorInFiniteField(coefficients, prime, steps);
+        if (steps)
+          steps.push(`[BZ] 有限体因数分解結果@p=${prime}: ${JSON.stringify(finiteFieldFactors)}`);
+        if (finiteFieldFactors.length > 1) {
+          foundFactors = finiteFieldFactors;
+          usedPrime = prime;
+          break;
+        }
       }
 
-      // Step 3: Factor the polynomial (square-free decomposition is handled elsewhere)
-      const allFactors: number[][] = [];
-
-      // Phase 1: Berlekamp algorithm in finite field
-      const finiteFieldFactors = this.berlekamp.factorInFiniteField(coefficients, prime);
-      if (steps) steps.push(`[BZ] 有限体因数分解結果: ${JSON.stringify(finiteFieldFactors)}`);
-
-      if (finiteFieldFactors.length <= 1) {
-        // Irreducible in finite field
-        if (steps) steps.push(`[BZ] 有限体で既約`);
-        allFactors.push(coefficients);
-      } else {
-        // Phase 2: Hensel lifting
-        if (steps) steps.push(`[BZ] Henselリフト開始`);
+      if (foundFactors && usedPrime) {
+        // BZ本体で分解できた場合は必ずHenselリフト
+        if (steps) steps.push(`[BZ] 素数${usedPrime}で分解成功。Henselリフト開始`);
         const liftedFactors = this.henselLifting.liftFactors(
           coefficients,
-          finiteFieldFactors,
-          prime,
-          opts.targetPrecision
+          foundFactors,
+          usedPrime,
+          opts.targetPrecision,
+          steps as string[]
         );
         if (steps) steps.push(`[BZ] Henselリフト結果: ${JSON.stringify(liftedFactors)}`);
-        allFactors.push(...liftedFactors);
-      }
-
-      // Convert coefficient arrays back to AST nodes
-      if (allFactors.length <= 1) {
+        const astFactors = this.convertCoefficientsToAST(liftedFactors, variable);
         if (steps)
-          steps.push(`[BZ] 高度な因数分解で分解できなかったので基本因数分解にフォールバック`);
-        // Try basic factorization as fallback
+          steps.push(`[BZ] AST因数リスト: ${astFactors.map(f => stepsAstToLatex(f)).join(', ')}`);
+        return astFactors;
+      } else {
+        if (steps) steps.push(`[BZ] すべての素数で有限体分解できず、基本因数分解にフォールバック`);
         return this.attemptBasicFactorization(polynomial, variable);
       }
-
-      const astFactors = this.convertCoefficientsToAST(allFactors, variable);
-      if (steps) steps.push(`[BZ] AST因数リスト: ${JSON.stringify(astFactors)}`);
-      return astFactors;
     } catch (error) {
       if (steps)
         steps.push(`[BZ] 例外発生: ${error instanceof Error ? error.message : String(error)}`);
