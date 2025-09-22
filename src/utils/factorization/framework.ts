@@ -195,6 +195,7 @@ export class FactorizationEngine {
     }
     context.steps.push('Attempting recursive factorization of subexpressions...');
     currentNode = this.recursivelyFactorSubexpressions(currentNode, context);
+    context.steps.push(stepsAstToLatex(currentNode));
     // stepsはcontext.stepsに統一
     return {
       success: true,
