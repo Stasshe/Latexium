@@ -21,7 +21,7 @@ export class QuadraticPattern implements FactorizationPattern, FactorizationStra
   }
   name = 'quadratic-factorization';
   description = 'Factor quadratic expressions ax² + bx + c';
-  priority = 30;
+  priority = 120;
 
   matches(node: ASTNode): boolean {
     if (node.type === 'BinaryExpression') {

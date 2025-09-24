@@ -59,10 +59,8 @@
 │       │   ├── index.ts
 │       │   └── strategies
 │       │       ├── berlekamp-zassenhaus.ts
-│       │       ├── common-factor-pattern.ts
 │       │       ├── common-factor.ts
 │       │       ├── cyclotomic.ts
-│       │       ├── difference-of-squares-pattern.ts
 │       │       ├── difference-of-squares.ts
 │       │       ├── grouping.ts
 │       │       ├── index.ts
@@ -118,15 +116,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-22 directories, 97 files
+22 directories, 95 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17688
-Total Characters: 518651
-Total File Size (bytes): 524289
+Total Lines: 17684
+Total Characters: 521900
+Total File Size (bytes): 528711
 
 Development Size
-212M	.
+218M	.
 
 Build Size
 5.5M	dist

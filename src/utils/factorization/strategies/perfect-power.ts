@@ -10,7 +10,7 @@ import { FactorizationStrategy, FactorizationResult, FactorizationContext } from
 export class PerfectPowerStrategy implements FactorizationStrategy {
   name = 'perfect-power';
   description = 'Detects and converts perfect power polynomials (e.g. (x+a)^k)';
-  priority = 100;
+  priority = 130;
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
     // x以外の変数が含まれていれば適用不可

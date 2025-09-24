@@ -25,7 +25,7 @@ import {
 export class GroupingStrategy implements FactorizationStrategy {
   name = 'Factorization by Grouping';
   description = 'Factor polynomials by grouping terms and extracting common factors';
-  priority = 70;
+  priority = 100;
 
   private commonFactorStrategy = new CommonFactorStrategy();
 

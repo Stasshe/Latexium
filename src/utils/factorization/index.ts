@@ -15,7 +15,6 @@ import {
 } from './strategies';
 // import { FACTORIZATION } from '@/config';
 import { stepsAstToLatex } from '../ast';
-import { ConcreteCommonFactorPattern } from './strategies/common-factor-pattern';
 import { CyclotomicPattern } from './strategies/cyclotomic';
 import { QuadraticPattern } from './strategies/quadratic-pattern';
 
@@ -29,7 +28,7 @@ const factorizationEngine = new FactorizationEngine();
 
 try {
   // Register pattern strategies (priority order)
-  factorizationEngine.registerStrategy(new ConcreteCommonFactorPattern());
+  factorizationEngine.registerStrategy(new CommonFactorStrategy());
   factorizationEngine.registerStrategy(new QuadraticPattern());
   factorizationEngine.registerStrategy(new CyclotomicPattern());
   // Register main strategies

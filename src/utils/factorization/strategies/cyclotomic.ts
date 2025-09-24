@@ -6,7 +6,7 @@ import { ASTNode, BinaryExpression, NumberLiteral, Identifier } from '@/types';
 export class CyclotomicPattern implements FactorizationPattern {
   name = 'cyclotomic';
   description = 'Factor x^n - 1, x^n + 1 into cyclotomic polynomials';
-  priority = 80;
+  priority = 90;
 
   canApply(node: ASTNode, _context: FactorizationContext): boolean {
     return this.matches(node);
@@ -63,13 +63,13 @@ export class CyclotomicPattern implements FactorizationPattern {
     const one = PatternUtils.createNumber(1);
     const xMinus1 = PatternUtils.createBinaryExpression(x, '-', one);
     let sum: ASTNode = PatternUtils.createNumber(1);
-    for (let k = 1; k < n; k++) {
+    for (let k = n - 1; k >= 1; k--) {
       const term = PatternUtils.createBinaryExpression(
         PatternUtils.createIdentifier(variable),
         '^',
         PatternUtils.createNumber(k)
       );
-      sum = PatternUtils.createBinaryExpression(term, '+', sum);
+      sum = PatternUtils.createBinaryExpression(sum, '+', term);
     }
     return PatternUtils.createBinaryExpression(xMinus1, '*', sum);
   }
@@ -91,7 +91,7 @@ export class CyclotomicPattern implements FactorizationPattern {
         sign === 1
           ? term
           : PatternUtils.createBinaryExpression(PatternUtils.createNumber(-1), '*', term);
-      sum = PatternUtils.createBinaryExpression(signedTerm, '+', sum);
+      sum = PatternUtils.createBinaryExpression(sum, '+', signedTerm);
     }
     return PatternUtils.createBinaryExpression(xPlus1, '*', sum);
   }

@@ -10,7 +10,7 @@ import { FactorizationStrategy, FactorizationResult, FactorizationContext } from
 export class PowerSubstitutionStrategy implements FactorizationStrategy {
   name = 'power-substitution';
   description = 'Factors polynomials by substitution t = x^k (k >= 2)';
-  priority = 86;
+  priority = 110;
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
     const detected = this.detectPowerSubstitution(node, context.variable);

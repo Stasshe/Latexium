@@ -23,7 +23,7 @@ import {
 export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
   name = 'Difference of Squares';
   description = 'Factor expressions of the form a² - b² into (a + b)(a - b)';
-  priority = 90;
+  priority = 140;
 
   canApply(node: ASTNode, context: FactorizationContext): boolean {
     return this.isDifferenceOfSquares(node);
