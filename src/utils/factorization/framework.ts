@@ -6,8 +6,7 @@
 import { ASTNode, BinaryExpression, NumberLiteral, Identifier, StepTree } from '../../types';
 import { astToLatex, stepsAstToLatex } from '../ast';
 
-import { FACTORIZATION } from '@/config';
-
+import { config } from '@/config';
 /**
  * Base interface for all factorization strategies
  */
@@ -226,7 +225,7 @@ export class FactorizationEngine {
       // さらに、各サブノードにfactorを適用
       if (
         node.operator === '*' ||
-        (node.operator === '+' && FACTORIZATION.applyFactorPlusOperate)
+        (node.operator === '+' && config.FACTORIZATION.applyFactorPlusOperate)
       ) {
         // それぞれの因子/項にfactorを適用
         const leftFactored = this.factor(left, context.variable, context.preferences);

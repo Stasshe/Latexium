@@ -16,5 +16,8 @@ export { parseLatex } from './parser';
 // Export analyzer
 export { analyze, IntegrationEngine } from './analyzer';
 
+// Export config setters/getters
+export { setConfig, getConfig } from './config';
+
 // Re-export commonly used functions for convenience
 export type { AnalyzeOptions, AnalyzeResult, ASTNode, ParseResult } from './types';

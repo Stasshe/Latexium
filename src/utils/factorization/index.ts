@@ -18,7 +18,7 @@ import { stepsAstToLatex } from '../ast';
 import { CyclotomicPattern } from './strategies/cyclotomic';
 import { QuadraticPattern } from './strategies/quadratic-pattern';
 
-import { FACTORIZATION } from '@/config';
+import { config } from '@/config';
 import { ASTNode, StepTree } from '@/types';
 
 // Create and configure the factorization engine
@@ -37,10 +37,10 @@ try {
   factorizationEngine.registerStrategy(new DifferenceOfSquaresStrategy());
   factorizationEngine.registerStrategy(new GroupingStrategy());
   factorizationEngine.registerStrategy(new PowerSubstitutionStrategy());
-  if (FACTORIZATION.useLLL) {
+  if (config.FACTORIZATION.useLLL) {
     factorizationEngine.registerStrategy(new LLLFactorizationStrategy());
   }
-  if (FACTORIZATION.useBerlekampZassenhaus) {
+  if (config.FACTORIZATION.useBerlekampZassenhaus) {
     factorizationEngine.registerStrategy(new BerlekampZassenhausStrategy());
   }
 } catch (strategyError) {

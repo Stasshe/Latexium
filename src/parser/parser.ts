@@ -3,7 +3,6 @@
  * Parses tokenized LaTeX mathematical expressions into AST
  */
 
-import { COMMON_FUNCTION_NAMES } from '../config';
 import {
   ASTNode,
   Fraction,
@@ -17,6 +16,8 @@ import {
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
 import { resolveScopeInAST } from '../utils/scope';
 import { validateFunctionArgs } from '../utils/validation';
+
+import { config } from '@/config';
 
 export class LaTeXParser {
   private tokens: Token[];
@@ -171,7 +172,7 @@ export class LaTeXParser {
       // 4. Otherwise, treat as multiplication for single letter variables
       if (this.expectToken('LPAREN')) {
         const isReservedFunction = this.isFunction(identifier.name);
-        const isCommonFunction = COMMON_FUNCTION_NAMES.has(identifier.name);
+        const isCommonFunction = config.COMMON_FUNCTION_NAMES.has(identifier.name);
 
         // Look ahead to see if the first thing inside parentheses is negative
         let startsWithNegative = false;

@@ -6,7 +6,7 @@
 import { ASTNode, BinaryExpression } from '../types';
 import { basicSimplify } from './simplify/basic-simplify';
 
-import { MAX_EXPANSION_POWER } from '@/config';
+import { config } from '@/config';
 
 /**
  * Extract all terms from an addition/subtraction expression
@@ -298,7 +298,7 @@ export function expandPower(base: ASTNode, exponent: number): ASTNode {
   }
 
   // For very large exponents, we might want to keep it unexpanded
-  if (exponent > MAX_EXPANSION_POWER) {
+  if (exponent > config.MAX_EXPANSION_POWER) {
     // Keep large powers unexpanded to avoid excessive computation
     return {
       type: 'BinaryExpression',
