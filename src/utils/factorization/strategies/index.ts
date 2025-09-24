@@ -10,3 +10,5 @@ export { BerlekampZassenhausStrategy } from './berlekamp-zassenhaus';
 export { LLLFactorizationStrategy } from './lll-factorization';
 export { PowerSubstitutionStrategy } from './power-substitution';
 export { PerfectPowerStrategy } from './perfect-power';
+export { CyclotomicPattern } from './cyclotomic';
+export { QuadraticPattern } from './quadratic-pattern';

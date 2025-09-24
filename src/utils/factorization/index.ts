@@ -62,7 +62,7 @@ try {
 // }
 
 /**
- * Factorization with detailed steps
+ * Factorization with detailed steps (refactored)
  */
 export function factorWithSteps(
   node: ASTNode,
@@ -73,87 +73,74 @@ export function factorWithSteps(
   try {
     let currentAst = node;
     let changed = false;
-    // --- 累乗の底が掛け算の場合の分解 ---
-    // (A)^n の形でAが多項式（単項式でない）なら、Aを因数分解し、各因数にn乗を分配して再構成
-    if (
-      currentAst &&
-      currentAst.type === 'BinaryExpression' &&
-      currentAst.operator === '^' &&
-      currentAst.right &&
-      currentAst.right.type === 'NumberLiteral' &&
-      Number.isInteger(currentAst.right.value) &&
-      currentAst.right.value >= 2
-    ) {
-      const n = currentAst.right.value;
-      const base = currentAst.left;
-      // baseが単項式（Identifier, NumberLiteral, Fraction, 単純な累乗）なら何もしない
-      const isMonomial =
-        base.type === 'Identifier' ||
-        base.type === 'NumberLiteral' ||
-        base.type === 'Fraction' ||
-        (base.type === 'BinaryExpression' && base.operator === '^');
-      if (!isMonomial) {
-        // まず底を因数分解
-        const baseFact = factorWithSteps(base, variable, preferences, steps);
-        // baseFactが積なら因数を列挙、そうでなければ1因数扱い
-        function collectFactors(expr: ASTNode): ASTNode[] {
-          if (expr.type === 'BinaryExpression' && expr.operator === '*') {
-            return [...collectFactors(expr.left), ...collectFactors(expr.right)];
-          } else {
-            return [expr];
-          }
-        }
-        const factors: ASTNode[] = collectFactors(baseFact.ast);
-        if (factors.length > 1) {
-          factors.map(f => steps.push(`Factor: ${stepsAstToLatex(f)}`));
-          changed = true;
-        }
-        // 各因数を n 乗して掛け合わせる
-        let newAst: ASTNode | undefined = undefined;
-        for (const factor of factors) {
-          const powNode: ASTNode = {
-            type: 'BinaryExpression',
-            operator: '^',
-            left: factor,
-            right: { type: 'NumberLiteral', value: n },
-          };
-          newAst = newAst
-            ? {
-                type: 'BinaryExpression',
-                operator: '*',
-                left: newAst,
-                right: powNode,
-              }
-            : powNode;
-        }
-        steps.push(`Factored base and distributed power: (A)^n → (F1^n)*(F2^n)*...`);
-        if (newAst) {
-          currentAst = newAst;
-          changed = true;
-        }
-      }
-    }
-    let prevAstStr = JSON.stringify(currentAst);
-    let count = 1;
-    // Recursively apply factorization until no further changes
-    while (true) {
-      const result = factorizationEngine.factor(currentAst, variable, preferences);
-      const nextAstStr = JSON.stringify(result.ast);
-      // stepsはresult.stepsに完全依存
-      steps.push(...result.steps);
-      if (nextAstStr === prevAstStr || !result.canContinue) {
-        changed = changed || result.changed;
-        currentAst = result.ast;
-        break;
+
+    // Helper function to collect factors from a product expression
+    function collectFactors(expr: ASTNode): ASTNode[] {
+      if (expr.type === 'BinaryExpression' && expr.operator === '*') {
+        return [...collectFactors(expr.left), ...collectFactors(expr.right)];
       } else {
-        changed = true;
-        currentAst = result.ast;
-        prevAstStr = nextAstStr;
-        count++;
+        return [expr];
       }
     }
+
+    // Step 1: Apply factorization engine once
+    const initialResult = factorizationEngine.factor(currentAst, variable, preferences);
+    steps.push(...initialResult.steps);
+    currentAst = initialResult.ast;
+    changed = initialResult.changed;
+
+    // Step 2: Collect factors from the resulting AST
+    const factors = collectFactors(currentAst);
+
+    // Step 3: Process each factor individually
+    const processedFactors: ASTNode[] = factors.flatMap((factor): ASTNode[] => {
+      if (
+        factor.type === 'BinaryExpression' &&
+        factor.operator === '^' &&
+        factor.right.type === 'NumberLiteral' &&
+        Number.isInteger(factor.right.value) &&
+        factor.right.value >= 2
+      ) {
+        // Handle powers: factor.base^n
+        const base = factor.left;
+        const exponent = factor.right.value;
+        const baseResult = factorWithSteps(base, variable, preferences, steps);
+        const baseFactors = collectFactors(baseResult.ast);
+
+        // Reconstruct the powered factors
+        const poweredFactors: ASTNode[] = baseFactors.map(baseFactor => ({
+          type: 'BinaryExpression',
+          operator: '^',
+          left: baseFactor,
+          right: { type: 'NumberLiteral', value: exponent },
+        }));
+
+        steps.push(`Factored base and distributed power: ${stepsAstToLatex(factor)}`);
+        changed = changed || baseResult.changed;
+        return poweredFactors;
+      } else {
+        // Recursively factorize the individual factor
+        const result = factorizationEngine.factor(factor, variable, preferences);
+        steps.push(...result.steps);
+        changed = changed || result.changed;
+        return [result.ast];
+      }
+    });
+
+    // Step 4: Reconstruct the final AST as a product of all processed factors
+    const finalAst = processedFactors.reduce<ASTNode | null>((acc, factor) => {
+      return acc
+        ? {
+            type: 'BinaryExpression',
+            operator: '*',
+            left: acc,
+            right: factor,
+          }
+        : factor;
+    }, null);
+
     return {
-      ast: currentAst,
+      ast: finalAst || currentAst,
       steps,
       changed,
     };
