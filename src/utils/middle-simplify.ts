@@ -588,6 +588,27 @@ function simplifyMultiplication(
     }
   }
 
+  // Combine identical terms with the same exponent: (A^n)(B^n) => (AB)^n
+  if (
+    left.type === 'BinaryExpression' &&
+    left.operator === '^' &&
+    right.type === 'BinaryExpression' &&
+    right.operator === '^' &&
+    areEquivalentExpressions(left.right, right.right)
+  ) {
+    return {
+      type: 'BinaryExpression',
+      operator: '^',
+      left: {
+        type: 'BinaryExpression',
+        operator: '*',
+        left: left.left,
+        right: right.left,
+      },
+      right: left.right,
+    };
+  }
+
   return { type: 'BinaryExpression', operator: '*', left, right };
 }
 /**
