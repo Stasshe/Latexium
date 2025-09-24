@@ -32,7 +32,7 @@ export class BerlekampZassenhausStrategy implements FactorizationStrategy {
     const degree = this.getPolynomialDegree(node, context.variable);
 
     // Use BZ for any polynomial of degree >= 2, or if other strategies have been tried
-    return (degree >= 2 && degree <= 6) || context.currentIteration > 1;
+    return (degree >= 2 && degree <= 8) || context.currentIteration > 1;
   }
 
   apply(node: ASTNode, context: FactorizationContext): FactorizationResult {

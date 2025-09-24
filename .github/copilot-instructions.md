@@ -1,6 +1,6 @@
 必要なライブラリがあれば、インストールすること。
 コードは全て英語で、コメントも英語で書くこと。
-tsなので、コードを変更した場合はnpm run buildし、テストはnode tests/unio*で実行。
+tsなので、コードを変更した場合はnpm run buildし、テストはnpm testで実行。
 
 ややこしいので、task: 'simplify'は使わないこと。task: 'distribute'か、'factor'を使うこと。変数の順番は、テストケースのexpectedが間違えている時がある。
 
