@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>LaTeXiUm Test</title>
+</head>
+
+<body>
+  <h1>LaTeXiUm Test</h1>
+  <p id="config"></p>
+  <pre id="output"></pre>
+
+  <script type="module">
+    import { parseLatex, analyze } from "https://cdn.jsdelivr.net/npm/latexium@latest/dist/index.esm.js";
+    // Parse LaTeX Formula
+    const parseResult = parseLatex("x^20 - 2x^10 + 1");
+
+    // Factorize
+    const factored = analyze(parseResult.ast, { task: "factor" });
+
+    // Output
+    const out = document.getElementById("output");
+    out.textContent =
+      "Factor Result: " + factored.value + "\n\n" +
+      "Steps (JSON):\n" + JSON.stringify(factored.steps, null, 2);
+  </script>
+</body>
+
+</html>
