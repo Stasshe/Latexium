@@ -233,7 +233,7 @@ export class BerlekampAlgorithm {
     polynomial: FiniteFieldPolynomial,
     nullSpace: number[][],
     prime: number,
-    steps?: import('../../types/ast').StepTree[]
+    steps?: StepTree[]
   ): FiniteFieldPolynomial[] {
     const factors: FiniteFieldPolynomial[] = [polynomial.clone()];
 
@@ -265,7 +265,7 @@ export class BerlekampAlgorithm {
     factor: FiniteFieldPolynomial,
     nullVector: number[],
     prime: number,
-    steps?: import('../../types/ast').StepTree[]
+    steps?: StepTree[]
   ): FiniteFieldPolynomial[] {
     // Create polynomial from null vector
     const nullPoly = new FiniteFieldPolynomial(nullVector, prime);

@@ -3,7 +3,7 @@
  * Helper functions for polynomial operations and AST conversions
  */
 
-import { ASTNode, BinaryExpression } from '../../types';
+import { ASTNode, BinaryExpression } from '@/types';
 
 /**
  * Polynomial utility functions

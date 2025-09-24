@@ -37,24 +37,27 @@
 │   │   └── index.ts
 │   ├── engine
 │   │   ├── ast.ts
-│   │   ├── berlekamp-zassenhaus
-│   │   │   ├── berlekamp.ts
-│   │   │   ├── finite-field.ts
-│   │   │   ├── hensel-lifting.ts
-│   │   │   ├── index.ts
-│   │   │   └── polynomial-utils.ts
 │   │   ├── differentiation.ts
 │   │   ├── distribution.ts
 │   │   ├── factorization
 │   │   │   ├── framework.ts
 │   │   │   ├── index.ts
 │   │   │   └── strategies
+│   │   │       ├── berlekamp-zassenhaus
+│   │   │       │   ├── berlekamp.ts
+│   │   │       │   ├── finite-field.ts
+│   │   │       │   ├── hensel-lifting.ts
+│   │   │       │   ├── index.ts
+│   │   │       │   └── polynomial-utils.ts
 │   │   │       ├── berlekamp-zassenhaus.ts
 │   │   │       ├── common-factor.ts
 │   │   │       ├── cyclotomic.ts
 │   │   │       ├── difference-of-squares.ts
 │   │   │       ├── grouping.ts
 │   │   │       ├── index.ts
+│   │   │       ├── lll-factorization
+│   │   │       │   ├── index.ts
+│   │   │       │   └── lll-lattice.ts
 │   │   │       ├── lll-factorization.ts
 │   │   │       ├── pattern-utils.ts
 │   │   │       ├── perfect-power.ts
@@ -63,9 +66,6 @@
 │   │   ├── identities
 │   │   │   └── trigonometric.ts
 │   │   ├── index.ts
-│   │   ├── lll-factorization
-│   │   │   ├── index.ts
-│   │   │   └── lll-lattice.ts
 │   │   ├── middle-simplify.ts
 │   │   ├── scope.ts
 │   │   ├── simplify
@@ -116,12 +116,12 @@
 21 directories, 93 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17856
-Total Characters: 529528
-Total File Size (bytes): 536561
+Total Lines: 17859
+Total Characters: 529484
+Total File Size (bytes): 536517
 
 Development Size
-119M	.
+121M	.
 
 Build Size
-6.6M	dist
+6.9M	dist

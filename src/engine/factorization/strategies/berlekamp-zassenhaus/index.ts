@@ -14,9 +14,10 @@
 import { BerlekampAlgorithm } from './berlekamp';
 import { HenselLifting } from './hensel-lifting';
 import { PolynomialUtils } from './polynomial-utils';
-import { ASTNode, StepTree } from '../../types';
-import type { NumberLiteral } from '../../types/ast';
-import { stepsAstToLatex } from '../ast';
+
+import { stepsAstToLatex } from '@/engine/ast';
+import { ASTNode, StepTree } from '@/types';
+import type { NumberLiteral } from '@/types/ast';
 
 /**
  * Berlekamp-Zassenhaus factorization options

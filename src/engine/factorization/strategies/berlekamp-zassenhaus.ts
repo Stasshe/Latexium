@@ -3,9 +3,9 @@
  * Advanced polynomial factorization strategy using BZ algorithm
  */
 
+import { berlekampZassenhausFactor } from './berlekamp-zassenhaus/index';
 import { ASTNode } from '../../../types';
 import { astToLatex } from '../../ast';
-import { berlekampZassenhausFactor } from '../../berlekamp-zassenhaus';
 import { basicSimplify } from '../../simplify/basic-simplify';
 import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
 

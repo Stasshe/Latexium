@@ -4,10 +4,11 @@
  */
 
 import { createLatticeBases, lllReduce, findShortVectors } from './lll-lattice';
-import { ASTNode } from '../../types';
 import { PolynomialUtils } from '../berlekamp-zassenhaus/polynomial-utils';
-import { FactorizationContext } from '../factorization/framework';
-import { simplify as middleSimplify } from '../middle-simplify';
+
+import { FactorizationContext } from '@/engine/factorization/framework';
+import { simplify as middleSimplify } from '@/engine/middle-simplify';
+import { ASTNode } from '@/types';
 
 /**
  * LLL Algorithm options

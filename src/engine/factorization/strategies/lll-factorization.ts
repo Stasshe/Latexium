@@ -3,11 +3,12 @@
  * Advanced polynomial factorization strategy using LLL algorithm
  */
 
-import { ASTNode } from '../../../types';
-import { astToLatex } from '../../ast';
-import { lllFactor } from '../../lll-factorization';
-import { basicSimplify } from '../../simplify/basic-simplify';
 import { FactorizationStrategy, FactorizationContext, FactorizationResult } from '../framework';
+import { lllFactor } from './lll-factorization/index';
+
+import { astToLatex } from '@/engine/ast';
+import { basicSimplify } from '@/engine/simplify/basic-simplify';
+import { ASTNode } from '@/types';
 
 /**
  * LLL factorization strategy
