@@ -7,8 +7,18 @@ import { ASTNode, BinaryExpression, FunctionCall, Integral, UnaryExpression } fr
 
 import { config } from '@/config';
 
-export function stepsAstToLatex(node: ASTNode): string {
-  return config.IS_STEPS_INCLUDE_LATEX ? astToLatex(node) : '';
+export function stepsAstToLatex(
+  node: ASTNode,
+  leftAppendCharacter?: string,
+  rightAppendCharacter?: string
+): string {
+  return config.IS_STEPS_INCLUDE_LATEX
+    ? config.LATEX_BRACKET.LEFT +
+        (leftAppendCharacter || '') +
+        astToLatex(node) +
+        (rightAppendCharacter || '') +
+        config.LATEX_BRACKET.RIGHT
+    : '';
 }
 
 /**

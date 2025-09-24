@@ -3,7 +3,7 @@
  * Factors polynomials by grouping terms with common factors
  */
 
-import { astToLatex } from '../../ast';
+import { astToLatex, stepsAstToLatex } from '../../ast';
 import {
   FactorizationStrategy,
   FactorizationContext,
@@ -52,7 +52,8 @@ export class GroupingStrategy implements FactorizationStrategy {
       }
 
       steps.push(
-        `Found ${terms.length} terms: ${terms.map(t => `${t.sign > 0 ? '+' : '-'}${astToLatex(t.term)}`).join(' ')}`
+        `Found ${terms.length} terms: 
+        ${terms.map(t => stepsAstToLatex(t.term, t.sign > 0 ? '' : '-')).join(',')}`
       );
 
       // Try different grouping patterns
@@ -204,7 +205,7 @@ export class GroupingStrategy implements FactorizationStrategy {
           groups.push(remaining);
           groupFactors.push(commonFactor);
           steps.push(
-            `Factored group ${i + 1}: ${astToLatex(commonFactor)} * (${astToLatex(remaining)})`
+            `Factored group ${i + 1}: ${stepsAstToLatex(commonFactor)} * (${stepsAstToLatex(remaining)})`
           );
         } else {
           groups.push(groupExpression);

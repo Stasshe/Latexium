@@ -979,16 +979,11 @@ export function analyzeIntegrate(
           steps.push(...result.steps);
         }
 
-        // Apply simplification to the integral result
-        const simplifiedResult = simplifyAST(result.result);
-        const integralLatex = astToLatex(simplifiedResult);
-        steps.push(`Integral: ${integralLatex} + C`);
-
         return {
           steps,
-          value: `${integralLatex} + C`,
+          value: astToLatex(result.result) + ' + C',
           valueType: 'symbolic',
-          ast: simplifiedResult,
+          ast: result.result,
           error: null,
         };
       }

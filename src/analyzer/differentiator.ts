@@ -41,7 +41,6 @@ export function analyzeDifferentiate(
     steps.push(...diffSteps);
     // Apply simplification to the derivative
     const derivativeLatex = astToLatex(derivative);
-    steps.push(`Derivative: ${derivativeLatex}`);
     return {
       steps,
       value: derivativeLatex,

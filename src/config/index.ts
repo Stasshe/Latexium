@@ -17,6 +17,10 @@ const DEFAULTS = {
     factorCommonFactors: false,
   },
   COMMON_FUNCTION_NAMES: ['f', 'g', 'h', 'F', 'G', 'H'],
+  LATEX_BRACKET: {
+    LEFT: '$',
+    RIGHT: '$',
+  },
 };
 
 // Mutable config object (exported)
@@ -26,6 +30,7 @@ export const config = {
   FACTORIZATION: { ...DEFAULTS.FACTORIZATION },
   DEFAULT_SIMPLIFY_OPTIONS: { ...DEFAULTS.DEFAULT_SIMPLIFY_OPTIONS },
   COMMON_FUNCTION_NAMES: new Set(DEFAULTS.COMMON_FUNCTION_NAMES),
+  LATEX_BRACKET: { ...DEFAULTS.LATEX_BRACKET },
 };
 
 /**
@@ -58,6 +63,11 @@ export function setConfig(newConfig: Partial<typeof config>): void {
       typeof newConfig.IS_STEPS_INCLUDE_LATEX === 'boolean'
     ) {
       config.IS_STEPS_INCLUDE_LATEX = newConfig.IS_STEPS_INCLUDE_LATEX;
+    } else if (key === 'LATEX_BRACKET') {
+      const val = newConfig.LATEX_BRACKET;
+      if (val && typeof val === 'object' && 'LEFT' in val && 'RIGHT' in val) {
+        config.LATEX_BRACKET = { ...config.LATEX_BRACKET, ...val };
+      }
     }
   }
 }
@@ -71,6 +81,7 @@ export function getConfig(): {
   FACTORIZATION: typeof config.FACTORIZATION;
   DEFAULT_SIMPLIFY_OPTIONS: typeof config.DEFAULT_SIMPLIFY_OPTIONS;
   COMMON_FUNCTION_NAMES: Set<string>;
+  LATEX_BRACKET: { LEFT: string; RIGHT: string };
 } {
   return {
     MAX_EXPANSION_POWER: config.MAX_EXPANSION_POWER,
@@ -78,5 +89,6 @@ export function getConfig(): {
     FACTORIZATION: { ...config.FACTORIZATION },
     DEFAULT_SIMPLIFY_OPTIONS: { ...config.DEFAULT_SIMPLIFY_OPTIONS },
     COMMON_FUNCTION_NAMES: new Set(config.COMMON_FUNCTION_NAMES),
+    LATEX_BRACKET: { ...config.LATEX_BRACKET },
   };
 }

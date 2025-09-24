@@ -9,10 +9,8 @@ import { IntegrationByPartsStrategy } from './strategies/integration-by-parts';
 import { RationalFunctionStrategy } from './strategies/rational';
 import { SubstitutionStrategy } from './strategies/substitution';
 import { TrigonometricStrategy } from './strategies/trigonometric';
-import { astToLatex } from '../../engine/ast';
-import { getAnalysisVariable, extractFreeVariables } from '../../engine/variables';
 
-import { ASTNode, AnalyzeResult, AnalyzeOptions, StepTree } from '@/types';
+import { ASTNode, StepTree } from '@/types';
 
 /**
  * Integration context for passing state between strategies
@@ -153,67 +151,4 @@ export function integrateAST(node: ASTNode, variable: string): ASTNode {
   }
 
   throw new Error(result.steps.join('; '));
-}
-
-/**
- * Analyze AST with integration task
- */
-export function analyzeIntegrate(
-  ast: ASTNode,
-  options: AnalyzeOptions & { task: 'integrate' }
-): AnalyzeResult {
-  const steps: StepTree[] = [];
-
-  try {
-    // Automatic variable inference
-    const variable = getAnalysisVariable(ast, options.variable);
-    const freeVars = extractFreeVariables(ast);
-
-    // Add informative steps about variable selection
-    if (!options.variable && freeVars.size > 1) {
-      steps.push(
-        `Multiple variables found: {${Array.from(freeVars).join(', ')}}. Using '${variable}' for integration.`
-      );
-    } else if (!options.variable && freeVars.size === 1) {
-      steps.push(`Auto-detected variable: ${variable}`);
-    }
-
-    steps.push(`Integrating with respect to ${variable}`);
-    steps.push(`Expression: ${astToLatex(ast)}`);
-
-    // Use the new integration engine
-    const engine = new IntegrationEngine();
-    const result = engine.integrateAST(ast, variable);
-
-    if (result.success && result.result) {
-      const integralLatex = astToLatex(result.result);
-      steps.push(...result.steps);
-      steps.push(`Integral: ${integralLatex} + C`);
-
-      return {
-        steps,
-        value: `${integralLatex} + C`,
-        valueType: 'symbolic',
-        ast: result.result,
-        error: null,
-      };
-    } else {
-      steps.push(...result.steps);
-      return {
-        steps,
-        value: null,
-        valueType: 'symbolic',
-        ast: null,
-        error: 'Integration failed: ' + result.steps.join('; '),
-      };
-    }
-  } catch (error) {
-    return {
-      steps,
-      value: null,
-      valueType: 'symbolic',
-      ast: null,
-      error: error instanceof Error ? error.message : 'Integration error',
-    };
-  }
 }
