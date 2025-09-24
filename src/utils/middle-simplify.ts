@@ -93,6 +93,17 @@ export function simplify(
       result = simplifyPolynomialFraction(result.numerator, result.denominator, steps);
       if (Array.isArray(steps) && before !== result)
         steps.push(`Simplified fraction: ${stepsAstToLatex(result)}`);
+      // 分数式の場合は分子・分母のみ再帰的に簡約化し、全体の展開や展開形への戻しは行わない
+      if (result.type === 'Fraction') {
+        const num = recursiveBasicSimplify(result.numerator, opts, 0);
+        const den = recursiveBasicSimplify(result.denominator, opts, 0);
+        const simplifiedFrac = { ...result, numerator: num, denominator: den };
+        if (Array.isArray(steps))
+          steps.push(
+            `Finished basic simplification (fraction): ${stepsAstToLatex(simplifiedFrac)}`
+          );
+        return simplifiedFrac;
+      }
     }
 
     // Step 3: Expansion (only if expand: true)

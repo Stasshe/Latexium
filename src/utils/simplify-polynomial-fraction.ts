@@ -1,4 +1,5 @@
 import { stepsAstToLatex } from './ast';
+import { areEquivalentExpressions } from './simplify/simplification';
 
 import { ASTNode, StepTree } from '@/types';
 /**
@@ -16,8 +17,26 @@ export function simplifyPolynomialFraction(
   // 1. Extract factors as arrays (flattened)
   if (Array.isArray(steps)) steps.push('Start simplifyPolynomialFraction');
   function extractFactors(node: ASTNode): ASTNode[] {
+    // Handle multiplication
     if (node.type === 'BinaryExpression' && node.operator === '*') {
       return [...extractFactors(node.left), ...extractFactors(node.right)];
+    }
+    // Handle powers: (base)^(n) => n copies of base (if n is integer and >= 1)
+    if (
+      node.type === 'BinaryExpression' &&
+      node.operator === '^' &&
+      node.right.type === 'NumberLiteral' &&
+      Number.isInteger(node.right.value) &&
+      node.right.value >= 1
+    ) {
+      // Expand (base)^n to n copies of base
+      const count = node.right.value;
+      const baseFactors = extractFactors(node.left);
+      let result: ASTNode[] = [];
+      for (let i = 0; i < count; ++i) {
+        result = result.concat(baseFactors);
+      }
+      return result;
     }
     return [node];
   }
@@ -25,11 +44,12 @@ export function simplifyPolynomialFraction(
   let numFactors = extractFactors(numerator);
   let denFactors = extractFactors(denominator);
 
-  // 2. Cancel common factors (by structural equality)
+  // 2. Cancel common factors (by structural or mathematical equivalence)
   const used = new Array(denFactors.length).fill(false);
   numFactors = numFactors.filter(nf => {
     for (let i = 0; i < denFactors.length; ++i) {
-      if (!used[i] && JSON.stringify(nf) === JSON.stringify(denFactors[i])) {
+      const df = denFactors[i];
+      if (!used[i] && df !== undefined && areEquivalentExpressions(nf, df)) {
         used[i] = true;
         if (Array.isArray(steps)) steps.push('Cancel common factor' + stepsAstToLatex(nf));
         return false; // cancel

@@ -45,6 +45,11 @@ const complexTestCases = [
     expected: 'x(x^2 - 3x + 3)',
   },
   {
+    id: 0.81,
+    expression: '(x^2 + 2x +1 )',
+    task: 'factor',
+  },
+  {
     id: 0.85,
     expression: 'x^20 - 2x^10 + 1',
     task: 'factor',
