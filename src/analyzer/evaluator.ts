@@ -3,9 +3,9 @@
  * Evaluates AST nodes with variable substitution and mathematical operations
  */
 
-import { astToLatex } from '../utils/ast';
-import { simplify } from '../utils/unified-simplify';
-import { extractFreeVariables } from '../utils/variables';
+import { astToLatex } from '../engine/ast';
+import { simplify } from '../engine/unified-simplify';
+import { extractFreeVariables } from '../engine/variables';
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS, StepTree } from '@/types';
 

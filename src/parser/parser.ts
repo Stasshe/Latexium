@@ -14,8 +14,8 @@ import {
   RESERVED_SYMBOLS,
 } from '../types';
 import { LaTeXTokenizer, Token, TokenType } from './tokenizer';
-import { resolveScopeInAST } from '../utils/scope';
-import { validateFunctionArgs } from '../utils/validation';
+import { resolveScopeInAST } from '../engine/scope';
+import { validateFunctionArgs } from '../engine/validation';
 
 import { config } from '@/config';
 

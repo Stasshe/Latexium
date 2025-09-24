@@ -3,10 +3,10 @@
  * Implements solving for linear and quadratic equations
  */
 
+import { astToLatex } from '../engine/ast';
+import { simplify as simplifyAST } from '../engine/unified-simplify';
+import { getAnalysisVariable, extractFreeVariables } from '../engine/variables';
 import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '../types';
-import { astToLatex } from '../utils/ast';
-import { simplify as simplifyAST } from '../utils/unified-simplify';
-import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 /**
  * Solve an equation AST

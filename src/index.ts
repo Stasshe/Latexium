@@ -8,7 +8,7 @@
 export * from './types';
 
 // Export utilities
-export * from './utils';
+export * from './engine';
 
 // Export parser
 export { parseLatex } from './parser';

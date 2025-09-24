@@ -5,9 +5,9 @@
 
 import { ASTNode, AnalyzeResult, AnalyzeOptions, StepTree } from '../types';
 import { IntegrationEngine } from './integration';
-import { astToLatex } from '../utils/ast';
-import { simplify as simplifyAST } from '../utils/unified-simplify';
-import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
+import { astToLatex } from '../engine/ast';
+import { simplify as simplifyAST } from '../engine/unified-simplify';
+import { getAnalysisVariable, extractFreeVariables } from '../engine/variables';
 
 // Legacy integration engine - now using new strategy-based system
 const modernIntegrationEngine = new IntegrationEngine();

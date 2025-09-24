@@ -3,9 +3,9 @@
  * Handles factorization and distribution tasks using the new advanced system
  */
 
-import { astToLatex } from '../utils/ast';
-import { expandExpression } from '../utils/distribution';
-import { simplify } from '../utils/unified-simplify';
+import { astToLatex } from '../engine/ast';
+import { expandExpression } from '../engine/distribution';
+import { simplify } from '../engine/unified-simplify';
 
 import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '@/types';
 

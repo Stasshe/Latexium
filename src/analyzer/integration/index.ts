@@ -9,8 +9,8 @@ import { IntegrationByPartsStrategy } from './strategies/integration-by-parts';
 import { RationalFunctionStrategy } from './strategies/rational';
 import { SubstitutionStrategy } from './strategies/substitution';
 import { TrigonometricStrategy } from './strategies/trigonometric';
-import { astToLatex } from '../../utils/ast';
-import { getAnalysisVariable, extractFreeVariables } from '../../utils/variables';
+import { astToLatex } from '../../engine/ast';
+import { getAnalysisVariable, extractFreeVariables } from '../../engine/variables';
 
 import { ASTNode, AnalyzeResult, AnalyzeOptions, StepTree } from '@/types';
 

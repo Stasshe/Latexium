@@ -3,10 +3,10 @@
  * Implements symbolic differentiation for mathematical expressions
  */
 
+import { astToLatex } from '../engine/ast';
+import { differentiate } from '../engine/differentiation';
+import { getAnalysisVariable, extractFreeVariables } from '../engine/variables';
 import { ASTNode, AnalyzeOptions, AnalyzeResult, StepTree } from '../types';
-import { astToLatex } from '../utils/ast';
-import { differentiate } from '../utils/differentiation';
-import { getAnalysisVariable, extractFreeVariables } from '../utils/variables';
 
 export function analyzeDifferentiate(
   ast: ASTNode,
