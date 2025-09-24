@@ -116,12 +116,12 @@
 21 directories, 93 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17838
-Total Characters: 528730
-Total File Size (bytes): 535613
+Total Lines: 17856
+Total Characters: 529528
+Total File Size (bytes): 536561
 
 Development Size
-222M	.
+119M	.
 
 Build Size
-6.7M	dist
+6.6M	dist
