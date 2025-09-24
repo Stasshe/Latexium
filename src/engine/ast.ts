@@ -21,6 +21,10 @@ export function stepsAstToLatex(
     : '';
 }
 
+export function bracketAppend(string: string): string {
+  return (config.LATEX_BRACKET.LEFT || '') + string + (config.LATEX_BRACKET.RIGHT || '');
+}
+
 /**
  * Convert AST to LaTeX string representation
  */

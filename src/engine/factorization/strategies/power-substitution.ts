@@ -7,6 +7,8 @@ import { ASTNode, BinaryExpression } from '../../../types/ast';
 import { simplify as middleSimplify } from '../../middle-simplify';
 import { FactorizationStrategy, FactorizationResult, FactorizationContext } from '../framework';
 
+import { bracketAppend } from '@/engine/ast';
+
 export class PowerSubstitutionStrategy implements FactorizationStrategy {
   name = 'power-substitution';
   description = 'Factors polynomials by substitution t = x^k (k >= 2)';
@@ -71,7 +73,7 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
       ast: simplified,
       changed: true,
       steps: [
-        `Applied power substitution: t = ${context.variable}^${k}`,
+        `Applied power substitution: ${bracketAppend(`t = ${context.variable}^${k}`)}`,
         'middle-simplify (expand: false) applied',
       ],
       strategyUsed: this.name,

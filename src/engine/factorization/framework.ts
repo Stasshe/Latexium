@@ -105,7 +105,7 @@ export class FactorizationEngine {
       },
     };
 
-    context.steps.push(`Starting factorization of: ${astToLatex(node)}`);
+    context.steps.push(`Starting factorization of: ${stepsAstToLatex(node)}`);
 
     let currentNode: ASTNode;
     try {

@@ -3,7 +3,7 @@
  * Handles factorization and distribution tasks using the new advanced system
  */
 
-import { astToLatex, stepsAstToLatex } from '../engine/ast';
+import { astToLatex, stepsAstToLatex, bracketAppend } from '../engine/ast';
 import { expandExpression } from '../engine/distribution';
 import { simplify } from '../engine/unified-simplify';
 
@@ -68,15 +68,15 @@ export function analyzeDistribution(ast: ASTNode): AnalyzeResult {
 
     // Always apply simplification to handle addition, like terms, etc.
     const simplified = simplify(expanded, { factor: false, combineLikeTerms: true }, steps);
-    const simplifiedLatex = stepsAstToLatex(simplified);
+    const simplifiedLatex = astToLatex(simplified);
 
     // Track changes step by step
     if (expandedLatex !== astToLatex(ast)) {
-      steps.push(`After distribution/expansion: ${expandedLatex}`);
+      steps.push(`After distribution/expansion: ${bracketAppend(expandedLatex)}`);
     }
 
     if (simplifiedLatex !== expandedLatex) {
-      steps.push(`After combining like terms: ${simplifiedLatex}`);
+      steps.push(`After combining like terms: ${bracketAppend(simplifiedLatex)}`);
     }
 
     // If no changes occurred at all, note that
