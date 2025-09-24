@@ -9,5 +9,9 @@
   "bracketSpacing": true,
   "arrowParens": "avoid",
   "jsxSingleQuote": false,
-  "bracketSameLine": false
+  "bracketSameLine": false,
+  "quoteProps": "consistent",
+  "proseWrap": "always",
+  "singleAttributePerLine": true,
+  "embeddedLanguageFormatting": "auto"
 }

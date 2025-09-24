@@ -13,8 +13,6 @@ tests/output/*
 
 # Build output
 /dist
-/build
-/out
 
 # Logs
 npm-debug.log*
@@ -29,13 +27,11 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# OS
-.DS_Store
-*.pem
-
 # TypeScript
 *.tsbuildinfo
 
 # Temporary files
 *.tmp
 *.temp
+
+tests/temp/*

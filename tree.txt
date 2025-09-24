@@ -109,19 +109,17 @@
 │   │   ├── simplify.test.mjs
 │   │   ├── test-distribution.test.mjs
 │   │   └── unified-simplify.test.mjs
-│   ├── temp
-│   │   └── lll-x5minus1.test.mjs
 │   └── union.test.mjs
 ├── tree.sh
 ├── tree.txt
 └── tsconfig.json
 
-22 directories, 95 files
+21 directories, 94 files
 
 src/*.ts, *.tsx の統計:
 Total Lines: 17879
-Total Characters: 529859
-Total File Size (bytes): 536708
+Total Characters: 529869
+Total File Size (bytes): 536718
 
 Development Size
 222M	.

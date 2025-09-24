@@ -17,7 +17,7 @@ const modernIntegrationEngine = new IntegrationEngine();
  */
 const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
   // Basic functions
-  constant: () => ({
+  'constant': () => ({
     type: 'Identifier',
     name: 'x',
     scope: 'free',
@@ -25,7 +25,7 @@ const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
   }),
 
   // Power functions
-  x: () => ({
+  'x': () => ({
     type: 'Fraction',
     numerator: {
       type: 'BinaryExpression',
@@ -48,7 +48,7 @@ const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
   }),
 
   // Trigonometric functions
-  sin: arg => ({
+  'sin': arg => ({
     type: 'UnaryExpression',
     operator: '-',
     operand: {
@@ -67,7 +67,7 @@ const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
     },
   }),
 
-  cos: arg => ({
+  'cos': arg => ({
     type: 'FunctionCall',
     name: 'sin',
     args: arg
@@ -83,7 +83,7 @@ const INTEGRATION_TABLE: Record<string, (arg?: ASTNode) => ASTNode> = {
   }),
 
   // Exponential and logarithmic
-  exp: arg => ({
+  'exp': arg => ({
     type: 'FunctionCall',
     name: 'exp',
     args: arg

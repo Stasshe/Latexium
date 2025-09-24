@@ -5,7 +5,7 @@ tests/output/
 *.test.mjs
 .github/
 .vscode/
-.husky/
+.husky/*
 temp/
 rollup.config.js
 tsconfig.json
