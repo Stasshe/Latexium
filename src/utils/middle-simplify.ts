@@ -1025,15 +1025,37 @@ function buildAdditionFromTerms(terms: Array<{ term: ASTNode; sign: number }>): 
     }
   }
 
-  let result = terms[0]?.term;
+  // 降冪ソート用の次数取得関数
+  function getDegree(node: ASTNode): number {
+    // x^n の n を返す, x の場合は1, 定数は0
+    if (node.type === 'BinaryExpression' && node.operator === '^') {
+      if (node.right.type === 'NumberLiteral') {
+        return typeof node.right.value === 'number' ? node.right.value : 1;
+      }
+      return 1;
+    }
+    if (node.type === 'Identifier') return 1;
+    if (node.type === 'NumberLiteral') return 0;
+    // ax^n の場合は左側を再帰
+    if (node.type === 'BinaryExpression' && node.operator === '*') {
+      return Math.max(getDegree(node.left), getDegree(node.right));
+    }
+    // 単項式でなければ0
+    return 0;
+  }
+
+  // 降冪でソート
+  const sorted = [...terms].sort((a, b) => getDegree(b.term) - getDegree(a.term));
+
+  let result = sorted[0]?.term;
   if (!result) return { type: 'NumberLiteral', value: 0 };
 
-  if (terms[0]?.sign === -1) {
+  if (sorted[0]?.sign === -1) {
     result = { type: 'UnaryExpression', operator: '-', operand: result };
   }
 
-  for (let i = 1; i < terms.length; i++) {
-    const term = terms[i];
+  for (let i = 1; i < sorted.length; i++) {
+    const term = sorted[i];
     if (!term) continue;
 
     if (term.sign === 1) {
