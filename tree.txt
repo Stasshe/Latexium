@@ -36,56 +36,56 @@
 │   │   └── solver.ts
 │   ├── config
 │   │   └── index.ts
+│   ├── engine
+│   │   ├── ast.ts
+│   │   ├── berlekamp-zassenhaus
+│   │   │   ├── berlekamp.ts
+│   │   │   ├── finite-field.ts
+│   │   │   ├── hensel-lifting.ts
+│   │   │   ├── index.ts
+│   │   │   └── polynomial-utils.ts
+│   │   ├── differentiation.ts
+│   │   ├── distribution.ts
+│   │   ├── factorization
+│   │   │   ├── framework.ts
+│   │   │   ├── index.ts
+│   │   │   └── strategies
+│   │   │       ├── berlekamp-zassenhaus.ts
+│   │   │       ├── common-factor.ts
+│   │   │       ├── cyclotomic.ts
+│   │   │       ├── difference-of-squares.ts
+│   │   │       ├── grouping.ts
+│   │   │       ├── index.ts
+│   │   │       ├── lll-factorization.ts
+│   │   │       ├── pattern-utils.ts
+│   │   │       ├── perfect-power.ts
+│   │   │       ├── power-substitution.ts
+│   │   │       └── quadratic-pattern.ts
+│   │   ├── identities
+│   │   │   └── trigonometric.ts
+│   │   ├── index.ts
+│   │   ├── lll-factorization
+│   │   │   ├── index.ts
+│   │   │   └── lll-lattice.ts
+│   │   ├── middle-simplify.ts
+│   │   ├── scope.ts
+│   │   ├── simplify
+│   │   │   ├── basic-simplify.ts
+│   │   │   ├── commutative.ts
+│   │   │   ├── exponential.ts
+│   │   │   └── simplification.ts
+│   │   ├── simplify-polynomial-fraction.ts
+│   │   ├── unified-simplify.ts
+│   │   ├── validation.ts
+│   │   └── variables.ts
 │   ├── index.ts
 │   ├── parser
 │   │   ├── index.ts
 │   │   ├── parser.ts
 │   │   └── tokenizer.ts
-│   ├── types
-│   │   ├── ast.ts
-│   │   └── index.ts
-│   └── utils
+│   └── types
 │       ├── ast.ts
-│       ├── berlekamp-zassenhaus
-│       │   ├── berlekamp.ts
-│       │   ├── finite-field.ts
-│       │   ├── hensel-lifting.ts
-│       │   ├── index.ts
-│       │   └── polynomial-utils.ts
-│       ├── differentiation.ts
-│       ├── distribution.ts
-│       ├── factorization
-│       │   ├── framework.ts
-│       │   ├── index.ts
-│       │   └── strategies
-│       │       ├── berlekamp-zassenhaus.ts
-│       │       ├── common-factor.ts
-│       │       ├── cyclotomic.ts
-│       │       ├── difference-of-squares.ts
-│       │       ├── grouping.ts
-│       │       ├── index.ts
-│       │       ├── lll-factorization.ts
-│       │       ├── pattern-utils.ts
-│       │       ├── perfect-power.ts
-│       │       ├── power-substitution.ts
-│       │       └── quadratic-pattern.ts
-│       ├── identities
-│       │   └── trigonometric.ts
-│       ├── index.ts
-│       ├── lll-factorization
-│       │   ├── index.ts
-│       │   └── lll-lattice.ts
-│       ├── middle-simplify.ts
-│       ├── scope.ts
-│       ├── simplify
-│       │   ├── basic-simplify.ts
-│       │   ├── commutative.ts
-│       │   ├── exponential.ts
-│       │   └── simplification.ts
-│       ├── simplify-polynomial-fraction.ts
-│       ├── unified-simplify.ts
-│       ├── validation.ts
-│       └── variables.ts
+│       └── index.ts
 ├── test-specification.txt
 ├── tests
 │   ├── analyze-demo.test.mjs
@@ -119,12 +119,12 @@
 22 directories, 95 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17684
-Total Characters: 521900
-Total File Size (bytes): 528711
+Total Lines: 17879
+Total Characters: 529859
+Total File Size (bytes): 536708
 
 Development Size
-218M	.
+222M	.
 
 Build Size
-5.5M	dist
+6.7M	dist
