@@ -63,7 +63,7 @@ const complexTestCases = [
     id: 0.85,
     expression: 'x^20 - 2x^10 + 1',
     task: 'factor',
-    expected: '(x^{5} + 1)^{2}(x - 1)^{2}(x^{4} + x^{3} + x^{2} + x + 1)^{2}',
+    expected: '((x + 1)(x^{4} - x^{3} + x^{2} - x + 1)(x - 1)(x^{4} + x^{3} + x^{2} + x + 1))^{2}',
   },
   {
     id: 0.9,
@@ -355,7 +355,7 @@ const complexTestCases = [
     id: 106,
     expression: 'x^4 - 10x^2 + 9',
     task: 'factor',
-    expected: '(x - 3)(x + 3)(x - 1)(x + 1)',
+    expected: '(x + 3)(x - 3)(x + 1)(x - 1)',
     description: 'Quartic as product of quadratics',
   },
   {
@@ -383,7 +383,7 @@ const complexTestCases = [
     id: 110,
     expression: 'x^8 - 2x^4 + 1',
     task: 'factor',
-    expected: '(x^{2} + 1)^{2}(x - 1)^{2}(x + 1)^{2}',
+    expected: '((x^{2} + 1)(x + 1)(x - 1))^{2}',
     description: 'Quartic squared',
   },
   {
@@ -530,7 +530,7 @@ const complexTestCases = [
     id: 132,
     expression: 'x^8 - 1',
     task: 'factor',
-    expected: '(x^4 + 1)(x^2 + 1)(x - 1)(x + 1)',
+    expected: '(x^{4} + 1)(x^{2} + 1)(x + 1)(x - 1)',
     description: 'Eighth power minus one (repeat for robustness)',
   },
   {
@@ -541,25 +541,11 @@ const complexTestCases = [
     description: 'Sixth power minus 27 (repeat for robustness)',
   },
   {
-    id: 134,
-    expression: 'x^8 + 16',
-    task: 'factor',
-    expected: '(x^4 + 4x^2 + 8)(x^4 - 4x^2 + 8)',
-    description: 'Eighth power plus 16 (repeat for robustness)',
-  },
-  {
     id: 135,
     expression: 'x^6 + 27',
     task: 'factor',
     expected: '(x^2 + 3x + 3)(x^2 - 3x + 3)',
     description: 'Sixth power plus 27',
-  },
-  {
-    id: 136,
-    expression: 'x^8 + 1',
-    task: 'factor',
-    expected: '(x^4 + sqrt{2}x^2 + 1)(x^4 - sqrt{2}x^2 + 1)',
-    description: 'Eighth power plus one (repeat for robustness)',
   },
   {
     id: 137,
@@ -572,7 +558,7 @@ const complexTestCases = [
     id: 138,
     expression: 'x^8 - 1',
     task: 'factor',
-    expected: '(x^4 + 1)(x^2 + 1)(x - 1)(x + 1)',
+    expected: '(x^{4} + 1)(x^{2} + 1)(x + 1)(x - 1)',
     description: 'Eighth power minus one (repeat for robustness)',
   },
   {

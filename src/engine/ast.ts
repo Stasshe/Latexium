@@ -126,6 +126,48 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
     case '-':
       return `${left} - ${right}`;
     case '*': {
+      // --- まとめて ^n の形にするロジック ---
+      // 積の全因子が (base)^n で n が同じ場合、(base1 base2 ...)^n の形にまとめる
+      function flattenMul(node: ASTNode): ASTNode[] {
+        if (node.type === 'BinaryExpression' && node.operator === '*') {
+          return [...flattenMul(node.left), ...flattenMul(node.right)];
+        }
+        return [node];
+      }
+      const factors = flattenMul(node);
+      // 全て BinaryExpression '^' かつ指数が同じかチェック
+      if (
+        factors.length > 1 &&
+        factors.every(
+          f =>
+            f.type === 'BinaryExpression' && f.operator === '^' && f.right.type === 'NumberLiteral'
+        )
+      ) {
+        const firstExp = (factors[0] as BinaryExpression).right as import('../types').NumberLiteral;
+        const allSameExp = factors.every(
+          f =>
+            ((f as BinaryExpression).right as import('../types').NumberLiteral).value ===
+            firstExp.value
+        );
+        if (allSameExp) {
+          // ベース部分をまとめて掛ける
+          const baseProduct: ASTNode = factors.slice(1).reduce<ASTNode>(
+            (acc, f) => ({
+              type: 'BinaryExpression',
+              operator: '*',
+              left: acc,
+              right: (f as BinaryExpression).left,
+            }),
+            (factors[0] as BinaryExpression).left
+          );
+          // (base1 base2 ...)^n
+          let baseLatex = astToLatex(baseProduct);
+          // 括弧を必ず付ける
+          baseLatex = `(${baseLatex})`;
+          return `${baseLatex}^{${firstExp.value}}`;
+        }
+      }
+      // --- 通常の積の処理 ---
       // Handle coefficient * constant/variable patterns
       if (node.left.type === 'NumberLiteral') {
         // Number * π/e should display as "2π" or "2e"
@@ -182,22 +224,12 @@ function binaryExpressionToLatex(node: BinaryExpression): string {
         return `${right}${left}`;
       }
 
-      // // Variable * Variable should be combined without space (xy, not x y)
-      // if (node.left.type === 'Identifier' && node.right.type === 'Identifier') {
-      //   // Same variable: x * x -> x^2 representation in LaTeX
-      //   if (node.left.name === node.right.name) {
-      //     return `${left}^{2}`;
-      //   }
-      //   return `${left}${right}`;
-      // }
-
       // Handle complex variable multiplication patterns and convert to exponent form
       const simplifiedMultiplication = simplifyVariableMultiplication(node);
       if (simplifiedMultiplication !== null) {
         return simplifiedMultiplication;
       }
 
-      // *** FIX FOR FACTORED EXPRESSIONS ***
       // For (expression)(expression) format, both sides need parentheses if they contain +/-
       const leftNeedsParens =
         node.left.type === 'BinaryExpression' &&
