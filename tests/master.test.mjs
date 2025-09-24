@@ -320,7 +320,7 @@ const complexTestCases = [
     id: 101,
     expression: 'x^8 - 1',
     task: 'factor',
-    expected: '(x^4 + 1)(x^2 + 1)(x - 1)(x + 1)',
+    expected: '(x^{4} + 1)(x^{2} + 1)(x + 1)(x - 1)',
     description: 'Eighth power minus one',
   },
   {
@@ -488,14 +488,14 @@ const complexTestCases = [
     id: 125,
     expression: 'x^6 - 2x^3 + 1',
     task: 'factor',
-    expected: '(x^3 - 1)^2',
+    expected: '((x - 1)(x^{2} + x + 1))^{2}',
     description: 'Perfect cube minus one squared',
   },
   {
     id: 126,
     expression: 'x^8 - 4x^4 + 4',
     task: 'factor',
-    expected: '(x^4 - 2x^2 + 2)^2',
+    expected: '(x^{4} - 2)^{2}',
     description: 'Quartic squared minus constant',
   },
   {
@@ -509,14 +509,14 @@ const complexTestCases = [
     id: 128,
     expression: 'x^8 - 64',
     task: 'factor',
-    expected: '(x^4 - 8)(x^4 + 8)',
+    expected: '(x^{4} + 8)(x^{4} - 8)',
     description: 'Eighth power minus 64',
   },
   {
     id: 129,
     expression: 'x^6 - 1',
     task: 'factor',
-    expected: '(x^2 - x + 1)(x^2 + x + 1)(x - 1)(x + 1)',
+    expected: '(x + 1)(x^{2} - x + 1)(x - 1)(x^{2} + x + 1)',
     description: 'Sixth power minus one (repeat for robustness)',
   },
   {
