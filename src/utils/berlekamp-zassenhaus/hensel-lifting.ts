@@ -33,25 +33,38 @@ export class HenselLifting {
     // 逆元が求められない場合は別の素数で再試行
     const triedPrimes: number[] = [];
     let currentPrime = prime;
-    let lastError: any = null;
-    const primeCandidates = [2, 3, 5, 7, 11, 13]; //17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
-    // primeCandidatesからprimeを優先
-    if (!primeCandidates.includes(prime)) primeCandidates.unshift(prime);
+    let lastError: unknown = null;
+    // p=2は多重根や特殊挙動が多いので除外（必要なら有効化）
+    const primeCandidates = [3, 5, 7, 11, 13];
+    if (prime !== 2 && !primeCandidates.includes(prime)) primeCandidates.unshift(prime);
 
     for (const p of primeCandidates) {
       if (triedPrimes.includes(p)) continue;
       triedPrimes.push(p);
       currentPrime = p;
       try {
-        // 多因子対応: すべての因子をリフト
+        // 係数配列は常に low→high（定数項→最高次項）で統一
         // モニック化: 各因子の最高次係数を1に正規化（mod currentPrime）
         const monicFactors = factorCoeffs.map(coeffs => {
           if (!coeffs || coeffs.length === 0) return [];
-          const lastIdx = coeffs.length - 1;
-          const lead = typeof coeffs[lastIdx] === 'number' ? coeffs[lastIdx] % currentPrime : 0;
-          // 最高次係数の逆元をかける
-          const inv = this.modInv(lead, currentPrime, steps);
-          return coeffs.map(c => (((c * inv) % currentPrime) + currentPrime) % currentPrime);
+          // 末尾0除去
+          const arr = [...coeffs];
+          while (arr.length > 1 && arr[arr.length - 1] === 0) arr.pop();
+          const lead = arr[arr.length - 1];
+          if (lead === undefined)
+            throw new Error('Leading coefficient is undefined, cannot monicize');
+          const leadMod = ((lead % currentPrime) + currentPrime) % currentPrime;
+          if (leadMod === 0) throw new Error('Leading coefficient is zero, cannot monicize');
+          // 逆元計算前にgcdチェック
+          const g = this.gcd(leadMod, currentPrime);
+          if (g !== 1) throw new Error(`Leading coefficient not coprime to modulus: gcd=${g}`);
+          const inv = this.modInv(leadMod, currentPrime, steps);
+          const monic = arr.map(c => (((c * inv) % currentPrime) + currentPrime) % currentPrime);
+          if (steps)
+            steps.push(
+              `[Hensel-DEBUG] monicize: input=${JSON.stringify(coeffs)}, trimmed=${JSON.stringify(arr)}, lead=${lead}, inv=${inv}, monic=${JSON.stringify(monic)}`
+            );
+          return monic;
         });
         const currentFactors = monicFactors.map(coeffs => [...coeffs]);
         const currentMod = currentPrime;
@@ -61,10 +74,23 @@ export class HenselLifting {
           );
 
         // 本格的な多因子Henselリフト（mod p^k で全因子同時補正）
-        let m = currentPrime;
+        let k = 1;
+        let m = Math.pow(currentPrime, k);
         while (m < targetPrecision) {
-          const nextMod = Math.min(m * currentPrime, targetPrecision);
+          k++;
+          let nextMod = Math.pow(currentPrime, k);
+          if (nextMod > targetPrecision) nextMod = targetPrecision;
+          // デバッグ: modulusの値を明示
+          if (steps)
+            steps.push(
+              `[Hensel-DEBUG] modulus update: m=${m}, nextMod=${nextMod}, prime=${currentPrime}, k=${k}`
+            );
           const prod = this.multiplyPolyList(currentFactors);
+          // デバッグ: 現在の因子積
+          if (steps)
+            steps.push(
+              `[Hensel-DEBUG] currentFactors: ${JSON.stringify(currentFactors)}, prod: ${JSON.stringify(prod)}`
+            );
           const h = this.modPoly(this.subtractPolynomials(originalCoeffs, prod), nextMod);
           // 追加: 各因子の最高次係数とgcdをログ出力
           if (steps) {
@@ -104,15 +130,44 @@ export class HenselLifting {
           );
           // 4. 全因子を同時に補正
           for (let i = 0; i < currentFactors.length; i++) {
-            const cf2 = currentFactors[i] as number[];
+            const arr = [...(currentFactors[i] as number[])];
+            while (arr.length > 1 && arr[arr.length - 1] === 0) arr.pop();
+            const cf2 = arr;
             const delta = deltas[i] as number[];
             let updatedFactor = this.modPoly(this.addPolynomials(cf2, delta), nextMod);
             // --- ここでモニック化 ---
             if (updatedFactor.length > 0) {
+              // デバッグ: 係数配列順序確認
+              if (steps)
+                steps.push(
+                  `[Hensel-DEBUG] before monicize: updatedFactor (low→high) = ${JSON.stringify(updatedFactor)}, (high→low) = ${JSON.stringify([...updatedFactor].reverse())}`
+                );
+              while (updatedFactor.length > 1 && updatedFactor[updatedFactor.length - 1] === 0)
+                updatedFactor.pop();
               const lead = updatedFactor[updatedFactor.length - 1];
-              const safeLead = typeof lead === 'number' && Number.isFinite(lead) ? lead : 1;
-              const inv = this.modInv(safeLead, nextMod, steps);
+              if (lead === undefined) {
+                if (steps) steps.push(`[Hensel] Leading coefficient is undefined, cannot monicize`);
+                throw new Error('Leading coefficient is undefined, cannot monicize');
+              }
+              const leadMod = ((lead % nextMod) + nextMod) % nextMod;
+              if (leadMod === 0) {
+                if (steps) steps.push(`[Hensel] Leading coefficient is zero, cannot monicize`);
+                throw new Error('Leading coefficient is zero, cannot monicize');
+              }
+              const g = this.gcd(leadMod, nextMod);
+              if (g !== 1) {
+                if (steps)
+                  steps.push(`[Hensel] Leading coefficient not coprime to modulus: gcd=${g}`);
+                throw new Error(`Leading coefficient not coprime to modulus: gcd=${g}`);
+              }
+              // デバッグ: 逆元計算前
+              if (steps) steps.push(`[Hensel-DEBUG] monicize: lead=${lead}, nextMod=${nextMod}`);
+              const inv = this.modInv(leadMod, nextMod, steps);
               updatedFactor = updatedFactor.map(c => (((c * inv) % nextMod) + nextMod) % nextMod);
+              if (steps)
+                steps.push(
+                  `[Hensel-DEBUG] after monicize: updatedFactor (low→high) = ${JSON.stringify(updatedFactor)}, (high→low) = ${JSON.stringify([...updatedFactor].reverse())}`
+                );
             }
             // Check if the updated factor is valid
             if (updatedFactor.some(coeff => isNaN(coeff))) {
@@ -123,6 +178,7 @@ export class HenselLifting {
             currentFactors[i] = updatedFactor;
           }
           m = nextMod;
+          k++;
           if (steps)
             (steps ?? []).push(`[Hensel] mod ${m} でリフト: ${JSON.stringify(currentFactors)}`);
         }
@@ -227,9 +283,7 @@ export class HenselLifting {
               ) {
                 // mod m で一致した因子セットを記録
                 foundModMatch.push(
-                  (partition as any[]).map(g =>
-                    Array.isArray(g) ? [...g] : []
-                  ) as unknown as number[][]
+                  (partition as unknown as number[][]).map(g => (Array.isArray(g) ? [...g] : []))
                 );
               }
             }
@@ -282,8 +336,16 @@ export class HenselLifting {
       }
     }
     // すべての素数で失敗した場合は元の因子を返す
-    if (steps)
-      (steps ?? []).push(`[Hensel] 全ての素数でリフト失敗: ${lastError ? lastError.message : ''}`);
+    if (steps) {
+      let msg = '';
+      if (lastError && typeof lastError === 'object' && 'message' in lastError) {
+        const maybeMsg = (lastError as { message?: unknown }).message;
+        if (typeof maybeMsg === 'string') {
+          msg = maybeMsg;
+        }
+      }
+      (steps ?? []).push(`[Hensel] 全ての素数でリフト失敗: ${msg}`);
+    }
     return factorCoeffs;
   }
 

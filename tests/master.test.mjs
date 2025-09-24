@@ -58,7 +58,7 @@ const complexTestCases = [
   },
   {
     id: 1,
-    expression: '8x^3 + 36x^2 + 54x + 27',
+    expression: '(x^2+1)(x^2+2)',
     task: 'factor',
   },
   {

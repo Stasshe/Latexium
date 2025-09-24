@@ -96,7 +96,7 @@ export class BerlekampZassenhausFactorizer {
       }
 
       // Step 2: 複数の素数で有限体分解を順次試行
-      const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+      const primes = [3, 5, 7, 11];
       let foundFactors: number[][] | null = null;
       let usedPrime: number | null = null;
       for (const prime of primes) {
