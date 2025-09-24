@@ -8,13 +8,13 @@
 export * from './types';
 
 // Export utilities
-export * from './engine';
+// export * from './engine';
 
 // Export parser
 export { parseLatex } from './parser';
 
 // Export analyzer
-export { analyze, IntegrationEngine } from './analyzer';
+export { analyze } from './analyzer';
 
 // Export config setters/getters
 export { setConfig, getConfig } from './config';

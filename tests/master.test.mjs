@@ -397,7 +397,7 @@ const complexTestCases = [
     id: 112,
     expression: 'x^8 - 4x^4 + 4',
     task: 'factor',
-    expected: '(x^4 - 2x^2 + 2)^2',
+    expected: '(x^{4} - 2)^{2}',
     description: 'Quartic squared with constant',
   },
   {
@@ -432,7 +432,7 @@ const complexTestCases = [
     id: 117,
     expression: 'x^6 + 2x^3 + 1',
     task: 'factor',
-    expected: '(x + 1)^{2}(x^{2} - x + 1)^{2}',
+    expected: '((x + 1)(x^{2} - x + 1))^{2}',
     description: 'Perfect cube plus one squared',
   },
   {

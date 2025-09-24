@@ -43,7 +43,14 @@ export class CyclotomicPattern implements FactorizationPattern {
       // Only allow integer coefficients, and for x^n+1, n must be odd
       if (n < 2) return false;
       if (node.operator === '+') {
-        if (n % 2 === 0) return false; // Do not factor x^n+1 for even n
+        if (n % 2 === 0) {
+          // For x^n+1, n even, only allow if n has an odd prime factor (i.e., n is not a power of 2)
+          let m = n;
+          while (m % 2 === 0) {
+            m = m / 2;
+          }
+          if (m === 1) return false; // n is a power of 2, do not factor
+        }
       }
       return true;
     }
