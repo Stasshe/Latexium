@@ -11,7 +11,6 @@
 ├── docs
 │   └── FLOW.md
 ├── eslint.config.js
-├── have-not-support-steptree.txt
 ├── package-lock.json
 ├── package.json
 ├── readme-assets
@@ -114,12 +113,12 @@
 ├── tree.txt
 └── tsconfig.json
 
-21 directories, 94 files
+21 directories, 93 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17879
-Total Characters: 529869
-Total File Size (bytes): 536718
+Total Lines: 17838
+Total Characters: 528730
+Total File Size (bytes): 535613
 
 Development Size
 222M	.
