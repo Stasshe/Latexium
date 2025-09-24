@@ -331,21 +331,12 @@ function functionCallToLatex(node: FunctionCall): string {
     case 'tanh':
       return `\\${node.name}(${args.join(', ')})`;
     case 'log':
-      // log(10, x) → \log_{10}{x}
-      if (
-        args.length === 2 &&
-        node.args[0] &&
-        node.args[0].type === 'NumberLiteral' &&
-        (node.args[0] as import('../types').NumberLiteral).value === 10
-      ) {
-        return `\\log_{10}{${args[1]}}`;
-      }
       // log(a, x) → \log_{a}{x}
       if (args.length === 2) {
-        return `\\log_{${args[0]}}{${args[1]}}`;
+        return `\\log_{${args[1]}}{${args[0]}}`;
       }
       // log(x) → \log{x}
-      return `\\log{${args[0]}}`;
+      return `\\ln{${args[0]}}`;
     case 'ln':
       return `\\ln(${args.join(', ')})`;
     case 'exp':

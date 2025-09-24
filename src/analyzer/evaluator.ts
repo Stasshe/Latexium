@@ -6,21 +6,20 @@
 import { astToLatex } from '../engine/ast';
 import { simplify } from '../engine/unified-simplify';
 import { extractFreeVariables } from '../engine/variables';
-
-import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS, StepTree } from '@/types';
+import { ASTNode, AnalyzeOptions, AnalyzeResult, MATH_CONSTANTS, StepTree } from '../types';
 
 /**
  * Evaluate an AST node with given variable values
  */
-export function evaluateAST(node: ASTNode, values: Record<string, number> = {}): number {
+export function evaluateAST(node: ASTNode, values: Record<string, number> = {}): ASTNode {
   switch (node.type) {
     case 'NumberLiteral':
-      return node.value;
+      return node;
 
     case 'Identifier':
       // First check if it's a mathematical constant
       if (node.name in MATH_CONSTANTS) {
-        return MATH_CONSTANTS[node.name]!;
+        return { type: 'NumberLiteral', value: MATH_CONSTANTS[node.name]! };
       }
 
       // Handle imaginary unit 'i' - it stays symbolic in evaluation
@@ -30,7 +29,7 @@ export function evaluateAST(node: ASTNode, values: Record<string, number> = {}):
 
       // Then check user-provided values
       if (node.name in values) {
-        return values[node.name]!;
+        return { type: 'NumberLiteral', value: values[node.name]! };
       }
 
       // For bound variables, they should not be evaluated directly
@@ -40,24 +39,49 @@ export function evaluateAST(node: ASTNode, values: Record<string, number> = {}):
 
       throw new Error(`Undefined variable: ${node.name}`);
 
-    case 'BinaryExpression':
-      return evaluateBinaryExpression(node, values);
+    case 'BinaryExpression': {
+      const left = evaluateAST(node.left, values);
+      const right = evaluateAST(node.right, values);
+      if (left.type === 'NumberLiteral' && right.type === 'NumberLiteral') {
+        return {
+          type: 'NumberLiteral',
+          value: evaluateBinaryExpression({ ...node, left, right }, values),
+        };
+      } else {
+        return { ...node, left, right };
+      }
+    }
 
-    case 'UnaryExpression':
-      return evaluateUnaryExpression(node, values);
+    case 'UnaryExpression': {
+      const operand = evaluateAST(node.operand, values);
+      if (operand.type === 'NumberLiteral') {
+        return {
+          type: 'NumberLiteral',
+          value: evaluateUnaryExpression({ ...node, operand }, values),
+        };
+      } else {
+        return { ...node, operand };
+      }
+    }
 
     case 'FunctionCall':
-      return evaluateFunctionCall(node, values);
+      // Do not evaluate function calls numerically, just return the node with evaluated args
+      return {
+        ...node,
+        args: node.args.map(arg => evaluateAST(arg, values)),
+      };
 
     case 'Fraction': {
       const numerator = evaluateAST(node.numerator, values);
       const denominator = evaluateAST(node.denominator, values);
-
-      if (denominator === 0) {
-        throw new Error('Division by zero');
+      if (numerator.type === 'NumberLiteral' && denominator.type === 'NumberLiteral') {
+        if (denominator.value === 0) {
+          throw new Error('Division by zero');
+        }
+        return { type: 'NumberLiteral', value: numerator.value / denominator.value };
+      } else {
+        return { ...node, numerator, denominator };
       }
-
-      return numerator / denominator;
     }
 
     case 'Integral':
@@ -70,13 +94,15 @@ export function evaluateAST(node: ASTNode, values: Record<string, number> = {}):
   }
 }
 
+import type { NumberLiteral } from '@/types/ast';
+
 function evaluateBinaryExpression(
   node: { operator: string; left: ASTNode; right: ASTNode },
   values: Record<string, number>
 ): number {
-  const left = evaluateAST(node.left, values);
-  const right = evaluateAST(node.right, values);
-
+  // left, rightは必ずNumberLiteral型
+  const left = (node.left as NumberLiteral).value;
+  const right = (node.right as NumberLiteral).value;
   switch (node.operator) {
     case '+':
       return left + right;
@@ -110,8 +136,8 @@ function evaluateUnaryExpression(
   node: { operator: string; operand: ASTNode },
   values: Record<string, number>
 ): number {
-  const operand = evaluateAST(node.operand, values);
-
+  // operandは必ずNumberLiteral型
+  const operand = (node.operand as NumberLiteral).value;
   switch (node.operator) {
     case '+':
       return operand;
@@ -122,51 +148,7 @@ function evaluateUnaryExpression(
   }
 }
 
-function evaluateFunctionCall(
-  node: { name: string; args: ASTNode[] },
-  values: Record<string, number>
-): number {
-  const args = node.args.map((arg: ASTNode) => evaluateAST(arg, values));
-
-  if (args.length === 0) {
-    throw new Error(`Function ${node.name} requires at least one argument`);
-  }
-
-  const firstArg = args[0]!;
-
-  switch (node.name) {
-    case 'sin':
-      return Math.sin(firstArg);
-    case 'cos':
-      return Math.cos(firstArg);
-    case 'tan':
-      return Math.tan(firstArg);
-    case 'asin':
-      return Math.asin(firstArg);
-    case 'acos':
-      return Math.acos(firstArg);
-    case 'atan':
-      return Math.atan(firstArg);
-    case 'sinh':
-      return Math.sinh(firstArg);
-    case 'cosh':
-      return Math.cosh(firstArg);
-    case 'tanh':
-      return Math.tanh(firstArg);
-    case 'log':
-      return Math.log10(firstArg);
-    case 'ln':
-      return Math.log(firstArg);
-    case 'exp':
-      return Math.exp(firstArg);
-    case 'sqrt':
-      return Math.sqrt(firstArg);
-    case 'abs':
-      return Math.abs(firstArg);
-    default:
-      throw new Error(`Unsupported function: ${node.name}`);
-  }
-}
+// FunctionCallの数値評価はapproxでのみ行うため、ここでは削除
 
 /**
  * Check if AST contains imaginary unit 'i'
@@ -570,24 +552,37 @@ export function analyzeApprox(
     }
 
     // Evaluate the expression
-    const result = evaluateAST(astWithConstants, values);
+    const evaluated = evaluateAST(astWithConstants, values);
+    let resultValue: number | null = null;
+    if (evaluated.type === 'NumberLiteral') {
+      resultValue = evaluated.value;
+    } else {
+      // シンボリックなままの場合
+      return {
+        steps,
+        value: astToLatex(evaluated),
+        valueType: 'symbolic',
+        ast: evaluated,
+        error: null,
+      };
+    }
 
     // Format the result
-    const formattedResult = formatNumber(result, precision);
+    const formattedResult = formatNumber(resultValue, precision);
     (steps[1] as StepTree[]).push(`Approximate result: ${formattedResult}`);
 
     const analyzeResult: AnalyzeResult = {
       steps,
       value: formattedResult,
-      valueType: Number.isInteger(result) ? 'exact' : 'approximate',
+      valueType: Number.isInteger(resultValue) ? 'exact' : 'approximate',
       ast: {
         type: 'NumberLiteral',
-        value: result,
+        value: resultValue,
       },
       error: null,
     };
 
-    if (!Number.isInteger(result)) {
+    if (!Number.isInteger(resultValue)) {
       analyzeResult.precision = precision;
     }
 

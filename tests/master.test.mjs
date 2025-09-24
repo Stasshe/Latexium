@@ -610,6 +610,19 @@ const complexTestCases = [
     expected: '2',
     description: 'Evaluate trigonometric sum at special angles',
   },
+  { 
+    id: 33.5,
+    expression: '\\tan(\\frac{\\pi}{4}) + \\cot(\\frac{\\pi}{4})',
+    task: 'evaluate',
+    expected: '2',
+    description: 'Evaluate tangent and cotangent at π/4',
+  },
+  {
+    id: 33.6,
+    expression: '\\log_{2}(12) + \\ln(e^2)',
+    task: 'evaluate',
+    expected: '5',
+  },
   {
     id: 34,
     expression: 'e^{\\ln(5)} + \\log_{10}(100)',

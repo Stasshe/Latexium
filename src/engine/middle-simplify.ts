@@ -9,6 +9,7 @@ import { stepsAstToLatex } from './ast';
 import type { StepTree } from '../types';
 import { expandExpression } from './distribution';
 // Import the legacy factorExpression function
+import { applyLogExpIdentities } from './identities/logexp';
 import { applyTrigonometricIdentities } from './identities/trigonometric';
 import { AdvancedTermAnalyzer, AdvancedTermCombiner } from './simplify/commutative';
 import {
@@ -227,6 +228,11 @@ function applyBasicSimplifications(
     const trigResult = applyTrigonometricIdentities(node);
     if (trigResult !== node) return trigResult;
   }
+  // --- Logarithmic and Exponential identities ---
+  if (options.applyIdentities) {
+    const logExpResult = applyLogExpIdentities(node);
+    if (logExpResult !== node) return logExpResult;
+  }
 
   switch (node.type) {
     case 'NumberLiteral':
@@ -252,43 +258,43 @@ function applyBasicSimplifications(
           const arg = simplifiedArgs[0] as ASTNode;
           // Try to evaluate if possible (sin, cos, tan, etc. with numeric/constant/fractional argument)
           let argVal: number | undefined = undefined;
-          // Try to extract value for famous angles (π, e, and their rational multiples)
           argVal = extractFamousConstantValue(arg);
-          if (argVal !== undefined && typeof argVal === 'number') {
-            let result: number | undefined = undefined;
-            switch (funcName) {
-              case 'sin':
-                result = Math.sin(argVal);
-                break;
-              case 'cos':
-                result = Math.cos(argVal);
-                break;
-              case 'tan':
-                result = Math.tan(argVal);
-                break;
-              case 'log':
-              case 'ln':
-                result = Math.log(argVal);
-                break;
-              case 'exp':
-                result = Math.exp(argVal);
-                break;
-              case 'sqrt':
-                result = Math.sqrt(argVal);
-                break;
-              case 'abs':
-                result = Math.abs(argVal);
-                break;
-              // 他の関数も必要に応じて追加
-            }
-            if (result !== undefined && isFinite(result)) {
-              // 0, -0, 1, -1, 0.0 などは丸める
-              if (Math.abs(result) < 1e-14) result = 0;
-              if (Math.abs(result - 1) < 1e-14) result = 1;
-              if (Math.abs(result + 1) < 1e-14) result = -1;
-              return { type: 'NumberLiteral', value: result };
-            }
-          }
+          // ここでは小数計算はしない
+          // if (argVal !== undefined && typeof argVal === 'number') {
+          //   let result: number | undefined = undefined;
+          //   switch (funcName) {
+          //     case 'sin':
+          //       result = Math.sin(argVal);
+          //       break;
+          //     case 'cos':
+          //       result = Math.cos(argVal);
+          //       break;
+          //     case 'tan':
+          //       result = Math.tan(argVal);
+          //       break;
+          //     case 'log':
+          //     case 'ln':
+          //       result = Math.log(argVal);
+          //       break;
+          //     case 'exp':
+          //       result = Math.exp(argVal);
+          //       break;
+          //     case 'sqrt':
+          //       result = Math.sqrt(argVal);
+          //       break;
+          //     case 'abs':
+          //       result = Math.abs(argVal);
+          //       break;
+          //     // 他の関数も必要に応じて追加
+          //   }
+          //   if (result !== undefined && isFinite(result)) {
+          //     // 0, -0, 1, -1, 0.0 などは丸める
+          //     if (Math.abs(result) < 1e-14) result = 0;
+          //     if (Math.abs(result - 1) < 1e-14) result = 1;
+          //     if (Math.abs(result + 1) < 1e-14) result = -1;
+          //     return { type: 'NumberLiteral', value: result };
+          //   }
+          //}
         }
         // Otherwise, return simplified FunctionCall
         return {
