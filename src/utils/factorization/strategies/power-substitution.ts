@@ -26,7 +26,7 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
         success: false,
         ast: node,
         changed: false,
-        steps: [],
+        steps: ['Applied power substitution strategy'],
         strategyUsed: this.name,
         canContinue: false,
       };
@@ -37,7 +37,7 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
         success: false,
         ast: node,
         changed: false,
-        steps: [],
+        steps: ['Applied power substitution strategy'],
         strategyUsed: this.name,
         canContinue: false,
       };
@@ -49,7 +49,7 @@ export class PowerSubstitutionStrategy implements FactorizationStrategy {
         success: false,
         ast: node,
         changed: false,
-        steps: [],
+        steps: ['Applied power substitution strategy'],
         strategyUsed: this.name,
         canContinue: false,
       };

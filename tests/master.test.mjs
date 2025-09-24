@@ -39,6 +39,16 @@ console.log('=== LATEXIUM MASTER TEST SUITE (SPECIFICATION v3) ===\n');
 const complexTestCases = [
   // Distribution Tests (10 cases) - Main focus
   {
+    id: 0.1,
+    expression: '(x - 1)(x + 1)',
+    task: 'factor',
+  },
+  {
+    id: 0.5,
+    expression: '(x + 1)(x - 1)',
+    task: 'factor',
+  },
+  {
     id: 0.8,
     expression: '(x-1)(x-1)(x-1) + 1',
     task: 'factor',

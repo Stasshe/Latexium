@@ -39,7 +39,13 @@ export class CyclotomicPattern implements FactorizationPattern {
       right.type === 'NumberLiteral' &&
       right.value === 1
     ) {
-      if (left.right.value >= 2) return true;
+      const n = left.right.value;
+      // Only allow integer coefficients, and for x^n+1, n must be odd
+      if (n < 2) return false;
+      if (node.operator === '+') {
+        if (n % 2 === 0) return false; // Do not factor x^n+1 for even n
+      }
+      return true;
     }
     return false;
   }
@@ -77,37 +83,8 @@ export class CyclotomicPattern implements FactorizationPattern {
   private factorXNPlus1(variable: string, n: number): ASTNode {
     const x = PatternUtils.createIdentifier(variable);
     const one = PatternUtils.createNumber(1);
-    // n even: x^n + 1 = (x^{n/2} + sqrt(2)x^{n/4} + 1)(x^{n/2} - sqrt(2)x^{n/4} + 1)
-    if (n % 2 === 0 && n >= 2) {
-      const n2 = n / 2;
-      const n4 = n / 4;
-      // Only handle n divisible by 4 for sqrt(2)x^{n/4} form
-      if (n4 === Math.floor(n4) && n4 >= 1) {
-        // (x^{n/2} + sqrt(2)x^{n/4} + 1)(x^{n/2} - sqrt(2)x^{n/4} + 1)
-        const x_n2 = PatternUtils.createBinaryExpression(x, '^', PatternUtils.createNumber(n2));
-        const x_n4 = PatternUtils.createBinaryExpression(x, '^', PatternUtils.createNumber(n4));
-        const sqrt2 = PatternUtils.createNumber(Math.SQRT2);
-        const sqrt2_xn4 = PatternUtils.createBinaryExpression(sqrt2, '*', x_n4);
-        const minus_sqrt2_xn4 = PatternUtils.createBinaryExpression(
-          PatternUtils.createNumber(-Math.SQRT2),
-          '*',
-          x_n4
-        );
-        const left = PatternUtils.createBinaryExpression(
-          PatternUtils.createBinaryExpression(x_n2, '+', sqrt2_xn4),
-          '+',
-          one
-        );
-        const right = PatternUtils.createBinaryExpression(
-          PatternUtils.createBinaryExpression(x_n2, '+', minus_sqrt2_xn4),
-          '+',
-          one
-        );
-        return PatternUtils.createBinaryExpression(left, '*', right);
-      }
-    }
-    // fallback: (x+1)(x^{n-1} - x^{n-2} + ... + 1)
     const xPlus1 = PatternUtils.createBinaryExpression(x, '+', one);
+    // Build (x^{n-1} - x^{n-2} + x^{n-3} - ... + 1)
     let sum: ASTNode = PatternUtils.createNumber(1);
     for (let k = n - 1; k >= 1; k--) {
       const term = PatternUtils.createBinaryExpression(

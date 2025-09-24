@@ -9,7 +9,7 @@ const DEFAULTS = {
   FACTORIZATION: {
     applyFactorPlusOperate: false,
     useLLL: false,
-    useBerlekampZassenhaus: true,
+    useBerlekampZassenhaus: false,
   },
   DEFAULT_SIMPLIFY_OPTIONS: {
     expandPowers: false,

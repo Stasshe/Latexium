@@ -51,7 +51,7 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
         success: false,
         ast: node,
         changed: false,
-        steps: [],
+        steps: ['Applied perfect power strategy'],
         strategyUsed: this.name,
         canContinue: false,
       };
@@ -96,7 +96,7 @@ export class PerfectPowerStrategy implements FactorizationStrategy {
         success: false,
         ast: node,
         changed: false,
-        steps: [],
+        steps: ['Applied perfect power strategy'],
         strategyUsed: this.name,
         canContinue: false,
       };
