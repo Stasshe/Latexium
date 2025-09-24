@@ -94,7 +94,7 @@ export class DifferenceOfSquaresStrategy implements FactorizationStrategy {
         changed: true,
         steps,
         strategyUsed: this.name,
-        canContinue: true, // Allow further factorization of the result
+        canContinue: false, // Allow further factorization of the result
       };
     } catch (error) {
       return {

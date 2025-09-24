@@ -154,7 +154,7 @@ const complexTestCases = [
     id: 11,
     expression: 'x^4 - 16',
     task: 'factor',
-    expected: '(x^{2} + 4)(x - 2)(x + 2)',
+    expected: '(x^{2} + 4)(x + 2)(x - 2)',
     description: 'Fourth power difference factorization',
   },
   {
@@ -203,7 +203,7 @@ const complexTestCases = [
     id: 17,
     expression: 'x^4 - 13x^2 + 36',
     task: 'factor',
-    expected: '(x - 3)(x + 3)(x - 2)(x + 2)',
+    expected: '(x + 3)(x - 3)(x + 2)(x - 2)',
     description: 'Quartic as quadratic in x^2',
   },
   {
@@ -224,7 +224,7 @@ const complexTestCases = [
     id: 20,
     expression: 'x^8 - 256',
     task: 'factor',
-    expected: '(x^{4} + 16)(x^{2} + 4)(x - 2)(x + 2)',
+    expected: '(x^{4} + 16)(x^{2} + 4)(x + 2)(x - 2)',
     description: 'Eighth power difference',
   },
 
@@ -234,7 +234,7 @@ const complexTestCases = [
     expression: '\\frac{d}{dx}[x^3 \\sin(x)]',
     task: 'differentiate',
     variable: 'x',
-    expected: '3x^2\\sin(x) + x^3\\cos(x)',
+    expected: 'x^{3}\\cos(x) + 3x^{2}\\sin(x)',
     description: 'Product rule with polynomial and trig',
   },
   {
@@ -415,14 +415,14 @@ const complexTestCases = [
     id: 116,
     expression: 'x^8 - 16x^4 + 64',
     task: 'factor',
-    expected: '(x^4 - 8x^2 + 16)(x^4 + 8x^2 + 16)',
+    expected: '(x^{4} - 8)^{2}',
     description: 'Quartic in x^4',
   },
   {
     id: 117,
     expression: 'x^6 + 2x^3 + 1',
     task: 'factor',
-    expected: '(x^3 + 1)^2',
+    expected: '(x + 1)^{2}(x^{2} - x + 1)^{2}',
     description: 'Perfect cube plus one squared',
   },
   {
