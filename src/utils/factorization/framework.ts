@@ -155,6 +155,9 @@ export class FactorizationEngine {
               );
             }
             // canContinue=falseなら以降の戦略もループも即座に打ち切る
+            context.steps.push(
+              `Strategy ${strategy.name} requested to stop further factorization. (canContinue=false)`
+            );
             shouldContinue = result.canContinue;
             break;
           } else if (!result.success) {
