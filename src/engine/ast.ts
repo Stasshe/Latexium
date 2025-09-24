@@ -316,9 +316,9 @@ function unaryExpressionToLatex(node: UnaryExpression): string {
 }
 
 function functionCallToLatex(node: FunctionCall): string {
-  const args = node.args.map(arg => astToLatex(arg)).join(', ');
+  const args = node.args.map(arg => astToLatex(arg));
 
-  // 特殊な関数の処理
+  // Special handling for certain functions
   switch (node.name) {
     case 'sin':
     case 'cos':
@@ -329,17 +329,31 @@ function functionCallToLatex(node: FunctionCall): string {
     case 'sinh':
     case 'cosh':
     case 'tanh':
-      return `\\${node.name}(${args})`;
+      return `\\${node.name}(${args.join(', ')})`;
     case 'log':
-      return `\\log(${args})`;
+      // log(10, x) → \log_{10}{x}
+      if (
+        args.length === 2 &&
+        node.args[0] &&
+        node.args[0].type === 'NumberLiteral' &&
+        (node.args[0] as import('../types').NumberLiteral).value === 10
+      ) {
+        return `\\log_{10}{${args[1]}}`;
+      }
+      // log(a, x) → \log_{a}{x}
+      if (args.length === 2) {
+        return `\\log_{${args[0]}}{${args[1]}}`;
+      }
+      // log(x) → \log{x}
+      return `\\log{${args[0]}}`;
     case 'ln':
-      return `\\ln(${args})`;
+      return `\\ln(${args.join(', ')})`;
     case 'exp':
-      return `\\exp(${args})`;
+      return `\\exp(${args.join(', ')})`;
     case 'sqrt':
-      return `\\sqrt{${args}}`;
+      return `\\sqrt{${args[0]}}`;
     default:
-      return `${node.name}(${args})`;
+      return `${node.name}(${args.join(', ')})`;
   }
 }
 
