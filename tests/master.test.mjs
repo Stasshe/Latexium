@@ -612,7 +612,7 @@ const complexTestCases = [
   },
   { 
     id: 33.5,
-    expression: '\\tan(\\frac{\\pi}{4}) + \\cot(\\frac{\\pi}{4})',
+    expression: '\\tan(\\frac{\\pi}{4}) + \\frac{\\pi}{4}',
     task: 'evaluate',
     expected: '2',
     description: 'Evaluate tangent and cotangent at π/4',

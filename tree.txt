@@ -64,6 +64,7 @@
 │   │   │       ├── power-substitution.ts
 │   │   │       └── quadratic-pattern.ts
 │   │   ├── identities
+│   │   │   ├── logexp.ts
 │   │   │   └── trigonometric.ts
 │   │   ├── index.ts
 │   │   ├── middle-simplify.ts
@@ -113,15 +114,15 @@
 ├── tree.txt
 └── tsconfig.json
 
-21 directories, 93 files
+21 directories, 94 files
 
 src/*.ts, *.tsx の統計:
-Total Lines: 17859
-Total Characters: 529484
-Total File Size (bytes): 536517
+Total Lines: 18356
+Total Characters: 544600
+Total File Size (bytes): 551887
 
 Development Size
-121M	.
+123M	.
 
 Build Size
-6.9M	dist
+7.0M	dist
