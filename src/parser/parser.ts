@@ -245,11 +245,11 @@ export class LaTeXParser {
 
     switch (token.value) {
       case '\\int': {
-        // Parse optional lower bound (_{...}) and upper bound (^{...})
+        // ...intの既存実装...
         let lowerBound: ASTNode | undefined = undefined;
         let upperBound: ASTNode | undefined = undefined;
         if (this.expectToken('UNDERSCORE')) {
-          this.advance(); // consume _
+          this.advance();
           if (this.expectToken('LBRACE')) {
             this.consume('LBRACE');
             lowerBound = this.parseExpression();
@@ -259,7 +259,7 @@ export class LaTeXParser {
           }
         }
         if (this.expectToken('CARET')) {
-          this.advance(); // consume ^
+          this.advance();
           if (this.expectToken('LBRACE')) {
             this.consume('LBRACE');
             upperBound = this.parseExpression();
@@ -268,8 +268,7 @@ export class LaTeXParser {
             upperBound = this.parsePrimary();
           }
         }
-        // Parse integrand (stop at dx/dt/du etc.)
-        // Find the index where IDENTIFIER 'd' or /^d[a-zA-Z]$/ appears (dx/dt/du)
+        // ...integrand/dxパースは省略...
         let integrandEnd = this.currentTokenIndex;
         while (integrandEnd < this.tokens.length) {
           const t = this.tokens[integrandEnd];
@@ -278,16 +277,15 @@ export class LaTeXParser {
             if (t.value === 'd') {
               const next = this.tokens[integrandEnd + 1];
               if (next && next.type === 'IDENTIFIER' && /^[a-zA-Z]$/.test(next.value)) {
-                break; // dxパターン
+                break;
               }
-              break; // d単体
+              break;
             } else if (/^d[a-zA-Z]$/.test(t.value)) {
-              break; // dx, dt, duパターン
+              break;
             }
           }
           integrandEnd++;
         }
-        // サブパーサーでintegrand部分だけパース
         const integrandTokens = this.tokens.slice(this.currentTokenIndex, integrandEnd);
         if (integrandTokens.length === 0) {
           throw new Error('Missing integrand before dx/dt/du');
@@ -296,18 +294,14 @@ export class LaTeXParser {
           integrandTokens.concat([{ type: 'EOF', value: '', position: 0 }])
         );
         const integrand = subParser.parseExpression();
-        // トークン位置をintegrandEndに進める
         this.currentTokenIndex = integrandEnd;
         this.currentToken = this.tokens[this.currentTokenIndex] || {
           type: 'EOF',
           value: '',
           position: 0,
         };
-        // Parse dx, dt, ... (must be IDENTIFIER, e.g. dx, dt, du)
         let variable: string | undefined = undefined;
-        // Allow whitespace between integrand and dx
         while (this.currentToken.type === 'WHITESPACE') this.advance();
-        // Robustly handle both IDENTIFIER: 'dx' or IDENTIFIER: 'd' + IDENTIFIER: 'x'
         if (this.expectToken('IDENTIFIER')) {
           const first = this.currentToken;
           if (first.value === 'd') {
@@ -340,6 +334,168 @@ export class LaTeXParser {
           ...(upperBound !== undefined ? { upperBound } : {}),
         };
       }
+      case '\\sum': {
+        // sum: \sum_{i=1}^{n}{expr} → {type: 'Sum', variable: i, lowerBound: 1, upperBound: n, expression: expr}
+        let lowerBound: ASTNode | undefined = undefined;
+        let upperBound: ASTNode | undefined = undefined;
+        let variable: string | undefined = undefined;
+        if (this.expectToken('UNDERSCORE')) {
+          this.advance();
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            // 変数=下限 形式をサポート: 例 i=1
+            if (this.expectToken('IDENTIFIER')) {
+              const varToken = this.currentToken;
+              variable = varToken.value;
+              this.advance();
+              if (this.expectToken('OPERATOR') && this.currentToken.value === '=') {
+                this.advance();
+                lowerBound = this.parseExpression();
+              } else {
+                lowerBound = this.parseExpression();
+              }
+            } else {
+              lowerBound = this.parseExpression();
+            }
+            this.consume('RBRACE');
+          } else {
+            lowerBound = this.parsePrimary();
+          }
+        }
+        if (this.expectToken('CARET')) {
+          this.advance();
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            upperBound = this.parseExpression();
+            this.consume('RBRACE');
+          } else {
+            upperBound = this.parsePrimary();
+          }
+        }
+        let expr: ASTNode;
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          expr = this.parseExpression();
+          this.consume('RBRACE');
+        } else if (this.expectToken('LPAREN')) {
+          this.consume('LPAREN');
+          expr = this.parseExpression();
+          this.consume('RPAREN');
+        } else {
+          expr = this.parsePrimary();
+        }
+        // variableがなければlowerBoundがIdentifierならそれを使う
+        if (!variable && lowerBound && lowerBound.type === 'Identifier') {
+          variable = lowerBound.name;
+          lowerBound = undefined;
+        }
+        return {
+          type: 'Sum',
+          expression: expr,
+          variable: variable || 'i',
+          lowerBound: lowerBound!,
+          upperBound: upperBound!,
+        };
+      }
+      case '\\prod': {
+        let lowerBound: ASTNode | undefined = undefined;
+        let upperBound: ASTNode | undefined = undefined;
+        let variable: string | undefined = undefined;
+        if (this.expectToken('UNDERSCORE')) {
+          this.advance();
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            if (this.expectToken('IDENTIFIER')) {
+              const varToken = this.currentToken;
+              variable = varToken.value;
+              this.advance();
+              if (this.expectToken('OPERATOR') && this.currentToken.value === '=') {
+                this.advance();
+                lowerBound = this.parseExpression();
+              } else {
+                lowerBound = this.parseExpression();
+              }
+            } else {
+              lowerBound = this.parseExpression();
+            }
+            this.consume('RBRACE');
+          } else {
+            lowerBound = this.parsePrimary();
+          }
+        }
+        if (this.expectToken('CARET')) {
+          this.advance();
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            upperBound = this.parseExpression();
+            this.consume('RBRACE');
+          } else {
+            upperBound = this.parsePrimary();
+          }
+        }
+        let expr: ASTNode;
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          expr = this.parseExpression();
+          this.consume('RBRACE');
+        } else if (this.expectToken('LPAREN')) {
+          this.consume('LPAREN');
+          expr = this.parseExpression();
+          this.consume('RPAREN');
+        } else {
+          expr = this.parsePrimary();
+        }
+        if (!variable && lowerBound && lowerBound.type === 'Identifier') {
+          variable = lowerBound.name;
+          lowerBound = undefined;
+        }
+        return {
+          type: 'Product',
+          expression: expr,
+          variable: variable || 'i',
+          lowerBound: lowerBound!,
+          upperBound: upperBound!,
+        };
+      }
+      case '\\log': {
+        // log_{base}(x) のような下付き対応
+        let base: ASTNode | undefined = undefined;
+        if (this.expectToken('UNDERSCORE')) {
+          this.advance();
+          if (this.expectToken('LBRACE')) {
+            this.consume('LBRACE');
+            base = this.parseExpression();
+            this.consume('RBRACE');
+          } else {
+            base = this.parsePrimary();
+          }
+        }
+        let argument: ASTNode;
+        if (this.expectToken('LBRACE')) {
+          this.consume('LBRACE');
+          argument = this.parseExpression();
+          this.consume('RBRACE');
+        } else if (this.expectToken('LPAREN')) {
+          this.consume('LPAREN');
+          argument = this.parseExpression();
+          this.consume('RPAREN');
+        } else {
+          argument = this.parsePrimary();
+        }
+        if (base) {
+          return {
+            type: 'FunctionCall',
+            name: 'log',
+            args: [argument, base],
+          };
+        } else {
+          return {
+            type: 'FunctionCall',
+            name: 'log',
+            args: [argument],
+          };
+        }
+      }
       case '\\frac':
         return this.parseFraction();
       case '\\sqrt':
@@ -347,7 +503,6 @@ export class LaTeXParser {
       case '\\sin':
       case '\\cos':
       case '\\tan':
-      case '\\log':
       case '\\ln':
       case '\\exp': {
         const functionName = token.value.substring(1); // Remove backslash
